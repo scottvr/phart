@@ -19,8 +19,6 @@ body:
       options:
         - label: I am using pure Python (plus NetworkX, our one true dependency)
           required: true
-        - label: I have confirmed this isn't working as expected in a Perl-free environment
-          required: true
         
   - type: textarea
     attributes:
