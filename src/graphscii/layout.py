@@ -39,7 +39,10 @@ class LayoutManager:
         for root in roots:
             for node in self.graph.nodes():
                 try:
-                    length = max(len(p) for p in nx.all_simple_paths(self.graph, root, node))
+                    paths = list(nx.all_simple_paths(self.graph, root, node))
+                    if not paths:
+                        continue  # Skip if no paths exist
+                    length = max(len(p) for p in paths)
                     distances[node] = max(distances.get(node, 0), length)
                 except nx.NetworkXNoPath:
                     continue
