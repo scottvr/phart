@@ -1,19 +1,19 @@
-# graphscii
-grAphSCII: Pure Python graph visualization in ASCII, no external dependencies* 
+# phart
+phart: Python Hierarchical ASCII Representation Tool - A Pure Python graph visualization in ASCII, no external dependencies* 
 
 (* except NetworkX, which we should probably mention prominently. We just mean no dependencies of the Perl or PHP/webserver types.)
 
 ## Installation
 
 ```bash
-pip install graphscii
+pip install git+https://github.com/scottvr/phart
 ```
 
 ## Quick Start
 
 ```python
 import networkx as nx
-from graphscii import ASCIIGraphRenderer
+from phart import ASCIIGraphRenderer
 
 # Create a simple graph
 G = nx.DiGraph()
