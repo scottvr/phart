@@ -64,16 +64,20 @@ class ASCIIGraphRenderer:
                 self.canvas[end_y][end_x-1] = self.options.edge_arrow
             else:
                 self.canvas[end_y][start_x-1] = '<'
-                
     def render(self) -> str:
         """
         Render the graph as ASCII art.
-        
+    
         Returns:
             String containing the ASCII representation of the graph
         """
         # Calculate layout
         positions, width, height = self.layout_manager.calculate_layout()
+        
+        # Handle empty graph
+        if not positions:
+            return ""
+            
         self._init_canvas(width, height)
         
         # Draw edges first (so nodes will overlay them)

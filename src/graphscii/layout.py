@@ -18,6 +18,8 @@ class LayoutManager:
         prefix, suffix = self.options.get_node_decorators(str(node))
         return len(str(node)) + len(prefix) + len(suffix)
         
+
+
     def calculate_layout(self) -> Tuple[Dict[str, Tuple[int, int]], int, int]:
         """
         Calculate node positions using hierarchical layout
@@ -27,13 +29,19 @@ class LayoutManager:
             - Dictionary of node positions (x, y)
             - Maximum width of the layout
             - Maximum height of the layout
+            
+        Raises:
+            ValueError: If graph is empty
         """
+        if not self.graph.nodes():
+            return {}, 0, 0  # Return empty layout for empty graph
+            
         # Group nodes by layer using longest path from any root
         layers: Dict[int, Set[str]] = {}
         roots = [n for n, d in self.graph.in_degree() if d == 0]
         if not roots:  # Handle cycles by picking arbitrary start
-            roots = [list(self.graph.nodes())[0]]
-            
+            roots = [list(self.graph.nodes())[0]]  # Safe now because we checked for empty graph
+
         # Calculate longest path to each node
         distances = {}
         for root in roots:

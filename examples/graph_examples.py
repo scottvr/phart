@@ -5,7 +5,8 @@ import random
 def example_binary_tree():
     """Example of rendering a binary tree"""
     print("\nBinary Tree Example:")
-    G = nx.balanced_binary_tree(3, create_using=nx.DiGraph)
+    # Create a binary tree (r=2) of height 3
+    G = nx.balanced_tree(r=2, h=3, create_using=nx.DiGraph)
     # Relabel nodes to be more readable
     mapping = {i: f"N{i}" for i in G.nodes()}
     G = nx.relabel_nodes(G, mapping)
@@ -16,6 +17,7 @@ def example_binary_tree():
         options = LayoutOptions(node_style=style)
         renderer = ASCIIGraphRenderer(G, options)
         print(renderer.render())
+        print("\n" + "="*50)  # Add separator between styles
 
 def example_dependency_graph():
     """Example of rendering a software dependency graph"""
