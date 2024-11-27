@@ -10,7 +10,7 @@ def example_binary_tree():
     # Relabel nodes to be more readable
     mapping = {i: f"N{i}" for i in G.nodes()}
     G = nx.relabel_nodes(G, mapping)
-    
+
     # Try different node styles
     for style in NodeStyle:
         print(f"\nUsing {style.name} style:")
@@ -30,7 +30,7 @@ def example_dependency_graph():
         ("config.py", "constants.py"),
         ("helpers.py", "constants.py")
     ])
-    
+
     # Use minimal style for better readability with long names
     options = LayoutOptions(
         node_style=NodeStyle.MINIMAL,
@@ -52,7 +52,7 @@ def example_workflow():
         ("Error Check", "Output"),
         ("Output", "End")
     ])
-    
+
     # Use round style for workflow nodes
     options = LayoutOptions(
         node_style=NodeStyle.ROUND,

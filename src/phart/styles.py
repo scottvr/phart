@@ -14,7 +14,7 @@ class LayoutOptions:
     # Node layout options
     node_spacing: int = 4      # Minimum horizontal space between nodes
     layer_spacing: int = 2     # Number of rows between layers
-    
+
     # Edge drawing characters
     edge_vertical: str = '│'   # Character for vertical edges
     edge_horizontal: str = '─'  # Character for horizontal edges
@@ -22,7 +22,7 @@ class LayoutOptions:
     edge_arrow: str = '>'      # Character for arrow heads
     edge_arrow_up: str = '^'   # Character for upward arrows
     edge_arrow_down: str = 'v'  # Character for downward arrows
-    
+
     # Node appearance
     node_style: NodeStyle = NodeStyle.SQUARE
 

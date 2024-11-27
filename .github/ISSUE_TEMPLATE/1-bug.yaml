@@ -7,19 +7,19 @@ body:
     attributes:
       value: |
         Thanks for taking the time to fill out this bug report!
-        
+
         Before proceeding, please confirm you're not looking for:
         - A Perl-based solution (we hear Graph::Easy is lovely this time of year)
         - A PHP+web server combo (because who doesn't love deploying a web server to render ASCII?)
         - Something that uses `requests.get("http://some-random-service.com/ascii")`
-        
+
   - type: checkboxes
     attributes:
       label: Prerequisites
       options:
         - label: I am using pure Python (plus NetworkX, our one true dependency)
           required: true
-        
+
   - type: textarea
     attributes:
       label: What happened?

@@ -7,20 +7,20 @@ class TestASCIIGraphRenderer(unittest.TestCase):
         """Set up some common test graphs"""
         # Simple chain
         self.chain = nx.DiGraph([("A", "B"), ("B", "C")])
-        
+
         # Disconnected components
         self.disconnected = nx.DiGraph([("A", "B"), ("C", "D")])
-        
+
         # Graph with no edges
         self.no_edges = nx.DiGraph()
         self.no_edges.add_nodes_from(["A", "B", "C"])
-        
+
         # Diamond shape (convergent paths)
         self.diamond = nx.DiGraph([("A", "B"), ("A", "C"), ("B", "D"), ("C", "D")])
-        
+
         # Cycle
         self.cycle = nx.DiGraph([("A", "B"), ("B", "C"), ("C", "A")])
-        
+
         # Complex graph with multiple paths
         self.complex = nx.DiGraph([
             ("A", "B"), ("A", "C"), ("B", "D"), ("C", "D"),
@@ -48,7 +48,7 @@ class TestASCIIGraphRenderer(unittest.TestCase):
         self.assertIn("[B]", result)
         self.assertIn("[C]", result)
         # All nodes should be on the same line
-        self.assertTrue(any('A' in line and 'B' in line and 'C' in line 
+        self.assertTrue(any('A' in line and 'B' in line and 'C' in line
                           for line in result.split('\n')))
 
     def test_disconnected_components(self):
@@ -85,7 +85,7 @@ class TestASCIIGraphRenderer(unittest.TestCase):
             NodeStyle.DIAMOND: ("<A>", "<B>"),
             NodeStyle.MINIMAL: ("A", "B")
         }
-        
+
         for style, (start, end) in styles.items():
             options = LayoutOptions(node_style=style)
             renderer = ASCIIGraphRenderer(self.chain, options)
@@ -103,7 +103,7 @@ class TestASCIIGraphRenderer(unittest.TestCase):
         # Verify basic layout properties
         lines = result.split('\n')
         # Root should be at top
-        self.assertTrue(any('A' in line and not any(n in line for n in "BCDEF") 
+        self.assertTrue(any('A' in line and not any(n in line for n in "BCDEF")
                           for line in lines))
         # Multiple paths should be rendered
         self.assertTrue(len([line for line in lines if '│' in line]) > 1)

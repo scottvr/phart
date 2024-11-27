@@ -26,7 +26,7 @@ def create_dependency_graph(n_layers: int, width: int) -> nx.DiGraph:
     G = nx.DiGraph()
     prev_layer = [f"L0_{i}" for i in range(width)]
     G.add_nodes_from(prev_layer)
-    
+
     for layer in range(1, n_layers):
         curr_layer = [f"L{layer}_{i}" for i in range(width)]
         G.add_nodes_from(curr_layer)
@@ -43,18 +43,18 @@ class TestPerformance(unittest.TestCase):
         """Test performance scaling with binary tree depth"""
         depths = [3, 5, 7, 9]  # 2^depth - 1 nodes
         times = []
-        
+
         for depth in depths:
             G = create_binary_tree(depth)
             renderer = ASCIIGraphRenderer(G)
-            
+
             start_time = time.perf_counter()
             result = renderer.render()
             end_time = time.perf_counter()
-            
+
             elapsed = end_time - start_time
             times.append(elapsed)
-            
+
             print(f"\nBinary Tree Depth {depth}:")
             print(f"Nodes: {G.number_of_nodes()}")
             print(f"Time: {elapsed:.4f} seconds")
@@ -66,18 +66,18 @@ class TestPerformance(unittest.TestCase):
         sizes = [10, 50, 100, 200]
         edge_probability = 0.1
         times = []
-        
+
         for n in sizes:
             G = create_random_dag(n, edge_probability)
             renderer = ASCIIGraphRenderer(G)
-            
+
             start_time = time.perf_counter()
             result = renderer.render()
             end_time = time.perf_counter()
-            
+
             elapsed = end_time - start_time
             times.append(elapsed)
-            
+
             print(f"\nRandom DAG Size {n}:")
             print(f"Edges: {G.number_of_edges()}")
             print(f"Time: {elapsed:.4f} seconds")
@@ -93,18 +93,18 @@ class TestPerformance(unittest.TestCase):
             (10, 15)  # 10 layers, 15 nodes per layer
         ]
         times = []
-        
+
         for n_layers, width in configs:
             G = create_dependency_graph(n_layers, width)
             renderer = ASCIIGraphRenderer(G)
-            
+
             start_time = time.perf_counter()
             result = renderer.render()
             end_time = time.perf_counter()
-            
+
             elapsed = end_time - start_time
             times.append(elapsed)
-            
+
             print(f"\nDependency Graph {n_layers}x{width}:")
             print(f"Nodes: {G.number_of_nodes()}, Edges: {G.number_of_edges()}")
             print(f"Time: {elapsed:.4f} seconds")
