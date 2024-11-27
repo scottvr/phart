@@ -1,6 +1,6 @@
 import unittest
 import networkx as nx
-from graphscii import ASCIIGraphRenderer, NodeStyle, LayoutOptions
+from phart import ASCIIGraphRenderer, NodeStyle, LayoutOptions
 
 class TestASCIIGraphRenderer(unittest.TestCase):
     def setUp(self):

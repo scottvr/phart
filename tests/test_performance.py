@@ -3,7 +3,7 @@ import time
 import networkx as nx
 import random
 from memory_profiler import profile
-from graphscii import ASCIIGraphRenderer
+from phart import ASCIIGraphRenderer
 
 def create_binary_tree(depth: int) -> nx.DiGraph:
     """Create a binary tree of specified depth"""

@@ -1,4 +1,4 @@
-from graphscii import ASCIIGraphRenderer, NodeStyle, LayoutOptions
+from phart import ASCIIGraphRenderer, NodeStyle, LayoutOptions
 import networkx as nx
 import random
 

@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "graphscii"
+name = "phart"
 version = "0.1.0"
-description = "Pure Python graph visualization in ASCII, no external dependencies* (*except NetworkX)"
+description = "Python Hierarchical ASCII Representation Tool - Pure Python graph visualization in ASCII, no external dependencies* (*except NetworkX)"
 readme = "README.md"
 license = "MIT"
 authors = [
@@ -46,12 +46,12 @@ disallow_untyped_defs = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
-addopts = "--cov=graphscii --cov-report=term-missing"
+addopts = "--cov=phart --cov-report=term-missing"
 filterwarnings = ["error"]
 
 [project.urls]
-Homepage = "https://github.com/scottvr/graphscii"
-Repository = "https://github.com/scottvr/graphscii.git"
-Issues = "https://github.com/scottvr/graphscii/issues"
+Homepage = "https://github.com/scottvr/phart"
+Repository = "https://github.com/scottvr/phart.git"
+Issues = "https://github.com/scottvr/phart/issues"
 [tool.hatch.build.targets.wheel]
-packages = ["src/graphscii"]
+packages = ["src/phart"]

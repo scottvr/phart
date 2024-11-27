@@ -1,5 +1,5 @@
 name: Bug Report
-description: Create a report to help us improve Graphscii
+description: Create a report to help us improve phart
 title: "[BUG]: "
 labels: ["bug"]
 body:
