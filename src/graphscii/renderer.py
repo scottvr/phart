@@ -88,7 +88,7 @@ class ASCIIGraphRenderer:
                 self.canvas[y][x + i] = char
                 
         # Convert canvas to string, trimming trailing spaces
-        return '\n'.join(''.join(row).rstrip() for row in canvas)
+        return '\n'.join(''.join(row).rstrip() for row in self.canvas)
 
     @classmethod
     def from_dot(cls, dot_string: str, options: Optional[LayoutOptions] = None) -> 'ASCIIGraphRenderer':
