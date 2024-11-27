@@ -32,3 +32,5 @@ classifiers = [
 Homepage = "https://github.com/scottvr/graphscii"
 Repository = "https://github.com/scottvr/graphscii.git"
 Issues = "https://github.com/scottvr/graphscii/issues"
+[tool.hatch.build.targets.wheel]
+packages = ["src/graphscii"]
