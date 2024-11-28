@@ -1,5 +1,6 @@
 from enum import Enum
 from dataclasses import dataclass
+from typing import Tuple
 
 
 class NodeStyle(Enum):
@@ -72,6 +73,32 @@ class LayoutOptions:
     edge_arrow_up: str = "^"
     edge_arrow_down: str = "v"
     node_style: NodeStyle = NodeStyle.SQUARE
+
+    def get_node_decorators(self, node_str: str) -> Tuple[str, str]:
+        """
+        Get the prefix and suffix decorators for a node based on style.
+
+        Parameters
+        ----------
+        node_str : str
+            Node identifier to be decorated
+
+        Returns
+        -------
+        tuple
+            (prefix, suffix) pair of strings
+        """
+        match self.node_style:
+            case NodeStyle.SQUARE:
+                return "[", "]"
+            case NodeStyle.ROUND:
+                return "(", ")"
+            case NodeStyle.DIAMOND:
+                return "<", ">"
+            case NodeStyle.MINIMAL:
+                return "", ""
+            case _:
+                return "[", "]"  # Default to square brackets
 
     def __post_init__(self) -> None:
         """Validate configuration values after initialization."""
