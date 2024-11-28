@@ -27,7 +27,6 @@ G.add_edges_from([("A", "B"), ("A", "C"), ("B", "D")])
 # Render it in ASCII
 renderer = ASCIIRenderer(G)
 print(renderer.render())
-<<<<<<< HEAD
 
      [A]
       │
@@ -38,19 +37,6 @@ print(renderer.render())
    ──[D]
 
 
-=======
-```
-
-       [A]
-        │
-     v  │   v
-    [B]────[C]
-     │
-     │  v
-     -─[D]
-
-```
->>>>>>> de7f4431607bb76e68c679bf66819963e613eac4
 The renderer shows edge direction using arrows:
 
 - v : downward flow
