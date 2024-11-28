@@ -125,6 +125,7 @@ class LayoutOptions:
         tuple
             (prefix, suffix) pair of strings
         """
+
         style_decorators = {
             NodeStyle.SQUARE: ("[", "]"),
             NodeStyle.ROUND: ("(", ")"),
