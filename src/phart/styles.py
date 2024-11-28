@@ -1,7 +1,6 @@
 """Style and configuration options for PHART rendering."""
 
 from enum import Enum
-from dataclasses import dataclass
 from typing import Tuple
 
 
@@ -26,7 +25,7 @@ class NodeStyle(Enum):
     DIAMOND = "diamond"
 
 
-@dataclass
+# @dataclass
 class LayoutOptions:
     """
     Configuration options for graph layout and appearance.
