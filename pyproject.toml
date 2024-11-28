@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "phart"
-version = "0.1.0"
+version = "0.1.1"
 description = "Python Hierarchical ASCII Representation Tool - Pure Python graph visualization in ASCII, no external dependencies* (*except NetworkX)"
 readme = "README.md"
 license = "MIT"
