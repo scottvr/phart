@@ -28,14 +28,13 @@ G.add_edges_from([("A", "B"), ("A", "C"), ("B", "D")])
 renderer = ASCIIRenderer(G)
 print(renderer.render())
 ```
-
-     [A]
-      │
-    v │ v
+       [A]
+        │
+     v  │   v
     [B]────[C]
-    │
-    │ v
-    ──[D]
+     │
+     │  v
+     -─[D]
 ```
 The renderer shows edge direction using arrows:
 
