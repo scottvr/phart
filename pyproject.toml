@@ -27,6 +27,26 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Text Processing :: Markup",
 ]
+[project.optional-dependencies]
+default = [
+]
+developer = [
+    'pre-commit>=3.2',
+    'mypy>=1.1',
+]
+doc = [
+]
+example = [
+]
+extra = [
+    'pygraphviz>=1.14',
+    'pydot>=3.0.1',
+]
+test = [
+    'pytest>=7.2',
+    'pytest-cov>=4.0',
+]
+
 [tool.black]
 line-length = 100
 target-version = ['py38']
