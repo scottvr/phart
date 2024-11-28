@@ -78,30 +78,54 @@ class LayoutOptions:
         """Character for vertical edges."""
         return "|" if self.use_ascii else "│"
 
+    @edge_vertical.setter
+    def edge_vertical(self, v: str) -> str:
+        self.edge_vertical = v
+
     @property
     def edge_horizontal(self) -> str:
         """Character for horizontal edges."""
         return "-" if self.use_ascii else "─"
+
+    @edge_horizontal.setter
+    def edge_horizontal(self, v: str) -> str:
+        self.edge_horizontal = v
 
     @property
     def edge_cross(self) -> str:
         """Character for edge crossings."""
         return "+" if self.use_ascii else "┼"
 
+    @edge_cross.setter
+    def edge_cross(self, v: str) -> str:
+        self.edge_cross - v
+
     @property
     def edge_arrow(self) -> str:
         """Character for horizontal arrows."""
         return ">" if self.use_ascii else "→"
+
+    @edge_arrow.setter
+    def edge_arrow(self, v: str) -> str:
+        self.edge_arrow = v
 
     @property
     def edge_arrow_up(self) -> str:
         """Character for upward arrows."""
         return "^" if self.use_ascii else "↑"
 
+    @edge_arrow_up.setter
+    def edge_arrow_up(self, v: str) -> str:
+        self.edge_arrow_up = v
+
     @property
     def edge_arrow_down(self) -> str:
         """Character for downward arrows."""
         return "v" if self.use_ascii else "↓"
+
+    @edge_arrow_down.setter
+    def edge_arrow_down(self, v: str) -> str:
+        self.edge_arrow_down = v
 
     def __post_init__(self) -> None:
         """Validate configuration values after initialization."""

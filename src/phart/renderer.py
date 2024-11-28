@@ -159,7 +159,9 @@ class ASCIIRenderer:
             ValueError: If dimensions are negative or zero
         """
         if width <= 0 or height <= 0:
-            raise ValueError("Canvas dimensions must be positive")
+            raise ValueError(
+                f"Canvas dimensions must be positive (got {width}x{height})"
+            )
 
         self.canvas = [[" " for _ in range(width)] for _ in range(height)]
 
