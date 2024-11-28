@@ -31,13 +31,12 @@ print(renderer.render())
 
      [A]
       │
-
-v │ v
-[B]────[C]
-│
-│ v
-──[D]
-
+    v │ v
+    [B]────[C]
+    │
+    │ v
+    ──[D]
+```
 The renderer shows edge direction using arrows:
 
 - v : downward flow
