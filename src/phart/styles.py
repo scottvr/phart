@@ -1,7 +1,7 @@
 """Style and configuration options for PHART rendering."""
 
-from enum import Enum
 from dataclasses import dataclass
+from enum import Enum
 from typing import Tuple
 
 
