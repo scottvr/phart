@@ -58,11 +58,13 @@ See Also
 * Graphviz: https://graphviz.org/
 """
 
-from typing import List, Dict, Tuple
+from typing import Dict, List, Tuple
+
 import networkx as nx
-from .styles import NodeStyle, LayoutOptions
+
+from .encoding import can_use_unicode, encoding_context
 from .layout import LayoutManager
-from .encoding import encoding_context, can_use_unicode
+from .styles import LayoutOptions, NodeStyle
 
 
 class ASCIIRenderer:

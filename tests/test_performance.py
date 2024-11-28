@@ -1,9 +1,11 @@
 """Performance tests for PHART ASCII renderer."""
 
-import unittest
-import time
-import networkx as nx
 import random
+import time
+import unittest
+
+import networkx as nx
+
 from phart import ASCIIRenderer, NodeStyle
 
 

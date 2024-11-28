@@ -1,8 +1,10 @@
 """Test suite for PHART ASCII graph renderer."""
 
 import unittest
+
 import networkx as nx
-from phart import ASCIIRenderer, NodeStyle, LayoutOptions
+
+from phart import ASCIIRenderer, LayoutOptions, NodeStyle
 
 
 class TestASCIIRenderer(unittest.TestCase):
