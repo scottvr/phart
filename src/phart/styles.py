@@ -125,14 +125,12 @@ class LayoutOptions:
         tuple
             (prefix, suffix) pair of strings
         """
-        match self.node_style:
-            case NodeStyle.SQUARE:
-                return "[", "]"
-            case NodeStyle.ROUND:
-                return "(", ")"
-            case NodeStyle.DIAMOND:
-                return "<", ">"
-            case NodeStyle.MINIMAL:
-                return "", ""
-            case _:
-                return "[", "]"  # Default to square brackets
+        style_decorators = {
+            NodeStyle.SQUARE: ("[", "]"),
+            NodeStyle.ROUND: ("(", ")"),
+            NodeStyle.DIAMOND: ("<", ">"),
+            NodeStyle.MINIMAL: ("", ""),
+        }
+        return style_decorators.get(
+            self.node_style, ("[", "]")
+        )  # Default to square brackets
