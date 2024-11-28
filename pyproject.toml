@@ -11,8 +11,6 @@ license = "MIT"
 authors = [
     { name = "Scott VR", email = "scottvr@gmail.com" }
 ]
-dynamic = ["dependencies", "optional-dependencies"]
-
 dependencies = [
     "networkx>=2.6.0",
 ]
