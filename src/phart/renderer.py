@@ -58,7 +58,7 @@ See Also
 * Graphviz: https://graphviz.org/
 """
 
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, TextIO
 
 import networkx as nx  # type: ignore
 
@@ -137,7 +137,7 @@ class ASCIIRenderer:
         self.layout_manager = LayoutManager(graph, self.options)
         self.canvas = []
 
-        def draw(self, file=None) -> None:
+        def draw(self, file: Optional[TextIO]) -> None:
             with encoding_context():
                 drawing = self.render()
                 print(drawing, file=file)
@@ -280,58 +280,58 @@ class ASCIIRenderer:
             except Exception as e:
                 raise RuntimeError(f"Failed to render graph: {e}")
 
-        @classmethod
-        def from_dot(cls, dot_string: str, **kwargs) -> "ASCIIRenderer":
-            """
-            Create a renderer from a DOT format string.
+    @classmethod
+    def from_dot(cls, dot_string: str, **kwargs) -> "ASCIIRenderer":
+        """
+        Create a renderer from a DOT format string.
 
-            Parameters
-            ----------
-            dot_string : str
-                Graph description in DOT format
-            **kwargs
-                Additional arguments passed to the constructor
+        Parameters
+        ----------
+        dot_string : str
+            Graph description in DOT format
+        **kwargs
+            Additional arguments passed to the constructor
 
-            Returns
-            -------
-            ASCIIRenderer
-                New renderer instance
+        Returns
+        -------
+        ASCIIRenderer
+            New renderer instance
 
-            Raises
-            ------
-            ImportError
-                If pydot is not available
-            ValueError
-                If DOT string doesn't contain any valid graphs
+        Raises
+        ------
+        ImportError
+            If pydot is not available
+        ValueError
+            If DOT string doesn't contain any valid graphs
 
-            Examples
-            --------
-            >>> dot = '''
-            ... digraph {
-            ...     A -> B
-            ...     B -> C
-            ... }
-            ... '''
-            >>> renderer = ASCIIRenderer.from_dot(dot)
-            >>> print(renderer.render())
-            A
-            |
-            B
-            |
-            C
-            """
+        Examples
+        --------
+        >>> dot = '''
+        ... digraph {
+        ...     A -> B
+        ...     B -> C
+        ... }
+        ... '''
+        >>> renderer = ASCIIRenderer.from_dot(dot)
+        >>> print(renderer.render())
+        A
+        |
+        B
+        |
+        C
+        """
 
-            try:
-                import pydot
-            except ImportError:
-                raise ImportError("pydot is required for DOT format support")
+        try:
+            import pydot
+        except ImportError:
+            raise ImportError("pydot is required for DOT format support")
 
-            graphs = pydot.graph_from_dot_data(dot_string)
-            if not graphs:
-                raise ValueError("No valid graphs found in DOT string")
+        graphs = pydot.graph_from_dot_data(dot_string)
+        if not graphs:
+            raise ValueError("No valid graphs found in DOT string")
 
-            # Take first graph from the list
-            G = nx.nx_pydot.from_pydot(graphs[0])
-            if not isinstance(G, nx.DiGraph):
-                G = nx.DiGraph(G)
-            return cls(G, **kwargs)
+        # Take first graph from the list
+        G = nx.nx_pydot.from_pydot(graphs[0])
+        if not isinstance(G, nx.DiGraph):
+            G = nx.DiGraph(G)
+        return cls(G, **kwargs)
