@@ -6,7 +6,7 @@ for ASCII graph visualization.
 
 from typing import Dict, Set, Tuple
 
-import networkx as nx
+import networkx as nx  # type: ignore
 
 from .styles import LayoutOptions
 
@@ -93,7 +93,7 @@ class LayoutManager:
             roots = [next(iter(self.graph.nodes()))]
 
         # Calculate distances using shortest paths
-        distances = {}
+        distances: Dict[str, int] = {}
         for root in roots:
             lengths = nx.single_source_shortest_path_length(self.graph, root)
             for node, dist in lengths.items():

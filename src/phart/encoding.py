@@ -24,7 +24,7 @@ def can_use_unicode() -> bool:
             import ctypes
 
             kernel32 = ctypes.windll.kernel32
-            return kernel32.GetConsoleOutputCP() == 65001
+            return bool(kernel32.GetConsoleOutputCP() == 6500)
         except BaseException:
             return False
     return True

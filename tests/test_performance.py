@@ -4,7 +4,7 @@ import random
 import time
 import unittest
 
-import networkx as nx
+import networkx as nx  # type: ignore
 
 from phart import ASCIIRenderer, NodeStyle
 

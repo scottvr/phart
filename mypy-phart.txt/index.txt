@@ -1,0 +1,16 @@
+Mypy Type Check Coverage Summary
+================================
+
+Script: index
+
++----------------+-------------------+---------+
+| Module         | Imprecision       | Lines   |
++----------------+-------------------+---------+
+| phart          |   0.00% imprecise |   5 LOC |
+| phart.encoding |   1.18% imprecise |  85 LOC |
+| phart.layout   |  21.17% imprecise | 137 LOC |
+| phart.renderer |   4.86% imprecise | 329 LOC |
+| phart.styles   |   0.00% imprecise | 137 LOC |
++----------------+-------------------+---------+
+| Total          |   6.64% imprecise | 693 LOC |
++----------------+-------------------+---------+
