@@ -51,7 +51,7 @@ test = [
 ]
 
 [tool.black]
-line-length = 88
+line-length = 79
 target-version = ['py38']
 include = '\.pyi?$'
 preview = true
@@ -67,7 +67,7 @@ warn_unused_configs = true
 disallow_untyped_defs = true
 
 [tool.flake8]
-max-line-length = 120
+max-line-length = 79
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
