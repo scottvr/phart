@@ -20,14 +20,23 @@ pip install -e .
 import networkx as nx
 from phart import ASCIIRenderer
 
+# Create a simple graph
+G = nx.DiGraph()
+G.add_edges_from([("A", "B"), ("A", "C"), ("B", "D")])
+
+# Render it in ASCII
+renderer = ASCIIRenderer(G)
+print(renderer.render())
+```
+
      [A]
       │
-   v  │   v
-  [B]────[C]
-   │
-   │  v
-   ──[D]
-```
+
+v │ v
+[B]────[C]
+│
+│ v
+──[D]
 
 The renderer shows edge direction using arrows:
 
@@ -51,6 +60,29 @@ These directional indicators are particularly useful for:
 - Support for directed and undirected graphs
 - Handles cycles and complex layouts
 - Bidirectional edge support
+
+## Extras
+
+- DOT file support
+- requires pydot
+  `pip install -r requirements\extra.txt`
+
+### Example
+
+    >>> dot = '''
+    ... digraph {
+    ...     A -> B
+    ...     B -> C
+    ... }
+    ... '''
+    >>> renderer = ASCIIRenderer.from_dot(dot)
+    >>> print(renderer.render())
+    A
+    |
+    B
+    |
+    C
+    >>>
 
 ## License
 
