@@ -7,7 +7,7 @@ for ASCII graph visualization.
 from dataclasses import dataclass
 from typing import Dict, Set, Tuple
 import networkx as nx
-from styles import NodeStyle
+from .styles import NodeStyle
 
 
 @dataclass
