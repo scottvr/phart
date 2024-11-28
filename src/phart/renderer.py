@@ -58,7 +58,7 @@ See Also
 * Graphviz: https://graphviz.org/
 """
 
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 
 import networkx as nx  # type: ignore
 
@@ -110,24 +110,34 @@ class ASCIIRenderer:
     from_dot : Create renderer from DOT format
     """
 
-    def __init__(
-        self,
-        graph: nx.Graph,
-        node_style: NodeStyle = NodeStyle.SQUARE,
-        node_spacing: int = 4,
-        layer_spacing: int = 2,
-        use_ascii: bool = False,
-        options=LayoutOptions(),
-    ):
-        self.graph = graph
+
+graph: nx.Graph
+options: LayoutOptions
+layout_manager: LayoutManager
+canvas: List[List[str]]
+
+
+def __init__(
+    self,
+    graph: nx.Graph,
+    node_style: NodeStyle = NodeStyle.SQUARE,
+    node_spacing: int = 4,
+    layer_spacing: int = 2,
+    use_ascii: bool = False,
+    options: Optional[LayoutOptions] = None,
+) -> None:
+    self.graph = graph
+    if options is not None:
+        self.options = options
+    else:
         self.options = LayoutOptions(
             node_style=node_style,
             node_spacing=node_spacing,
             layer_spacing=layer_spacing,
             use_ascii=use_ascii or not can_use_unicode(),
         )
-        self.layout_manager = LayoutManager(graph, self.options)
-        self.canvas: List[List[str]] = []
+    self.layout_manager = LayoutManager(graph, self.options)
+    self.canvas = []
 
     def draw(self, file=None) -> None:
         with encoding_context():
