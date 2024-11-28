@@ -123,6 +123,44 @@ class ASCIIRenderer:
         self.layout_manager = LayoutManager(graph, self.options)
         self.canvas: List[List[str]] = []
 
+    def render(self) -> str:
+        """
+        Render the graph as ASCII art.
+
+        Returns:
+            String containing the ASCII representation of the graph
+
+        Raises:
+            RuntimeError: If layout calculation fails
+            ValueError: If rendering encounters invalid node positions
+        """
+        try:
+            # Calculate layout
+            positions, width, height = self.layout_manager.calculate_layout()
+            self._init_canvas(width, height)
+
+            # Draw edges first (so nodes will overlay them)
+            for start, end in self.graph.edges():
+                self._draw_edge(start, end, positions)
+
+            # Draw nodes
+            for node, (x, y) in positions.items():
+                prefix, suffix = self.options.get_node_decorators(str(node))
+                label = f"{prefix}{node}{suffix}"
+                try:
+                    for i, char in enumerate(label):
+                        self.canvas[y][x + i] = char
+                except IndexError:
+                    raise ValueError(
+                        f"Node '{node}' position exceeds canvas boundaries"
+                    )
+
+            # Convert canvas to string, trimming trailing spaces
+            return "\n".join("".join(row).rstrip() for row in self.canvas)
+
+        except Exception as e:
+            raise RuntimeError(f"Failed to render graph: {e}")
+
     @classmethod
     def from_dot(cls, dot_string: str, **kwargs) -> "ASCIIRenderer":
         """
