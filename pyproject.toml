@@ -33,6 +33,7 @@ default = [
 developer = [
     'pre-commit>=3.2',
     'mypy>=1.1',
+    'black'
 ]
 doc = [
 ]
