@@ -10,7 +10,7 @@ phart: Python Hierarchical ASCII Representation Tool - A Pure Python graph visua
 # not yet in Pypi so, from github:
 pip install git+https://github.com/scottvr/phart
 
-# or since you are probably reading this from where you cloned the repo:
+# or if you are reading this from where you cloned the repo:
 pip install -e .
 ```
 
