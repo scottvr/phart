@@ -287,6 +287,13 @@ class ASCIIRenderer:
         ASCIIRenderer
             New renderer instance
 
+        Raises
+        ------
+        ImportError
+            If pydot is not available
+        ValueError
+            If DOT string doesn't contain any valid graphs
+
         Examples
         --------
         >>> dot = '''
@@ -303,12 +310,18 @@ class ASCIIRenderer:
         |
         C
         """
+
         try:
             import pydot
         except ImportError:
             raise ImportError("pydot is required for DOT format support")
 
-        G = nx.nx_pydot.from_pydot(pydot.graph_from_dot_data(dot_string))
+        graphs = pydot.graph_from_dot_data(dot_string)
+        if not graphs:
+            raise ValueError("No valid graphs found in DOT string")
+
+        # Take first graph from the list
+        G = nx.nx_pydot.from_pydot(graphs[0])
         if not isinstance(G, nx.DiGraph):
             G = nx.DiGraph(G)
         return cls(G, **kwargs)

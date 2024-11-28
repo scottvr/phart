@@ -83,6 +83,15 @@ These directional indicators are particularly useful for:
     C
     >>>
 
+### Note on DOT format support:
+
+---
+
+PHART uses pydot for DOT format support. When processing DOT strings containing
+multiple graph definitions, only the first graph will be rendered. For more
+complex DOT processing needs, you can convert your graphs using NetworkX's
+various graph reading utilities before passing them to PHART.
+
 ## License
 
 MIT License
