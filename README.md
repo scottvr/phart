@@ -20,27 +20,27 @@ pip install -e .
 import networkx as nx
 from phart import ASCIIRenderer
 
-# Create a simple graph
-G = nx.DiGraph()
-G.add_edges_from([("A", "B"), ("A", "C"), ("B", "D")])
-
-# Render it in ASCII
-renderer = ASCIIRenderer(G)
-print(renderer.render())
+     [A]
+      │
+   v  │   v
+  [B]────[C]
+   │
+   │  v
+   ──[D]
 ```
 
-Output:
+The renderer shows edge direction using arrows:
 
-```
-    [A]
-     |
-  ---|---
-  |     |
-[B]    [C]
-  |
-  |
- [D]
-```
+- v : downward flow
+- ^ : upward flow
+- > or < : horizontal flow
+
+These directional indicators are particularly useful for:
+
+- Dependency graphs
+- Workflow diagrams
+- Process flows
+- Any directed relationships
 
 ## Features
 
