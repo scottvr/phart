@@ -14,6 +14,137 @@ phart: Python Hierarchical ASCII Representation Tool - A Pure Python graph visua
 - Handles cycles and complex layouts
 - Bidirectional edge support
 
+<details>
+     <summary>Example output PHARTs [click arrow to expand]</summary>
+
+## PHART Graph Visualization Examples
+=================================
+
+### Software Dependency Example:
+```
+            [main.py]
+                |
+         v      |       v
+    [config.py]----[utils.py]
+         |              |
+         v              | v
+  [constants.py]----[helpers.py]
+```
+
+
+### Organizational Hierarchy Example:
+```
+                                       [CEO]
+                                         |
+                                v        v        v
+                              [CFO]----[COO]----[CTO]
+                                |        |        |
+        v              v        |      v |        |       v                v
+  [Controller]----[Dev Lead]----[Marketing Dir]----[Research Lead]----[Sales Dir]
+```
+
+
+### Network Topology Example:
+```
+                     [Router1]
+                         |
+                   v     |      v
+               [Switch1]----[Switch2]
+                   |            |
+      v            v            |            v
+  [Server1]----[Server2]    [Server3]----[Server4]
+```
+
+### Workflow Example:
+```
+        [Start]
+           |
+           v
+        [Input]
+           |
+           |v
+       [Validate]
+            |
+           v|
+     --[Process]
+     |     ^
+     |     v
+     |  [Check]
+     |     |
+     |     |     v
+  [Error]----[Success]
+                 |
+            v    |
+        [Output]--
+            |
+           v|
+         [End]
+```
+
+### DOT Import Example:
+```
+     [A]
+      |
+   v  |   v
+  [B]----[D]
+   |      |
+   |  v   |
+   --[C]---
+      |
+      v
+     [E]
+```
+
+
+## Custom Styling Example:
+Different node styles for the same graph:
+
+### Using MINIMAL style:
+```
+         0
+         |
+       v |  v
+       1----2
+       |    |
+  v    v    |    v
+  3----4    5----6
+```
+
+### Using SQUARE style:
+```
+            [0]
+             |
+          v  |   v
+         [1]----[2]
+          |      |
+   v      v      |      v
+  [3]----[4]    [5]----[6]
+```
+
+### Using ROUND style:
+```
+            (0)
+             |
+          v  |   v
+         (1)----(2)
+          |      |
+   v      v      |      v
+  (3)----(4)    (5)----(6)
+```
+
+### Using DIAMOND style:
+```
+            <0>
+             |
+          v  |   v
+         <1>----<2>
+          |      |
+   v      v      |      v
+  <3>----<4>    <5>----<6>
+```
+   
+</details>
+
 ## Installation
 
 ```bash
