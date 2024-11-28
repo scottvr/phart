@@ -60,7 +60,7 @@ See Also
 
 from typing import Dict, List, Tuple
 
-import networkx as nx
+import networkx as nx  # type: ignore
 
 from .encoding import can_use_unicode, encoding_context
 from .layout import LayoutManager
