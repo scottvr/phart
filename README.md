@@ -27,16 +27,15 @@ G.add_edges_from([("A", "B"), ("A", "C"), ("B", "D")])
 # Render it in ASCII
 renderer = ASCIIRenderer(G)
 print(renderer.render())
-```
 
      [A]
       │
+   v  │   v
+  [B]────[C]
+   │
+   │  v
+   ──[D]
 
-v │ v
-[B]────[C]
-│
-│ v
-──[D]
 
 The renderer shows edge direction using arrows:
 
@@ -65,10 +64,8 @@ These directional indicators are particularly useful for:
 
 - DOT file support
 - requires pydot
-  `pip install -r requirements\extra.txt`
-
+   `pip install -r requirements\extra.txt`
 ### Example
-
     >>> dot = '''
     ... digraph {
     ...     A -> B
@@ -87,3 +84,4 @@ These directional indicators are particularly useful for:
 ## License
 
 MIT License
+```
