@@ -1,3 +1,5 @@
+"""Style and configuration options for PHART rendering."""
+
 from enum import Enum
 from dataclasses import dataclass
 from typing import Tuple
@@ -66,13 +68,49 @@ class LayoutOptions:
 
     node_spacing: int = 4
     layer_spacing: int = 2
-    edge_vertical: str = "│"
-    edge_horizontal: str = "─"
-    edge_cross: str = "┼"
-    edge_arrow: str = ">"
-    edge_arrow_up: str = "^"
-    edge_arrow_down: str = "v"
     node_style: NodeStyle = NodeStyle.SQUARE
+    show_arrows: bool = True
+    use_ascii: bool = False  # If True, use ASCII-only characters
+
+    # Edge characters as properties to handle ASCII fallback
+    @property
+    def edge_vertical(self) -> str:
+        """Character for vertical edges."""
+        return "|" if self.use_ascii else "│"
+
+    @property
+    def edge_horizontal(self) -> str:
+        """Character for horizontal edges."""
+        return "-" if self.use_ascii else "─"
+
+    @property
+    def edge_cross(self) -> str:
+        """Character for edge crossings."""
+        return "+" if self.use_ascii else "┼"
+
+    @property
+    def edge_arrow(self) -> str:
+        """Character for horizontal arrows."""
+        return ">" if self.use_ascii else "→"
+
+    @property
+    def edge_arrow_up(self) -> str:
+        """Character for upward arrows."""
+        return "^" if self.use_ascii else "↑"
+
+    @property
+    def edge_arrow_down(self) -> str:
+        """Character for downward arrows."""
+        return "v" if self.use_ascii else "↓"
+
+    def __post_init__(self) -> None:
+        """Validate configuration values after initialization."""
+        if self.node_spacing <= 0:
+            raise ValueError("node_spacing must be positive")
+        if self.layer_spacing <= 0:
+            raise ValueError("layer_spacing must be positive")
+        if not isinstance(self.node_style, NodeStyle):
+            raise TypeError("node_style must be a NodeStyle enum value")
 
     def get_node_decorators(self, node_str: str) -> Tuple[str, str]:
         """
@@ -99,21 +137,3 @@ class LayoutOptions:
                 return "", ""
             case _:
                 return "[", "]"  # Default to square brackets
-
-    def __post_init__(self) -> None:
-        """Validate configuration values after initialization."""
-        if self.node_spacing <= 0:
-            raise ValueError("node_spacing must be positive")
-        if self.layer_spacing <= 0:
-            raise ValueError("layer_spacing must be positive")
-
-        # Validate edge characters
-        for attr, value in self.__dict__.items():
-            if attr.startswith("edge_"):
-                if not isinstance(value, str):
-                    raise TypeError(f"{attr} must be a string")
-                if len(value) != 1:
-                    raise ValueError(f"{attr} must be a single character")
-
-        if not isinstance(self.node_style, NodeStyle):
-            raise TypeError("node_style must be a NodeStyle enum value")

@@ -113,12 +113,15 @@ class ASCIIRenderer:
         node_style: NodeStyle = NodeStyle.SQUARE,
         node_spacing: int = 4,
         layer_spacing: int = 2,
+        use_ascii: bool = False,
+        options=LayoutOptions(),
     ):
         self.graph = graph
         self.options = LayoutOptions(
             node_style=node_style,
             node_spacing=node_spacing,
             layer_spacing=layer_spacing,
+            use_ascii=use_ascii,
         )
         self.layout_manager = LayoutManager(graph, self.options)
         self.canvas: List[List[str]] = []
@@ -202,17 +205,33 @@ class ASCIIRenderer:
         except IndexError as e:
             raise IndexError(f"Edge drawing exceeded canvas boundaries: {e}")
 
-    def render(self) -> str:
+    def render(self, ensure_utf8: bool = True) -> str:
         """
         Render the graph as ASCII art.
 
+        Parameters:
+            ensure_utf8: bool, optional (default=True)
+                If True, verify UTF-8 encoding is available
+
         Returns:
-            String containing the ASCII representation of the graph
+            str
+                ASCII representation of the graph
 
         Raises:
-            RuntimeError: If layout calculation fails
-            ValueError: If rendering encounters invalid node positions
+            RuntimeError
+                If layout calculation fails
+            ValueError
+                If rendering encounters invalid node positions
+            UnicodeEncodeError
+                If UTF-8 encoding is not available and ensure_utf8 is True
         """
+        if ensure_utf8 and not self.options.use_ascii:
+            try:
+                # Test if UTF-8 characters can be encoded
+                "│─┼→↑↓".encode("utf-8")
+            except UnicodeEncodeError:
+                # Fall back to ASCII if UTF-8 is not available
+                self.options.use_ascii = True
         try:
             # Calculate layout
             positions, width, height = self.layout_manager.calculate_layout()
