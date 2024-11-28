@@ -34,7 +34,8 @@ developer = [
     'pre-commit>=3.2',
     'mypy>=1.1',
     'black',
-    'isort'
+    'isort',
+    'flake8'
 ]
 doc = [
 ]
@@ -58,8 +59,6 @@ force-multiline-basics = true
 
 [tool.isort]
 profile = "black"
-multi_line_output = 3
-line_length = 88
 
 [tool.mypy]
 python_version = "3.8"
