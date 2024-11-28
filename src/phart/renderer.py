@@ -322,7 +322,7 @@ class ASCIIRenderer:
         """
 
         try:
-            import pydot
+            import pydot  # type: ignore
         except ImportError:
             raise ImportError("pydot is required for DOT format support")
 
