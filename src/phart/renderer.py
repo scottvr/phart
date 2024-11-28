@@ -137,148 +137,148 @@ class ASCIIRenderer:
         self.layout_manager = LayoutManager(graph, self.options)
         self.canvas = []
 
-        def draw(self, file: Optional[TextIO]) -> None:
-            with encoding_context():
-                drawing = self.render()
-                print(drawing, file=file)
+    def draw(self, file: Optional[TextIO]) -> None:
+        with encoding_context():
+            drawing = self.render()
+            print(drawing, file=file)
 
-        def write_to_file(self, filename: str) -> None:
-            with encoding_context():
-                with open(filename, "w", encoding="utf-8") as f:
-                    f.write(self.render())
+    def write_to_file(self, filename: str) -> None:
+        with encoding_context():
+            with open(filename, "w", encoding="utf-8") as f:
+                f.write(self.render())
 
-        def _init_canvas(self, width: int, height: int) -> None:
-            """
-            Initialize the rendering canvas with given dimensions.
+    def _init_canvas(self, width: int, height: int) -> None:
+        """
+        Initialize the rendering canvas with given dimensions.
 
-            Args:
-                width: Canvas width in characters
-                height: Canvas height in characters
+        Args:
+            width: Canvas width in characters
+            height: Canvas height in characters
 
-            Raises:
-                ValueError: If dimensions are negative or zero
-            """
-            if width <= 0 or height <= 0:
-                raise ValueError("Canvas dimensions must be positive")
+        Raises:
+            ValueError: If dimensions are negative or zero
+        """
+        if width <= 0 or height <= 0:
+            raise ValueError("Canvas dimensions must be positive")
 
-            self.canvas = [[" " for _ in range(width)] for _ in range(height)]
+        self.canvas = [[" " for _ in range(width)] for _ in range(height)]
 
-        def _draw_edge(
-            self, start: str, end: str, positions: Dict[str, Tuple[int, int]]
-        ) -> None:
-            """
-            Draw an edge between two nodes on the canvas.
+    def _draw_edge(
+        self, start: str, end: str, positions: Dict[str, Tuple[int, int]]
+    ) -> None:
+        """
+        Draw an edge between two nodes on the canvas.
 
-            Args:
-                start: Source node identifier
-                end: Target node identifier
-                positions: Dictionary mapping nodes to their (x, y) coordinates
+        Args:
+            start: Source node identifier
+            end: Target node identifier
+            positions: Dictionary mapping nodes to their (x, y) coordinates
 
-            Raises:
-                KeyError: If either node is not in positions dictionary
-                IndexError: If edge coordinates exceed canvas boundaries
-            """
-            if start not in positions or end not in positions:
-                raise KeyError(
-                    f"Node position not found: {start if start not in positions else end}"
-                )
+        Raises:
+            KeyError: If either node is not in positions dictionary
+            IndexError: If edge coordinates exceed canvas boundaries
+        """
+        if start not in positions or end not in positions:
+            raise KeyError(
+                f"Node position not found: {start if start not in positions else end}"
+            )
 
-            start_x, start_y = positions[start]
-            end_x, end_y = positions[end]
+        start_x, start_y = positions[start]
+        end_x, end_y = positions[end]
 
-            # Account for node decoration width
-            prefix, _ = self.options.get_node_decorators(start)
-            start_x += len(prefix) + len(str(start)) // 2
-            end_x += len(prefix) + len(str(end)) // 2
+        # Account for node decoration width
+        prefix, _ = self.options.get_node_decorators(start)
+        start_x += len(prefix) + len(str(start)) // 2
+        end_x += len(prefix) + len(str(end)) // 2
 
+        try:
+            # Draw vertical line
+            min_y, max_y = min(start_y, end_y), max(start_y, end_y)
+            for y in range(min_y + 1, max_y):
+                curr_char = self.canvas[y][start_x]
+                if curr_char == self.options.edge_horizontal:
+                    self.canvas[y][start_x] = self.options.edge_cross
+                else:
+                    self.canvas[y][start_x] = self.options.edge_vertical
+
+            # Draw horizontal line if needed
+            if start_x != end_x:
+                y = end_y
+                x_start, x_end = min(start_x, end_x), max(start_x, end_x)
+                for x in range(x_start, x_end + 1):
+                    curr_char = self.canvas[y][x]
+                    if curr_char == self.options.edge_vertical:
+                        self.canvas[y][x] = self.options.edge_cross
+                    else:
+                        self.canvas[y][x] = self.options.edge_horizontal
+
+            # Add arrow
+            if end_y > start_y:  # Downward arrow
+                self.canvas[end_y - 1][end_x] = self.options.edge_arrow_down
+            elif end_y < start_y:  # Upward arrow
+                self.canvas[end_y + 1][end_x] = self.options.edge_arrow_up
+            else:  # Horizontal arrow
+                if end_x > start_x:
+                    self.canvas[end_y][end_x - 1] = self.options.edge_arrow
+                else:
+                    self.canvas[end_y][start_x - 1] = "<"
+
+        except IndexError as e:
+            raise IndexError(f"Edge drawing exceeded canvas boundaries: {e}")
+
+    def render(self, ensure_utf8: bool = True) -> str:
+        """
+        Render the graph as ASCII art.
+
+        Parameters:
+            ensure_utf8: bool, optional (default=True)
+                If True, verify UTF-8 encoding is available
+
+        Returns:
+            str
+                ASCII representation of the graph
+
+        Raises:
+            RuntimeError
+                If layout calculation fails
+            ValueError
+                If rendering encounters invalid node positions
+            UnicodeEncodeError
+                If UTF-8 encoding is not available and ensure_utf8 is True
+        """
+        if ensure_utf8 and not self.options.use_ascii:
             try:
-                # Draw vertical line
-                min_y, max_y = min(start_y, end_y), max(start_y, end_y)
-                for y in range(min_y + 1, max_y):
-                    curr_char = self.canvas[y][start_x]
-                    if curr_char == self.options.edge_horizontal:
-                        self.canvas[y][start_x] = self.options.edge_cross
-                    else:
-                        self.canvas[y][start_x] = self.options.edge_vertical
+                # Test if UTF-8 characters can be encoded
+                "│─┼→↑↓".encode("utf-8")
+            except UnicodeEncodeError:
+                # Fall back to ASCII if UTF-8 is not available
+                self.options.use_ascii = True
+        try:
+            # Calculate layout
+            positions, width, height = self.layout_manager.calculate_layout()
+            self._init_canvas(width, height)
 
-                # Draw horizontal line if needed
-                if start_x != end_x:
-                    y = end_y
-                    x_start, x_end = min(start_x, end_x), max(start_x, end_x)
-                    for x in range(x_start, x_end + 1):
-                        curr_char = self.canvas[y][x]
-                        if curr_char == self.options.edge_vertical:
-                            self.canvas[y][x] = self.options.edge_cross
-                        else:
-                            self.canvas[y][x] = self.options.edge_horizontal
+            # Draw edges first (so nodes will overlay them)
+            for start, end in self.graph.edges():
+                self._draw_edge(start, end, positions)
 
-                # Add arrow
-                if end_y > start_y:  # Downward arrow
-                    self.canvas[end_y - 1][end_x] = self.options.edge_arrow_down
-                elif end_y < start_y:  # Upward arrow
-                    self.canvas[end_y + 1][end_x] = self.options.edge_arrow_up
-                else:  # Horizontal arrow
-                    if end_x > start_x:
-                        self.canvas[end_y][end_x - 1] = self.options.edge_arrow
-                    else:
-                        self.canvas[end_y][start_x - 1] = "<"
-
-            except IndexError as e:
-                raise IndexError(f"Edge drawing exceeded canvas boundaries: {e}")
-
-        def render(self, ensure_utf8: bool = True) -> str:
-            """
-            Render the graph as ASCII art.
-
-            Parameters:
-                ensure_utf8: bool, optional (default=True)
-                    If True, verify UTF-8 encoding is available
-
-            Returns:
-                str
-                    ASCII representation of the graph
-
-            Raises:
-                RuntimeError
-                    If layout calculation fails
-                ValueError
-                    If rendering encounters invalid node positions
-                UnicodeEncodeError
-                    If UTF-8 encoding is not available and ensure_utf8 is True
-            """
-            if ensure_utf8 and not self.options.use_ascii:
+            # Draw nodes
+            for node, (x, y) in positions.items():
+                prefix, suffix = self.options.get_node_decorators(str(node))
+                label = f"{prefix}{node}{suffix}"
                 try:
-                    # Test if UTF-8 characters can be encoded
-                    "│─┼→↑↓".encode("utf-8")
-                except UnicodeEncodeError:
-                    # Fall back to ASCII if UTF-8 is not available
-                    self.options.use_ascii = True
-            try:
-                # Calculate layout
-                positions, width, height = self.layout_manager.calculate_layout()
-                self._init_canvas(width, height)
+                    for i, char in enumerate(label):
+                        self.canvas[y][x + i] = char
+                except IndexError:
+                    raise ValueError(
+                        f"Node '{node}' position exceeds canvas boundaries"
+                    )
 
-                # Draw edges first (so nodes will overlay them)
-                for start, end in self.graph.edges():
-                    self._draw_edge(start, end, positions)
+            # Convert canvas to string, trimming trailing spaces
+            return "\n".join("".join(row).rstrip() for row in self.canvas)
 
-                # Draw nodes
-                for node, (x, y) in positions.items():
-                    prefix, suffix = self.options.get_node_decorators(str(node))
-                    label = f"{prefix}{node}{suffix}"
-                    try:
-                        for i, char in enumerate(label):
-                            self.canvas[y][x + i] = char
-                    except IndexError:
-                        raise ValueError(
-                            f"Node '{node}' position exceeds canvas boundaries"
-                        )
-
-                # Convert canvas to string, trimming trailing spaces
-                return "\n".join("".join(row).rstrip() for row in self.canvas)
-
-            except Exception as e:
-                raise RuntimeError(f"Failed to render graph: {e}")
+        except Exception as e:
+            raise RuntimeError(f"Failed to render graph: {e}")
 
     @classmethod
     def from_dot(cls, dot_string: str, **kwargs) -> "ASCIIRenderer":
