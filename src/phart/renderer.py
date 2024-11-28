@@ -58,10 +58,10 @@ See Also
 * Graphviz: https://graphviz.org/
 """
 
-from typing import List
+from typing import List, Dict, Tuple
 import networkx as nx
-from .styles import NodeStyle, LayoutOptions
-from .layout import LayoutManager
+from .styles import NodeStyle
+from .layout import LayoutManager, LayoutOptions
 
 
 class ASCIIRenderer:
@@ -122,6 +122,85 @@ class ASCIIRenderer:
         )
         self.layout_manager = LayoutManager(graph, self.options)
         self.canvas: List[List[str]] = []
+
+    def _init_canvas(self, width: int, height: int) -> None:
+        """
+        Initialize the rendering canvas with given dimensions.
+
+        Args:
+            width: Canvas width in characters
+            height: Canvas height in characters
+
+        Raises:
+            ValueError: If dimensions are negative or zero
+        """
+        if width <= 0 or height <= 0:
+            raise ValueError("Canvas dimensions must be positive")
+
+        self.canvas = [[" " for _ in range(width)] for _ in range(height)]
+
+    def _draw_edge(
+        self, start: str, end: str, positions: Dict[str, Tuple[int, int]]
+    ) -> None:
+        """
+        Draw an edge between two nodes on the canvas.
+
+        Args:
+            start: Source node identifier
+            end: Target node identifier
+            positions: Dictionary mapping nodes to their (x, y) coordinates
+
+        Raises:
+            KeyError: If either node is not in positions dictionary
+            IndexError: If edge coordinates exceed canvas boundaries
+        """
+        if start not in positions or end not in positions:
+            raise KeyError(
+                f"Node position not found: {start if start not in positions else end}"
+            )
+
+        start_x, start_y = positions[start]
+        end_x, end_y = positions[end]
+
+        # Account for node decoration width
+        prefix, _ = self.options.get_node_decorators(start)
+        start_x += len(prefix) + len(str(start)) // 2
+        end_x += len(prefix) + len(str(end)) // 2
+
+        try:
+            # Draw vertical line
+            min_y, max_y = min(start_y, end_y), max(start_y, end_y)
+            for y in range(min_y + 1, max_y):
+                curr_char = self.canvas[y][start_x]
+                if curr_char == self.options.edge_horizontal:
+                    self.canvas[y][start_x] = self.options.edge_cross
+                else:
+                    self.canvas[y][start_x] = self.options.edge_vertical
+
+            # Draw horizontal line if needed
+            if start_x != end_x:
+                y = end_y
+                x_start, x_end = min(start_x, end_x), max(start_x, end_x)
+                for x in range(x_start, x_end + 1):
+                    curr_char = self.canvas[y][x]
+                    if curr_char == self.options.edge_vertical:
+                        self.canvas[y][x] = self.options.edge_cross
+                    else:
+                        self.canvas[y][x] = self.options.edge_horizontal
+
+            # Add arrow
+            if end_y > start_y:  # Downward arrow
+                self.canvas[end_y - 1][end_x] = self.options.edge_arrow_down
+            elif end_y < start_y:  # Upward arrow
+                self.canvas[end_y + 1][end_x] = self.options.edge_arrow_up
+            else:  # Horizontal arrow
+                if end_x > start_x:
+                    self.canvas[end_y][end_x - 1] = self.options.edge_arrow
+                else:
+                    self.canvas[end_y][start_x - 1] = "<"
+
+        except IndexError as e:
+            raise IndexError(f"Edge drawing exceeded canvas boundaries: {e}")
 
     def render(self) -> str:
         """
