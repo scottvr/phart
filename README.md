@@ -4,6 +4,16 @@ phart: Python Hierarchical ASCII Representation Tool - A Pure Python graph visua
 
 (\* except NetworkX, which we should probably mention prominently. We just mean no dependencies of the Perl or PHP/webserver types.)
 
+## Features
+
+- Pure Python implementation
+- No external dependencies (except NetworkX)
+- Multiple node styles (square, round, diamond)
+- Customizable edge characters
+- Support for directed and undirected graphs
+- Handles cycles and complex layouts
+- Bidirectional edge support
+
 ## Installation
 
 ```bash
@@ -50,22 +60,14 @@ These directional indicators are particularly useful for:
 - Process flows
 - Any directed relationships
 
-## Features
-
-- Pure Python implementation
-- No external dependencies (except NetworkX)
-- Multiple node styles (square, round, diamond)
-- Customizable edge characters
-- Support for directed and undirected graphs
-- Handles cycles and complex layouts
-- Bidirectional edge support
-
 ## Extras
 
 - DOT file support
 - requires pydot
-   `pip install -r requirements\extra.txt`
+  `pip install -r requirements\extra.txt`
+
 ### Example
+
     >>> dot = '''
     ... digraph {
     ...     A -> B
@@ -84,4 +86,7 @@ These directional indicators are particularly useful for:
 ## License
 
 MIT License
+
+```
+
 ```
