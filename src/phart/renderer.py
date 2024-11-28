@@ -60,8 +60,8 @@ See Also
 
 from typing import List, Dict, Tuple
 import networkx as nx
-from .styles import NodeStyle
-from .layout import LayoutManager, LayoutOptions
+from .styles import NodeStyle, LayoutOptions
+from .layout import LayoutManager
 
 
 class ASCIIRenderer:
@@ -110,7 +110,7 @@ class ASCIIRenderer:
     def __init__(
         self,
         graph: nx.Graph,
-        node_style: NodeStyle = NodeStyle.MINIMAL,
+        node_style: NodeStyle = NodeStyle.SQUARE,
         node_spacing: int = 4,
         layer_spacing: int = 2,
     ):
