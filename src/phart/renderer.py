@@ -58,7 +58,7 @@ See Also
 * Graphviz: https://graphviz.org/
 """
 
-from typing import Dict, List, Tuple, Optional, TextIO
+from typing import Dict, List, Tuple, Optional, TextIO, Union
 
 import networkx as nx  # type: ignore
 
@@ -281,7 +281,11 @@ class ASCIIRenderer:
             raise RuntimeError(f"Failed to render graph: {e}")
 
     @classmethod
-    def from_dot(cls, dot_string: str, **kwargs) -> "ASCIIRenderer":
+    def from_dot(
+        cls,
+        dot_string: str,
+        **kwargs: Union[NodeStyle, int, bool, Optional[LayoutOptions]],
+    ) -> "ASCIIRenderer":
         """
         Create a renderer from a DOT format string.
 
