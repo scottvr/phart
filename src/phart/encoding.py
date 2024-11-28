@@ -5,7 +5,7 @@ where certain Unicode characters (like box-drawing characters) can be problemati
 """
 
 import os
-import platform
+import sys
 from contextlib import contextmanager
 from typing import Generator
 
@@ -19,11 +19,11 @@ def can_use_unicode() -> bool:
     bool
         True if Unicode box characters are supported
     """
-    if platform.system() == "Windows":
+    if sys.platform == "win32":
         try:
-            import ctypes
+            import ctypes  # type: ignore[import,unused-ignore]
 
-            kernel32 = ctypes.windll.kernel32
+            kernel32 = ctypes.windll.kernel32  # type: ignore[import,unused-ignore]
             return bool(kernel32.GetConsoleOutputCP() == 6500)
         except BaseException:
             return False
