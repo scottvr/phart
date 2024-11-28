@@ -1,4 +1,4 @@
-from phart import ASCIIGraphRenderer, NodeStyle, LayoutOptions
+from phart import ASCIIRenderer, NodeStyle, LayoutOptions
 import networkx as nx
 
 
@@ -15,7 +15,7 @@ def example_binary_tree():
     for style in NodeStyle:
         print(f"\nUsing {style.name} style:")
         options = LayoutOptions(node_style=style)
-        renderer = ASCIIGraphRenderer(G, options)
+        renderer = ASCIIRenderer(G, options)
         print(renderer.render())
         print("\n" + "=" * 50)  # Add separator between styles
 
@@ -38,7 +38,7 @@ def example_dependency_graph():
     options = LayoutOptions(
         node_style=NodeStyle.MINIMAL, node_spacing=6, layer_spacing=2
     )
-    renderer = ASCIIGraphRenderer(G, options)
+    renderer = ASCIIRenderer(G, options)
     print(renderer.render())
 
 
@@ -59,7 +59,7 @@ def example_workflow():
 
     # Use round style for workflow nodes
     options = LayoutOptions(node_style=NodeStyle.ROUND, node_spacing=4, layer_spacing=2)
-    renderer = ASCIIGraphRenderer(G, options)
+    renderer = ASCIIRenderer(G, options)
     print(renderer.render())
 
 

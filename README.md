@@ -7,21 +7,25 @@ phart: Python Hierarchical ASCII Representation Tool - A Pure Python graph visua
 ## Installation
 
 ```bash
+# not yet in Pypi so, from github:
 pip install git+https://github.com/scottvr/phart
+
+# or since you are probably reading this from where you cloned the repo:
+pip install -e .
 ```
 
 ## Quick Start
 
 ```python
 import networkx as nx
-from phart import ASCIIGraphRenderer
+from phart import ASCIIRenderer
 
 # Create a simple graph
 G = nx.DiGraph()
 G.add_edges_from([("A", "B"), ("A", "C"), ("B", "D")])
 
 # Render it in ASCII
-renderer = ASCIIGraphRenderer(G)
+renderer = ASCIIRenderer(G)
 print(renderer.render())
 ```
 
