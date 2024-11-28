@@ -62,6 +62,7 @@ from typing import List, Dict, Tuple
 import networkx as nx
 from .styles import NodeStyle, LayoutOptions
 from .layout import LayoutManager
+from .encoding import encoding_context, can_use_unicode
 
 
 class ASCIIRenderer:
@@ -121,10 +122,20 @@ class ASCIIRenderer:
             node_style=node_style,
             node_spacing=node_spacing,
             layer_spacing=layer_spacing,
-            use_ascii=use_ascii,
+            use_ascii=use_ascii or not can_use_unicode(),
         )
         self.layout_manager = LayoutManager(graph, self.options)
         self.canvas: List[List[str]] = []
+
+    def draw(self, file=None) -> None:
+        with encoding_context():
+            drawing = self.render()
+            print(drawing, file=file)
+
+    def write_to_file(self, filename: str) -> None:
+        with encoding_context():
+            with open(filename, "w", encoding="utf-8") as f:
+                f.write(self.render())
 
     def _init_canvas(self, width: int, height: int) -> None:
         """
