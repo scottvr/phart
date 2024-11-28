@@ -35,7 +35,7 @@ print(renderer.render())
    │
    │  v
    ──[D]
-
+```
 
 The renderer shows edge direction using arrows:
 
