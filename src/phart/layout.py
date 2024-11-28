@@ -6,7 +6,7 @@ for ASCII graph visualization.
 
 from typing import Dict, Set, Tuple
 import networkx as nx
-from styles import LayoutOptions
+from .styles import LayoutOptions
 
 
 class LayoutManager:
