@@ -214,10 +214,10 @@ class TestLayoutOptions(unittest.TestCase):
     def test_custom_characters(self):
         """Test custom edge character configuration."""
         options = LayoutOptions(
-            edge_vertical="|",
-            edge_horizontal="-",
-            edge_cross="+",
-            edge_arrow=">",
+            self.edge_vertical("|"),
+            self.edge_horizontal("-"),
+            self.edge_cross("+"),
+            self.edge_arrow(">"),
         )
         renderer = ASCIIRenderer(
             nx.DiGraph([("A", "B")]),
