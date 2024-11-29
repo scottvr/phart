@@ -33,9 +33,7 @@ default = [
 developer = [
     'pre-commit>=3.2',
     'mypy>=1.1',
-    'black',
     'isort',
-    'flake8'
 ]
 doc = [
 ]
@@ -53,23 +51,11 @@ test = [
 [project.scripts]
 phart = "phart.cli:main"
 
-[tool.black]
-line-length = 79
-target-version = ['py38']
-include = '\.pyi?$'
-preview = true
-
-[tool.isort]
-profile = "black"
-
 [tool.mypy]
 python_version = "3.8"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
-
-[tool.flake8]
-max-line-length = 79
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
