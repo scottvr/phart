@@ -6,16 +6,16 @@ import networkx as nx  # type: ignore
 
 from phart import ASCIIRenderer, LayoutOptions, NodeStyle
 
+from pathlib import Path
+
 
 class TestASCIIRenderer(unittest.TestCase):
-    """Test cases for basic rendering functionality."""
+    """Test cases for basic rendering functionality and encoding."""
 
     def setUp(self):
         """Set up common test graphs."""
-        # Simple chain
+        # Existing test graph setup...
         self.chain = nx.DiGraph([("A", "B"), ("B", "C")])
-
-        # Tree structure
         self.tree = nx.DiGraph(
             [("A", "B"), ("A", "C"), ("B", "D"), ("B", "E"), ("C", "F")]
         )
@@ -160,6 +160,38 @@ class TestASCIIRenderer(unittest.TestCase):
         self.assertIn("A", result)
         self.assertIn("B", result)
         self.assertIn("C", result)
+
+    def test_auto_ascii_detection(self):
+        """Test that ASCII mode is auto-detected correctly."""
+        renderer = ASCIIRenderer(self.chain)
+        self.assertEqual(renderer.options.use_ascii, not renderer._can_use_unicode())
+
+    def test_force_ascii_mode(self):
+        """Test forcing ASCII mode."""
+        renderer = ASCIIRenderer(self.chain, use_ascii=True)
+        result = renderer.render()
+        self.assertTrue(all(ord(c) < 128 for c in result))
+
+    def test_unicode_mode(self):
+        """Test Unicode mode."""
+        renderer = ASCIIRenderer(self.chain, use_ascii=False)
+        result = renderer.render()
+        self.assertTrue(any(ord(c) > 127 for c in result))
+
+    def test_file_writing(self):
+        """Test writing to file with proper encoding."""
+        import tempfile
+
+        renderer = ASCIIRenderer(self.chain)
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", delete=False) as f:
+            name = f.name
+        try:
+            renderer.write_to_file(name)
+            with open(name, "r", encoding="utf-8") as f2:
+                content = f2.read()
+                self.assertEqual(content, renderer.render())
+        finally:
+            Path(name).unlink()  # Clean up temp file
 
 
 class TestLayoutOptions(unittest.TestCase):

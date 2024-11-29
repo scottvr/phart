@@ -18,9 +18,11 @@ phart: Python Hierarchical ASCII Representation Tool - A Pure Python graph visua
      <summary>Example output PHARTs [click arrow to expand]</summary>
 
 ## PHART Graph Visualization Examples
+
 =================================
 
 ### Software Dependency Example:
+
 ```
             [main.py]
                 |
@@ -31,8 +33,8 @@ phart: Python Hierarchical ASCII Representation Tool - A Pure Python graph visua
   [constants.py]----[helpers.py]
 ```
 
-
 ### Organizational Hierarchy Example:
+
 ```
                                        [CEO]
                                          |
@@ -43,8 +45,8 @@ phart: Python Hierarchical ASCII Representation Tool - A Pure Python graph visua
   [Controller]----[Dev Lead]----[Marketing Dir]----[Research Lead]----[Sales Dir]
 ```
 
-
 ### Network Topology Example:
+
 ```
                      [Router1]
                          |
@@ -56,6 +58,7 @@ phart: Python Hierarchical ASCII Representation Tool - A Pure Python graph visua
 ```
 
 ### Workflow Example:
+
 ```
         [Start]
            |
@@ -82,6 +85,7 @@ phart: Python Hierarchical ASCII Representation Tool - A Pure Python graph visua
 ```
 
 ### DOT Import Example:
+
 ```
      [A]
       |
@@ -95,11 +99,12 @@ phart: Python Hierarchical ASCII Representation Tool - A Pure Python graph visua
      [E]
 ```
 
-
 ## Custom Styling Example:
+
 Different node styles for the same graph:
 
 ### Using MINIMAL style:
+
 ```
          0
          |
@@ -111,6 +116,7 @@ Different node styles for the same graph:
 ```
 
 ### Using SQUARE style:
+
 ```
             [0]
              |
@@ -122,6 +128,7 @@ Different node styles for the same graph:
 ```
 
 ### Using ROUND style:
+
 ```
             (0)
              |
@@ -133,6 +140,7 @@ Different node styles for the same graph:
 ```
 
 ### Using DIAMOND style:
+
 ```
             <0>
              |
@@ -142,7 +150,7 @@ Different node styles for the same graph:
    v      v      |      v
   <3>----<4>    <5>----<6>
 ```
-   
+
 </details>
 
 ## Installation
@@ -223,9 +231,28 @@ multiple graph definitions, only the first graph will be rendered. For more
 complex DOT processing needs, you can convert your graphs using NetworkX's
 various graph reading utilities before passing them to PHART.
 
+## Command Line Usage
+
+PHART can be used from the command line to render DOT files:
+
+```bash
+# Basic usage
+phart graph.dot
+
+# Change node style
+phart --style round graph.dot
+
+# Force ASCII output (no Unicode)
+phart --ascii graph.dot
+
+# Adjust spacing
+phart --node-spacing 6 --layer-spacing 3 graph.dot
+
 ## License
 
 MIT License
+
+```
 
 ```
 
