@@ -247,7 +247,7 @@ phart --ascii graph.dot
 
 # Adjust spacing
 phart --node-spacing 6 --layer-spacing 3 graph.dot
-
+```
 ## License
 
 MIT License
