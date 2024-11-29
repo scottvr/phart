@@ -62,9 +62,10 @@ from typing import Any, Dict, List, Optional, TextIO, Tuple
 
 import networkx as nx  # type: ignore
 
-from .encoding import can_use_unicode, encoding_context
 from .layout import LayoutManager
 from .styles import LayoutOptions, NodeStyle
+
+import sys
 
 
 class ASCIIRenderer:
@@ -110,10 +111,18 @@ class ASCIIRenderer:
     from_dot : Create renderer from DOT format
     """
 
-    graph: nx.Graph
-    options: LayoutOptions
-    layout_manager: LayoutManager
-    canvas: List[List[str]]
+    @staticmethod
+    def _can_use_unicode() -> bool:
+        """Internal check for Unicode support."""
+        if sys.platform == "win32":
+            try:
+                import ctypes
+
+                kernel32 = ctypes.windll.kernel32
+                return bool(kernel32.GetConsoleOutputCP() == 65001)
+            except BaseException:
+                return False
+        return True
 
     def __init__(
         self,
@@ -121,10 +130,14 @@ class ASCIIRenderer:
         node_style: NodeStyle = NodeStyle.SQUARE,
         node_spacing: int = 4,
         layer_spacing: int = 2,
-        use_ascii: bool = False,
+        use_ascii: bool = None,  # Changed to None default to allow auto-detection
         options: Optional[LayoutOptions] = None,
     ) -> None:
         self.graph = graph
+
+        if use_ascii is None:
+            use_ascii = not self._can_use_unicode()
+
         if options is not None:
             self.options = options
         else:
@@ -132,20 +145,80 @@ class ASCIIRenderer:
                 node_style=node_style,
                 node_spacing=node_spacing,
                 layer_spacing=layer_spacing,
-                use_ascii=use_ascii or not can_use_unicode(),
+                use_ascii=use_ascii,
             )
         self.layout_manager = LayoutManager(graph, self.options)
-        self.canvas = []
+        self.canvas: List[List[str]] = []
 
-    def draw(self, file: Optional[TextIO]) -> None:
-        with encoding_context():
-            drawing = self.render()
-            print(drawing, file=file)
+    def _ensure_encoding(self, text: str) -> str:
+        """Internal method to handle encoding safely."""
+        try:
+            return text.encode("utf-8").decode("utf-8")
+        except UnicodeEncodeError:
+            return text.encode("ascii", errors="replace").decode("ascii")
+
+    def render(self) -> str:
+        """
+        Render the graph as ASCII art.
+
+        Returns
+        -------
+        str
+            ASCII representation of the graph
+        """
+        # Calculate layout and render to canvas
+        positions, width, height = self.layout_manager.calculate_layout()
+        if not positions:
+            return ""
+
+        self._init_canvas(width, height)
+
+        # Draw edges first
+        for start, end in self.graph.edges():
+            self._draw_edge(start, end, positions)
+
+        # Draw nodes
+        for node, (x, y) in positions.items():
+            prefix, suffix = self.options.get_node_decorators(str(node))
+            label = f"{prefix}{node}{suffix}"
+            for i, char in enumerate(label):
+                self.canvas[y][x + i] = char
+
+        result = "\n".join("".join(row).rstrip() for row in self.canvas)
+        return self._ensure_encoding(result)
+
+    def draw(self, file: Optional[TextIO] = None) -> None:
+        """
+        Draw the graph to a file or stdout.
+
+        Parameters
+        ----------
+        file : Optional[TextIO]
+            File to write to. If None, writes to stdout
+        """
+
+        if file is None:
+            import sys
+            import io
+
+            if not self.options.use_ascii:
+                sys.stdout = io.TextIOWrapper(
+                    sys.stdout.buffer, encoding="utf-8", errors="replace"
+                )
+        print(self.render(), file=file)
 
     def write_to_file(self, filename: str) -> None:
-        with encoding_context():
-            with open(filename, "w", encoding="utf-8") as f:
-                f.write(self.render())
+        """
+        Write graph representation to a file.
+
+        Parameters
+        ----------
+        filename : str
+            Path to output file
+        """
+
+        with open(filename, "w", encoding="utf-8") as f:
+            f.write(self.render())
 
     def _init_canvas(self, width: int, height: int) -> None:
         """
@@ -227,60 +300,6 @@ class ASCIIRenderer:
 
         except IndexError as e:
             raise IndexError(f"Edge drawing exceeded canvas boundaries: {e}")
-
-    def render(self, ensure_utf8: bool = True) -> str:
-        """
-        Render the graph as ASCII art.
-
-        Parameters:
-            ensure_utf8: bool, optional (default=True)
-                If True, verify UTF-8 encoding is available
-
-        Returns:
-            str
-                ASCII representation of the graph
-
-        Raises:
-            RuntimeError
-                If layout calculation fails
-            ValueError
-                If rendering encounters invalid node positions
-            UnicodeEncodeError
-                If UTF-8 encoding is not available and ensure_utf8 is True
-        """
-        if ensure_utf8 and not self.options.use_ascii:
-            try:
-                # Test if UTF-8 characters can be encoded
-                "│─┼→↑↓".encode("utf-8")
-            except UnicodeEncodeError:
-                # Fall back to ASCII if UTF-8 is not available
-                self.options.use_ascii = True
-        try:
-            # Calculate layout
-            positions, width, height = self.layout_manager.calculate_layout()
-            self._init_canvas(width, height)
-
-            # Draw edges first (so nodes will overlay them)
-            for start, end in self.graph.edges():
-                self._draw_edge(start, end, positions)
-
-            # Draw nodes
-            for node, (x, y) in positions.items():
-                prefix, suffix = self.options.get_node_decorators(str(node))
-                label = f"{prefix}{node}{suffix}"
-                try:
-                    for i, char in enumerate(label):
-                        self.canvas[y][x + i] = char
-                except IndexError:
-                    raise ValueError(
-                        f"Node '{node}' position exceeds canvas boundaries"
-                    )
-
-            # Convert canvas to string, trimming trailing spaces
-            return "\n".join("".join(row).rstrip() for row in self.canvas)
-
-        except Exception as e:
-            raise RuntimeError(f"Failed to render graph: {e}")
 
     @classmethod
     def from_dot(cls, dot_string: str, **kwargs: Any) -> "ASCIIRenderer":
