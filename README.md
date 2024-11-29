@@ -252,8 +252,3 @@ phart --node-spacing 6 --layer-spacing 3 graph.dot
 
 MIT License
 
-```
-
-```
-
-```
