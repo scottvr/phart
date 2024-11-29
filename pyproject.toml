@@ -60,7 +60,7 @@ disallow_untyped_defs = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
-addopts = "--cov=phart --cov-report=term-missing"
+addopts = "--cov=phart --cov-report html"
 filterwarnings = ["error"]
 
 [project.urls]
