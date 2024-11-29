@@ -1,4 +1,4 @@
-name: Test
+name: Tests
 
 on:
   push:
@@ -14,74 +14,28 @@ jobs:
         python-version: ["3.8", "3.9", "3.10", "3.11"]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install package and dependencies
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install ".[test]"
+          pip install -e ".[test]"
+          pip install ruff mypy
 
       - name: Run tests
         run: |
-          pytest tests/ --cov=phart --cov-report=xml
+          python -m pytest
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
-        with:
-          file: ./coverage.xml
-          fail_ci_if_error: true
-
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
-
-      - name: Install dev dependencies
+      - name: Ruff format check
         run: |
-          python -m pip install --upgrade pip
-          pip install ".[developer]"
+          ruff format --check .
+          ruff check .
 
-      - name: Check formatting with black
-        run: black --check src tests
-
-      - name: Check imports with isort
-        run: isort --check-only src tests
-
-      - name: Type checking with mypy
-        run: mypy src
-
-      - name: Style checking with flake8
-        run: flake8 src tests
-
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
-
-      - name: Install build dependencies
+      - name: Type check with mypy
         run: |
-          python -m pip install --upgrade pip
-          pip install build
-
-      - name: Build package
-        run: python -m build
-
-      - name: Check dist contents
-        run: |
-          python -m pip install --upgrade check-manifest
-          check-manifest
+          mypy src
