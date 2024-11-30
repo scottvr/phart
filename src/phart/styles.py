@@ -1,6 +1,6 @@
 """Style and configuration options for PHART rendering."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Tuple
 
@@ -24,6 +24,19 @@ class NodeStyle(Enum):
     SQUARE = "square"
     ROUND = "round"
     DIAMOND = "diamond"
+
+
+def make_ascii_property(name: str, ascii_char: str, unicode_char: str) -> property:
+    """Create a property that handles ASCII fallback for edge characters."""
+    private_name = f"_{name}"
+
+    def getter(self) -> str:
+        return ascii_char if self.use_ascii else unicode_char
+
+    def setter(self, value: str) -> None:
+        setattr(self, private_name, value)
+
+    return property(getter, setter)
 
 
 @dataclass
@@ -71,67 +84,21 @@ class LayoutOptions:
     node_style: NodeStyle = NodeStyle.SQUARE
     show_arrows: bool = True
     use_ascii: bool = False  # If True, use ASCII-only characters
-    _edge_vertical: str = "|"
-    _edge_horizontal: str = "─"
-    _edge_cross: str = "┼"
-    _edge_arrow: str = ">"
-    _edge_arrow_up: str = "^"
-    _edge_arrow_down: str = "v"
 
-    # Edge characters as properties to handle ASCII fallback
-    @property
-    def edge_vertical(self) -> str:
-        """Character for vertical edges."""
-        return "|" if self.use_ascii else "│"
+    _edge_vertical: str = field(default="|", init=False)
+    _edge_horizontal: str = field(default="─", init=False)
+    _edge_cross: str = field(default="┼", init=False)
+    _edge_arrow: str = field(default=">", init=False)
+    _edge_arrow_up: str = field(default="^", init=False)
+    _edge_arrow_down: str = field(default="v", init=False)
 
-    @edge_vertical.setter
-    def edge_vertical(self, v: str) -> str:
-        self._edge_vertical = v
-
-    @property
-    def edge_horizontal(self) -> str:
-        """Character for horizontal edges."""
-        return "-" if self.use_ascii else "─"
-
-    @edge_horizontal.setter
-    def edge_horizontal(self, v: str) -> str:
-        self._edge_horizontal = v
-
-    @property
-    def edge_cross(self) -> str:
-        """Character for edge crossings."""
-        return "+" if self.use_ascii else "┼"
-
-    @edge_cross.setter
-    def edge_cross(self, v: str) -> str:
-        self._edge_cross - v
-
-    @property
-    def edge_arrow(self) -> str:
-        """Character for horizontal arrows."""
-        return ">" if self.use_ascii else "→"
-
-    @edge_arrow.setter
-    def edge_arrow(self, v: str) -> str:
-        self._edge_arrow = v
-
-    @property
-    def edge_arrow_up(self) -> str:
-        """Character for upward arrows."""
-        return "^" if self.use_ascii else "↑"
-
-    @edge_arrow_up.setter
-    def edge_arrow_up(self, v: str) -> str:
-        self._edge_arrow_up = v
-
-    @property
-    def edge_arrow_down(self) -> str:
-        """Character for downward arrows."""
-        return "v" if self.use_ascii else "↓"
-
-    @edge_arrow_down.setter
-    def edge_arrow_down(self, v: str) -> str:
-        self._edge_arrow_down = v
+    # Generate properties
+    edge_vertical = make_ascii_property("edge_vertical", "|", "│")
+    edge_horizontal = make_ascii_property("edge_horizontal", "-", "─")
+    edge_cross = make_ascii_property("edge_cross", "+", "┼")
+    edge_arrow = make_ascii_property("edge_arrow", ">", "→")
+    edge_arrow_up = make_ascii_property("edge_arrow_up", "^", "↑")
+    edge_arrow_down = make_ascii_property("edge_arrow_down", "v", "↓")
 
     def __post_init__(self) -> None:
         """Validate configuration values after initialization."""
