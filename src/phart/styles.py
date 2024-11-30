@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Tuple
+from typing import Tuple, Any, Optional
 from enum import Enum
 
 
@@ -31,17 +31,16 @@ class EdgeChar:
     Provides automatic fallback to ASCII characters when needed.
     """
 
-    def __init__(self, ascii_char: str, unicode_char: str):
+    def __init__(self, ascii_char: str, unicode_char: str) -> None:
         self.ascii_char = ascii_char
         self.unicode_char = unicode_char
 
-    def __get__(self, obj, objtype=None) -> str:
-        if obj is None:
-            return self
+    def __get__(self, obj: Any, objtype: Optional[type] = None) -> str:
+        #        if obj is None:
+        #            return self
         return self.ascii_char if obj.use_ascii else self.unicode_char
 
-    def __set__(self, obj, value: str) -> None:
-        # Could add validation here if needed
+    def __set__(self, obj: Any, value: str) -> None:
         self.unicode_char = value
 
 
