@@ -21,7 +21,7 @@ phart: Python Hierarchical ASCII Representation Tool - A Pure Python graph visua
 
 =================================
 
-### In preparation for a 1.0 PyPi release, I was doing some last-minute testing and cane across this, from the networkx gallery:
+### In preparation for a 1.0 PyPi release, I was doing some last-minute testing and came across this, from the networkx gallery:
 
 https://networkx.org/documentation/latest/auto_examples/drawing/plot_chess_masters.html#sphx-glr-auto-examples-drawing-plot-chess-masters-py
 
@@ -251,7 +251,11 @@ These directional indicators are particularly useful for:
 - Process flows
 - Any directed relationships
 
-## Extras
+# Extras
+
+## File Format Support
+
+### DOT Files
 
 - DOT file support
 - requires pydot
@@ -283,7 +287,38 @@ multiple graph definitions, only the first graph will be rendered. For more
 complex DOT processing needs, you can convert your graphs using NetworkX's
 various graph reading utilities before passing them to PHART.
 
+### GraphML Files
+
+PHART supports reading GraphML files:
+
+```python
+renderer = ASCIIRenderer.from_graphml("graph.graphml")
+print(renderer.render())
+```
+
 ## Command Line Usage
+
+PHART can be used from the command line to render graph files:
+
+```bash
+# Basic usage
+phart input.dot
+
+# Save to file instead of stdout
+phart input.dot -o output.txt
+
+# GraphML input
+phart input.graphml --output viz.txt
+
+# Change node style
+phart --style round input.dot
+
+# Force ASCII output (no Unicode)
+phart --ascii input.dot
+
+# Adjust spacing
+phart --node-spacing 6 --layer-spacing 3 input.dot
+```
 
 PHART can be used from the command line to render DOT files:
 
