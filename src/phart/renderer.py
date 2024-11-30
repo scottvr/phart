@@ -358,7 +358,7 @@ class ASCIIRenderer:
         return cls(G, **kwargs)
 
     @classmethod
-    def from_graphml(cls, graphml_file: str, **kwargs) -> "ASCIIRenderer":
+    def from_graphml(cls, graphml_file: str, **kwargs: Any) -> "ASCIIRenderer":
         """
         Create a renderer from a GraphML file.
 
