@@ -356,3 +356,35 @@ class ASCIIRenderer:
         if not isinstance(G, nx.DiGraph):
             G = nx.DiGraph(G)
         return cls(G, **kwargs)
+
+    @classmethod
+    def from_graphml(cls, graphml_file: str, **kwargs) -> "ASCIIRenderer":
+        """
+        Create a renderer from a GraphML file.
+
+        Parameters
+        ----------
+        graphml_file : str
+            Path to GraphML file
+        **kwargs
+            Additional arguments passed to the constructor
+
+        Returns
+        -------
+        ASCIIRenderer
+            New renderer instance
+
+        Raises
+        ------
+        ImportError
+            If NetworkX graphml support is not available
+        ValueError
+            If file cannot be read as GraphML
+        """
+        try:
+            G = nx.read_graphml(graphml_file)
+            if not isinstance(G, nx.DiGraph):
+                G = nx.DiGraph(G)
+            return cls(G, **kwargs)
+        except Exception as e:
+            raise ValueError(f"Failed to read GraphML file: {e}")

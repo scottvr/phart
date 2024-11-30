@@ -8,6 +8,8 @@ from phart import ASCIIRenderer, LayoutOptions, NodeStyle
 
 from pathlib import Path
 
+import tempfile
+
 
 class TestASCIIRenderer(unittest.TestCase):
     """Test cases for basic rendering functionality and encoding."""
@@ -180,7 +182,6 @@ class TestASCIIRenderer(unittest.TestCase):
 
     def test_file_writing(self):
         """Test writing to file with proper encoding."""
-        import tempfile
 
         renderer = ASCIIRenderer(self.chain)
         with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", delete=False) as f:
@@ -192,6 +193,27 @@ class TestASCIIRenderer(unittest.TestCase):
                 self.assertEqual(content, renderer.render())
         finally:
             Path(name).unlink()  # Clean up temp file
+
+    def test_graphml_import(self):
+        """Test creating renderer from GraphML file."""
+
+        # Create a simple graph for testing
+        G = nx.DiGraph([("A", "B"), ("B", "C")])
+        with tempfile.NamedTemporaryFile(suffix=".graphml") as f:
+            nx.write_graphml(G, f.name)
+            renderer = ASCIIRenderer.from_graphml(f.name)
+            result = renderer.render()
+            self.assertIn("A", result)
+            self.assertIn("B", result)
+            self.assertIn("C", result)
+
+    def test_invalid_graphml(self):
+        """Test handling of invalid GraphML file."""
+        with tempfile.NamedTemporaryFile(suffix=".graphml") as f:
+            f.write(b"not valid graphml")
+            f.flush()
+            with self.assertRaises(ValueError):
+                ASCIIRenderer.from_graphml(f.name)
 
 
 class TestLayoutOptions(unittest.TestCase):
