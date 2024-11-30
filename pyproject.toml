@@ -46,6 +46,7 @@ extra = [
 test = [
     'pytest>=7.2',
     'pytest-cov>=4.0',
+    'pydot'
 ]
 
 [project.scripts]
