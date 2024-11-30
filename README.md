@@ -212,11 +212,7 @@ Different node styles for the same graph:
 ## Installation
 
 ```bash
-# not yet in Pypi so, from github:
-pip install git+https://github.com/scottvr/phart
-
-# or if you are reading this from where you cloned the repo:
-pip install -e .
+pip install phart
 ```
 
 ## Quick Start
