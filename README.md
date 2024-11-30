@@ -31,7 +31,7 @@ https://chessproblem.my-free-games.com/chess/games/Download-PGN.php
 
 And plots it with matplotlib. It looked pretty complex so I thought as a lark I would see how difficult it would be to get phart to render the graph. The matplot can be seen here:
 
-![alt text](https://github.com/[username]/[reponame]/blob/[branch]/image.jpg?raw=true)
+![screen capture of graph plot](https://github.com/scottvr/phart/blob/67bd3d02b6ad9cc4a8a09fe6fc2920a6712f5c7a/examples/WCC-plt-Capture.png)
 
 So, I added the following to the code at the networkx gallery page linked above:
 
