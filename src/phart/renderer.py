@@ -130,7 +130,7 @@ class ASCIIRenderer:
         node_style: NodeStyle = NodeStyle.SQUARE,
         node_spacing: int = 4,
         layer_spacing: int = 2,
-        use_ascii: bool = None,  # Changed to None default to allow auto-detection
+        use_ascii: Optional[bool] = None,
         options: Optional[LayoutOptions] = None,
     ) -> None:
         self.graph = graph

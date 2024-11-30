@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Tuple
+from typing import Tuple, Any
 
 
 class NodeStyle(Enum):
@@ -30,10 +30,10 @@ def make_ascii_property(name: str, ascii_char: str, unicode_char: str) -> proper
     """Create a property that handles ASCII fallback for edge characters."""
     private_name = f"_{name}"
 
-    def getter(self) -> str:
+    def getter(self: Any) -> str:
         return ascii_char if self.use_ascii else unicode_char
 
-    def setter(self, value: str) -> None:
+    def setter(self: Any, value: str) -> None:
         setattr(self, private_name, value)
 
     return property(getter, setter)
