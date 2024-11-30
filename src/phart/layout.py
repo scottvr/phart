@@ -4,7 +4,7 @@ This module handles the calculation of node positions and edge routing
 for ASCII graph visualization.
 """
 
-from typing import Dict, Set, Tuple
+from typing import Dict, Tuple
 
 import networkx as nx  # type: ignore
 
@@ -76,62 +76,74 @@ class LayoutManager:
         3. Centers each layer horizontally
         4. Maintains consistent vertical spacing between layers
         """
+
         if not self.graph:
             return {}, 0, 0
 
-        # Group nodes by layer using path lengths from roots
-        layers: Dict[int, Set[str]] = {}
+        # Group nodes by connected component
+        components = list(
+            nx.weakly_connected_components(self.graph)
+            if self.graph.is_directed()
+            else nx.connected_components(self.graph)
+        )
 
-        # Find root nodes
-        if self.graph.is_directed():
-            roots = [n for n, d in self.graph.in_degree() if d == 0]
-        else:
-            # For undirected, use highest degree node as root
-            roots = [max(self.graph.nodes(), key=lambda n: self.graph.degree(n))]
+        # Handle each component separately
+        component_layouts = {}
+        max_width = 0
+        total_height = 0
 
-        if not roots:  # Handle cycles by picking arbitrary start
-            roots = [next(iter(self.graph.nodes()))]
+        for component in components:
+            subgraph = self.graph.subgraph(component)
 
-        # Calculate distances using shortest paths
-        distances: Dict[str, int] = {}
-        for root in roots:
-            lengths = nx.single_source_shortest_path_length(self.graph, root)
-            for node, dist in lengths.items():
-                distances[node] = max(distances.get(node, 0), dist)
+            # Find root nodes for this component
+            if self.graph.is_directed():
+                roots = [n for n, d in subgraph.in_degree() if d == 0]
+            else:
+                roots = [max(subgraph.nodes(), key=lambda n: subgraph.degree(n))]
 
-        # Group nodes by layer
-        for node, layer in distances.items():
-            if layer not in layers:
-                layers[layer] = set()
-            layers[layer].add(node)
+            if not roots:  # Handle cycles by picking arbitrary start
+                roots = [next(iter(subgraph.nodes()))]
 
-        # Handle disconnected components
-        unreached = set(self.graph.nodes()) - set(distances)
-        if unreached:
-            max_layer = max(layers.keys()) if layers else 0
-            layers[max_layer + 1] = unreached
+            # Calculate distances within component
+            distances = {}
+            for root in roots:
+                lengths = nx.single_source_shortest_path_length(subgraph, root)
+                for node, dist in lengths.items():
+                    distances[node] = max(distances.get(node, 0), dist)
 
-        # Calculate layout dimensions
-        self.max_height = (max(layers.keys()) + 1) * (self.options.layer_spacing + 1)
+            # Layout this component
+            layers = {}
+            for node, layer in distances.items():
+                if layer not in layers:
+                    layers[layer] = set()
+                layers[layer].add(node)
 
-        # Calculate layer widths
-        layer_widths = {}
-        for layer, nodes in layers.items():
-            total_width = sum(self._get_node_width(n) for n in nodes)
-            min_spacing = (len(nodes) - 1) * self.options.node_spacing
-            layer_widths[layer] = total_width + min_spacing
+            # Calculate component dimensions
+            layer_widths = {}
+            for layer, nodes in layers.items():
+                total_width = sum(self._get_node_width(n) for n in nodes)
+                min_spacing = (len(nodes) - 1) * self.options.node_spacing
+                layer_widths[layer] = total_width + min_spacing
 
-        self.max_width = max(layer_widths.values()) + 4  # Add margins
+            component_width = max(layer_widths.values()) + 4  # Add margins
+            component_height = (max(layers.keys()) + 1) * (
+                self.options.layer_spacing + 1
+            )
+            max_width = max(max_width, component_width)
 
-        # Assign positions
-        for layer, nodes in layers.items():
-            y = layer * (self.options.layer_spacing + 1)
-            total_width = layer_widths[layer]
-            start_x = (self.max_width - total_width) // 2
-            current_x = start_x
+            # Position nodes in this component
+            positions = {}
+            for layer, nodes in layers.items():
+                y = layer * (self.options.layer_spacing + 1) + total_height
+                total_width = layer_widths[layer]
+                start_x = (max_width - total_width) // 2
+                current_x = start_x
 
-            for node in sorted(nodes):  # Sort for consistent layout
-                self.node_positions[node] = (current_x, y)
-                current_x += self._get_node_width(node) + self.options.node_spacing
+                for node in sorted(nodes):  # Sort for consistent layout
+                    positions[node] = (current_x, y)
+                    current_x += self._get_node_width(node) + self.options.node_spacing
 
-        return self.node_positions, self.max_width, self.max_height
+            component_layouts.update(positions)
+            total_height += component_height + self.options.layer_spacing
+
+        return component_layouts, max_width, total_height

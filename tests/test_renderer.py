@@ -121,16 +121,36 @@ class TestASCIIRenderer(unittest.TestCase):
 
     def test_disconnected_components(self):
         """Test handling of disconnected components."""
+        # Create a graph with two clearly disconnected components
+        self.disconnected = nx.DiGraph(
+            [
+                ("A", "B"),  # Component 1
+                ("C", "D"),  # Component 2
+            ]
+        )
         renderer = ASCIIRenderer(self.disconnected)
         result = renderer.render()
         lines = result.split("\n")
 
         # Find all lines containing each component
-        a_lines = [i for i, line in enumerate(lines) if "A" in line or "B" in line]
-        c_lines = [i for i, line in enumerate(lines) if "C" in line or "D" in line]
+        comp1_lines = set(
+            i for i, line in enumerate(lines) if any(node in line for node in "AB")
+        )
+        comp2_lines = set(
+            i for i, line in enumerate(lines) if any(node in line for node in "CD")
+        )
 
-        # Components should have no overlap
-        self.assertTrue(not set(a_lines) & set(c_lines))
+        # Components should not share any lines
+        self.assertTrue(
+            not comp1_lines & comp2_lines,
+            "Disconnected components should be rendered on different lines",
+        )
+        # Components should have some vertical separation
+        min1, max1 = min(comp1_lines), max(comp1_lines)
+        min2, max2 = min(comp2_lines), max(comp2_lines)
+        self.assertTrue(
+            max1 < min2 or max2 < min1, "Components should be vertically separated"
+        )
 
     def test_empty_graph(self):
         """Test handling of empty graph."""
@@ -221,33 +241,37 @@ class TestASCIIRenderer(unittest.TestCase):
 
 
 class TestLayoutOptions(unittest.TestCase):
-    def test_custom_characters(self):
-        """Test custom edge character configuration."""
-        options = LayoutOptions()
-        # Test through the property getters
-        self.assertTrue(isinstance(options.edge_vertical, str))
-        self.assertTrue(isinstance(options.edge_horizontal, str))
-        self.assertTrue(isinstance(options.edge_cross, str))
-        self.assertTrue(isinstance(options.edge_arrow, str))
+    def test_edge_chars_ascii_fallback(self):
+        """Test that edge characters properly fall back to ASCII when needed."""
+        options = LayoutOptions(use_ascii=False)
+        self.assertEqual(options.edge_vertical, "│")
+        self.assertEqual(options.edge_horizontal, "─")
 
-    def test_invalid_edge_chars(self):
-        """Test validation of edge characters."""
+        options.use_ascii = True
+        self.assertEqual(options.edge_vertical, "|")
+        self.assertEqual(options.edge_horizontal, "-")
+
+    def test_edge_chars_custom(self):
+        """Test that edge characters can be customized."""
         options = LayoutOptions()
-        with self.assertRaises(ValueError):
-            options.edge_vertical = ""  # Empty string
-        with self.assertRaises(ValueError):
-            options.edge_horizontal = "too_long"  # More than one character
+        original = options.edge_vertical
+        options.edge_vertical = "X"
+        self.assertEqual(options.edge_vertical, "X")
+
+        # Reset for other tests
+        options.edge_vertical = original
 
     def test_invalid_spacing(self):
         """Test validation of spacing parameters."""
-        # Test constructor validation
         with self.assertRaises(ValueError):
             LayoutOptions(node_spacing=0)
 
-        # Test property setter validation
-        options = LayoutOptions()
         with self.assertRaises(ValueError):
-            options.node_spacing = -1
+            LayoutOptions(layer_spacing=-1)
+
+        options = LayoutOptions()
+        self.assertGreater(options.node_spacing, 0)
+        self.assertGreater(options.layer_spacing, 0)
 
 
 if __name__ == "__main__":

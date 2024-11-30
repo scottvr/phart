@@ -27,7 +27,18 @@ def create_binary_tree(depth: int) -> nx.DiGraph:
 
 def create_random_dag(n: int, p: float) -> nx.DiGraph:
     """Create random DAG with n nodes and edge probability p."""
-    return nx.gnp_random_graph(n, p, directed=True, acyclic=True)
+    # Create base graph
+    G = nx.DiGraph()
+    nodes = range(n)
+    G.add_nodes_from(nodes)
+
+    # Add edges ensuring acyclicity by only connecting to higher-numbered nodes
+    for i in nodes:
+        for j in range(i + 1, n):
+            if random.random() < p:
+                G.add_edge(i, j)
+
+    return G
 
 
 def create_dependency_graph(n_layers: int, width: int) -> nx.DiGraph:

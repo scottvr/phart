@@ -2,48 +2,59 @@
 
 This directory contains example scripts demonstrating PHART's capabilities.
 
-## Chess Masters Example
+## Chess Masters Example (`chess_masters.py`)
 
-`chess_masters.py` shows how PHART can visualize complex real-world networks. It creates
-an ASCII visualization of World Chess Championship games from 1886-1985.
+Demonstrates PHART's ability to handle complex real-world networks by visualizing World Chess Championship games from 1886-1985. This example shows how PHART can elegantly handle large, complex graphs with minimal configuration.
 
-To run the example:
+To run this example:
 
 1. Download WCC.pgn.bz2 from https://chessproblem.my-free-games.com/chess/games/Download-PGN.php
 2. Place it in this directory
 3. Run `python chess_masters.py`
 
-The script will create both a text file output and display the graph in the terminal.
+## Simple Graph Examples (`simple_graph.py`)
 
-Sample output:
+Basic examples showing PHART's core functionality:
 
+- Simple directed graphs
+- Different node styles (square, round, diamond, minimal)
+- Cycle handling
+
+Perfect for getting started with PHART.
+
+## Dependency Tree Example (`dependency_tree.py`)
+
+Shows how to use PHART for visualizing package dependencies:
+
+- Typical package dependency trees
+- Circular dependency detection
+- Different layout approaches for dependency graphs
+
+## NetworkX Integration (`networkx_integration.py`)
+
+Demonstrates PHART's seamless integration with NetworkX's various graph generators and algorithms.
+
+## Graph Examples (`showcase.py`)
+
+A collection of different graph types and visualization scenarios:
+
+- Organizational hierarchies
+- Network topologies
+- Workflow diagrams
+- Process flows
+
+## Example Screenshots
+
+The `WCC-plt-Capture.png` shows the matplotlib visualization of the chess masters graph for comparison with PHART's ASCII output.
+
+## Running the Examples
+
+All examples can be run directly:
+
+```bash
+python simple_graph.py
+python dependency_tree.py
+# etc.
 ```
-                               ---------------------------------[Botvinnik, Mikhail M]---------------------------------
-                               |               |                           |                 |                        |
-            v                  |               |                    v      |                 |                        |                     v
-  [Bronstein, David I]----[Euwe, Max]----[Keres, Paul]----[Petrosian, Tigran V]----[Reshevsky, Samuel H]----[Smyslov, Vassily V]----[Tal, Mikhail N]
-                               ^                               |    |
-                                                               |    |                   v
-                                                    [Alekhine, Alexander A]----[Spassky, Boris V]
-                                                               |           |            |
-                                                  v            |           |            |           v
-                                        [Bogoljubow, Efim D]----[Capablanca, Jose Raul] ---[Fischer, Robert J]
-                                                                          |^
-                                                                          |
-                                                                  [Lasker, Emanuel]--------------
-                                                                          |                     |
-                            v                      v                      v                     |                       v
-                   [Janowski, Dawid M]----[Marshall, Frank J]----[Schlechter, Carl]----[Steinitz, Wilhelm]----[Tarrasch, Siegbert]
-                                                                                                |  |
-                                                 v                        v                     |  |
-                                       [Chigorin, Mikhail I]----[Gunsberg, Isidor A]----[Zukertort, Johannes H]
 
-
-                                            [Karpov, Anatoly]----[Kasparov, Gary]----[Korchnoi, Viktor L]
-```
-
-This visualization clearly shows:
-
-- The main connected component of historical World Champions
-- The separate Karpov-Kasparov-Korchnoi group
-- The natural chronological flow (generally older players higher up)
+No additional dependencies are required beyond PHART's core requirements (NetworkX), except for the chess example which needs the WCC.pgn.bz2 data file.
