@@ -209,6 +209,11 @@ Different node styles for the same graph:
 
 </details>
 
+## Why PHART?
+
+Because it is necessary? OK, sorry... Actually it had a few other names early on, but they were all taken so we wanted to mash up the relevant terms ("graph", "ascii", "art", "chart", and such) and bonus if it can be a fitting acronym. In the case of PHART, the acronym made from the first letters of the obvious first words to come to mind was discovered to spell PHART after the non abbreviated words were suggested. Fortuitous; so it had to be.:w
+
+
 ## Installation
 
 ```bash
