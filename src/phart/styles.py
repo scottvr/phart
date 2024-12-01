@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Tuple, Any, Optional, Union
+from typing import Tuple, Any, Optional
 from enum import Enum
 
 
@@ -35,11 +35,13 @@ class EdgeChar:
         self.ascii_char = ascii_char
         self.unicode_char = unicode_char
 
-    def __get__(
-        self, obj: Any, objtype: Optional[type] = None
-    ) -> Union[str, "EdgeChar"]:
+    def __get__(self, obj: Optional[Any], objtype: Optional[type] = None) -> str:
+        """Get the appropriate character.
+
+        Returns str when accessed on instance, EdgeChar when accessed on class.
+        """
         if obj is None:
-            return self
+            return self  # type: ignore[return-value]
         return self.ascii_char if obj.use_ascii else self.unicode_char
 
     def __set__(self, obj: Any, value: str) -> None:

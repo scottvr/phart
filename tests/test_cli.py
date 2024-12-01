@@ -12,7 +12,7 @@ class TestCLI(unittest.TestCase):
     def setUp(self):
         """Set up test environment."""
         self.temp_dir = tempfile.mkdtemp()
-        self.dot_file = Path(self.temp_dir) / "test.dot"
+        self.test_text_file = Path(self.temp_dir) / "test.txt"
 
         # Create a valid DOT file
         self.dot_content = """
@@ -21,7 +21,7 @@ class TestCLI(unittest.TestCase):
             B -> C;
         }
         """
-        self.dot_file.write_text(self.dot_content, encoding="utf-8")
+        self.test_text_file.write_text(self.dot_content, encoding="utf-8")
 
         # Save original stdout/stderr
         self.old_stdout = sys.stdout
@@ -39,12 +39,12 @@ class TestCLI(unittest.TestCase):
         sys.stdout = self.old_stdout
         sys.stderr = self.old_stderr
         sys.argv = self.old_argv
-        self.dot_file.unlink()
+        self.test_text_file.unlink()
         Path(self.temp_dir).rmdir()
 
     def test_basic_rendering(self):
         """Test basic DOT file rendering."""
-        sys.argv = ["phart", str(self.dot_file)]
+        sys.argv = ["phart", str(self.test_text_file)]
         exit_code = main()
         self.assertEqual(exit_code, 0)
         output = self.stdout.getvalue()
@@ -55,7 +55,7 @@ class TestCLI(unittest.TestCase):
 
     def test_style_option(self):
         """Test node style option."""
-        sys.argv = ["phart", "--style", "round", str(self.dot_file)]
+        sys.argv = ["phart", "--style", "round", str(self.test_text_file)]
         exit_code = main()
         self.assertEqual(exit_code, 0)
         output = self.stdout.getvalue()
@@ -65,7 +65,7 @@ class TestCLI(unittest.TestCase):
 
     def test_ascii_option(self):
         """Test ASCII-only output."""
-        sys.argv = ["phart", "--ascii", str(self.dot_file)]
+        sys.argv = ["phart", "--ascii", str(self.test_text_file)]
         exit_code = main()
         self.assertEqual(exit_code, 0)
         output = self.stdout.getvalue()
@@ -79,12 +79,12 @@ class TestCLI(unittest.TestCase):
         self.assertEqual(exit_code, 1)
         self.assertIn("Error", self.stderr.getvalue())
 
-    def test_invalid_format(self):
-        """Test handling of unsupported file format."""
-        bad_file = Path(self.temp_dir) / "test.xyz"
-        bad_file.touch()
-        sys.argv = ["phart", str(bad_file)]
+    def test_invalid_content(self):
+        """Test handling of invalid input content."""
+        self.test_text_file.write_text("This is not a valid graph format")
+        sys.argv = ["phart", str(self.test_text_file)]
         exit_code = main()
         self.assertEqual(exit_code, 1)
-        self.assertIn("Unsupported file format", self.stderr.getvalue())
-        bad_file.unlink()
+        error_msg = self.stderr.getvalue()
+        self.assertIn("Error", error_msg)
+        self.assertIn("Could not parse file as GraphML or DOT format", error_msg)
