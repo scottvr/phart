@@ -213,7 +213,7 @@ Different node styles for the same graph:
 
 Because it is necessary? OK, sorry... Actually it had a few other names early on, but when it came time to upload to PyPi, we discovered the early names we chose were already taken so we had to choose a new name. We wanted to mash up the relevant terms ("graph", "ascii", "art", "chart", and such) and bonus if the new name xa fitting acronym. In the case of PHART, the acronym made from the first letters of the obvious first words to come to mind was discovered to spell PHART after the non abbreviated words were suggested. Fortuitous; so it had to be.
 
-You may pronounce it as "eff art", "pee heart", or any way you like, so long as the audience you are speaking it to knows it is PHART you are referring to.
+You may pronounce it the obvious monosyllabic way, or as "eff art", or perhaps "pee heart", or any way that you like, so long as the audience you are speaking it to knows it is PHART you are referring to.
 
 
 ## Installation
