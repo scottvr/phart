@@ -327,22 +327,6 @@ phart --ascii input.dot
 phart --node-spacing 6 --layer-spacing 3 input.dot
 ```
 
-PHART can be used from the command line to render DOT files:
-
-```bash
-# Basic usage
-phart graph.dot
-
-# Change node style
-phart --style round graph.dot
-
-# Force ASCII output (no Unicode)
-phart --ascii graph.dot
-
-# Adjust spacing
-phart --node-spacing 6 --layer-spacing 3 graph.dot
-```
-
 ## License
 
 MIT License
