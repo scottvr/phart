@@ -16,7 +16,7 @@
 
 <details>
 
-     <summary>Example output PHARTs [click arrow to expand]</summary>
+<summary>Example output PHARTs [click arrow to expand]</summary>
 
 ## PHART Graph Visualization Examples
 
