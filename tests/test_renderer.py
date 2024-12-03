@@ -1,6 +1,7 @@
 """Test suite for PHART ASCII graph renderer."""
 
 import unittest
+import sys
 
 import networkx as nx  # type: ignore
 
@@ -15,6 +16,24 @@ class TestASCIIRenderer(unittest.TestCase):
     """Test cases for basic rendering functionality and encoding."""
 
     def setUp(self):
+        print(f"\nPython version: {sys.version}")
+        print(f"NetworkX version: {nx.__version__}")
+
+        # Try both construction methods to see difference
+        try:
+            print("\nTrying constructor with edge list:")
+            self.chain = nx.DiGraph([("A", "B"), ("B", "C")])
+        except Exception as e:
+            print(f"Constructor failed: {type(e).__name__}: {e}")
+
+        try:
+            print("\nTrying add_edges_from:")
+            G = nx.DiGraph()
+            G.add_edges_from([("A", "B"), ("B", "C")])
+            print("add_edges_from succeeded")
+        except Exception as e:
+            print(f"add_edges_from failed: {type(e).__name__}: {e}")
+
         """Set up common test graphs."""
         # Existing test graph setup...
         self.chain = nx.DiGraph([("A", "B"), ("B", "C")])
