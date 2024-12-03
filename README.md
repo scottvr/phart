@@ -14,7 +14,9 @@
 - Handles cycles and complex layouts
 - Bidirectional edge support
 
-<details open>
+## Examples
+
+<details>
 
 <summary>Example output PHARTs [click triangle/arrow to expand/collapse]</summary>
 
