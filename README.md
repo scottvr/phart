@@ -14,9 +14,9 @@
 - Handles cycles and complex layouts
 - Bidirectional edge support
 
-<details>
+<details open>
 
-<summary>Example output PHARTs [click arrow to expand]</summary>
+<summary>Example output PHARTs [click triangle/arrow to expand/collapse]</summary>
 
 ## PHART Graph Visualization Examples
 
