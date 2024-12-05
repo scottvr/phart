@@ -221,6 +221,14 @@ In the case of PHART, the acronym made from the first letters of the obvious fir
 
 You may pronounce it the obvious monosyllabic way, or as "eff art", or perhaps "pee heart", or any way that you like, so long as the audience you are speaking it to knows it is PHART you are referring to.
 
+## Really, why?
+
+While the mention of not being Perl or a PHP webapp may appear to be throwing shade at the existing solutions, but it is meant in a good-hearted way. Wrapping the OG Graph::Easy is a straightforeard way to go about it, and a web interface to the same is  a project I might create as well, but Perl being installed is not the sure uniquitous thing it omce was, and spinning up a Docker container in order to add ascii art graph output to a python tool seemed a bit excessive. 
+
+Additionally, I'm not sure how I didn't find pydot2ascii - which is native pythom - when I first looked for a solution, but even if I had seen it I may not have realized that I could have exported my NX DAG to DOT, and then from DOT to ascii art.  
+
+So now we have PHART, and the ability to render a NX digraph in ASCII/Unicode, read a DOT file, read GraphML, and a few other things in a well-tested Pythom module published to PyPi.  I hope ypu find it usedul. 
+
 ## Installation
 
 ```bash
