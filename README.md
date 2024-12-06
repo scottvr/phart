@@ -262,7 +262,7 @@ The renderer shows edge direction using arrows:
 
 - v : downward flow
 - ^ : upward flow
-- > or < : horizontal flow
+- &gt; or < : horizontal flow
 
 These directional indicators are particularly useful for:
 
