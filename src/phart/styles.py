@@ -81,6 +81,4 @@ class LayoutOptions:
             NodeStyle.DIAMOND: ("<", ">"),
             NodeStyle.MINIMAL: ("", ""),
         }
-        return style_decorators.get(
-            self.node_style, ("[", "]")
-        )  # Default to square brackets
+        return style_decorators.get(self.node_style, style_decorators[NodeStyle.SQUARE])
