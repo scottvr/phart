@@ -124,7 +124,7 @@ class LayoutOptions:
             else:
                 return (
                     self.custom_decorators[node_str]
-                    if self.custom_decoratos[node_str]
+                    if self.custom_decorators[node_str]
                     else ("", "")
                 )
 
