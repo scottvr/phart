@@ -123,7 +123,11 @@ class LayoutOptions:
                 # return '', ''
             else:
                 try:
-                    return self.custom_decorators[node_str]
+                    return (
+                        self.custom_decorators[node_str]
+                        if self.custom_decorators[node_str]
+                        else self.custom_decorators["*"]
+                    )
                 except KeyError:
                     return ("", "")
 
