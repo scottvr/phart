@@ -52,8 +52,8 @@ class LayoutManager:
         int
             Total width of node when rendered
         """
-        prefix, suffix = self.options.get_node_decorators(str(node))
-        return len(str(node)) + len(prefix) + len(suffix)
+        prefix, suffix = self.options.get_node_decorators(node)
+        return len(node) + len(prefix) + len(suffix)
 
     def calculate_layout(self) -> Tuple[Dict[str, Tuple[int, int]], int, int]:
         """

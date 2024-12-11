@@ -11,13 +11,47 @@ def example_binary_tree():
     mapping = {i: f"N{i}" for i in G.nodes()}
     G = nx.relabel_nodes(G, mapping)
 
-    # Try different node styles
     for style in NodeStyle:
         print(f"\nUsing {style.name} style:")
-        options = LayoutOptions(node_style=style)
-        renderer = ASCIIRenderer(G, options)
+        renderer = ASCIIRenderer(G, node_style=style)
         print(renderer.render())
         print("\n" + "=" * 50)  # Add separator between styles
+
+
+def example_custom_decorators():
+    """Example of rendering a graph with custom node decorators"""
+    print("\nCustom Decorators Example:")
+
+    # Create a simple directed graph
+    G = nx.DiGraph(
+        [
+            ("Start", "Input Data"),
+            ("Input Data", "Process"),
+            ("Process", "Output"),
+            ("Output", "End"),
+        ]
+    )
+
+    # Define custom decorators for specific nodes
+    custom_decorators = {
+        "Start": ("<<", ">>"),
+        "End": ("{{", "}}"),
+    }
+
+    # Use custom decorators in the LayoutOptions
+    options = LayoutOptions(
+        node_style=NodeStyle.CUSTOM,
+        custom_decorators=custom_decorators,
+        node_spacing=4,
+        layer_spacing=2,
+    )
+
+    # Render the graph with custom node decorations
+    renderer = ASCIIRenderer(G, options)
+    print(renderer.render())
+    print("\n" + "=" * 50)  # Separator for clarity
+
+    # Use custom decorators in the LayoutOptions
 
 
 def example_dependency_graph():

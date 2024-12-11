@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Tuple, Any, Optional
+from typing import Tuple, Any, Optional, Union, Dict
 from enum import Enum
 
 
@@ -22,6 +22,7 @@ class NodeStyle(Enum):
     SQUARE = "square"
     ROUND = "round"
     DIAMOND = "diamond"
+    CUSTOM = "custom"
 
 
 class EdgeChar:
@@ -52,12 +53,12 @@ class EdgeChar:
 class LayoutOptions:
     """Configuration options for graph layout and appearance."""
 
-    # Core layout options
     node_spacing: int = field(default=4)
     layer_spacing: int = field(default=2)
-    node_style: NodeStyle = NodeStyle.SQUARE
+    node_style: Union[NodeStyle, str] = NodeStyle.SQUARE
     show_arrows: bool = True
     use_ascii: Optional[bool] = None
+    custom_decorators: Optional[Dict[str, Tuple[str, str]]] = None
 
     # Edge characters with ASCII fallbacks
     edge_vertical = EdgeChar("|", "│")
@@ -68,17 +69,72 @@ class LayoutOptions:
     edge_arrow_down = EdgeChar("v", "↓")
 
     def __post_init__(self) -> None:
-        """Validate configuration values after initialization."""
+        """Validate and normalize configuration values."""
+        if isinstance(self.node_style, str):
+            try:
+                # Convert string to NodeStyle enum
+                self.node_style = NodeStyle[self.node_style.upper()]
+            except KeyError:
+                valid_styles = ", ".join([style.name.lower() for style in NodeStyle])
+                raise ValueError(
+                    f"Invalid node style '{self.node_style}'. Valid options are: {valid_styles}"
+                )
+        if self.node_style == NodeStyle.CUSTOM:
+            # Ensure custom decorators are handled correctly
+            if not self.custom_decorators:
+                raise ValueError(
+                    "Custom decorators must be provided when using NodeStyle.CUSTOM"
+                )
+
+            # Ensure decorators are applied as needed (e.g., handle defaults if any node doesn't have a decorator)
+            # You could set up default values for missing nodes here if desired
+            for node, (prefix, suffix) in self.custom_decorators.items():
+                print(
+                    f"Node '{node}' will be decorated with prefix '{prefix}' and suffix '{suffix}'."
+                )
+
         if self.node_spacing <= 0:
             raise ValueError("node_spacing must be positive")
         if self.layer_spacing <= 0:
             raise ValueError("layer_spacing must be positive")
 
     def get_node_decorators(self, node_str: str) -> Tuple[str, str]:
-        style_decorators = {
-            NodeStyle.SQUARE: ("[", "]"),
-            NodeStyle.ROUND: ("(", ")"),
-            NodeStyle.DIAMOND: ("<", ">"),
-            NodeStyle.MINIMAL: ("", ""),
-        }
-        return style_decorators.get(self.node_style, style_decorators[NodeStyle.SQUARE])
+        """Retrieve decorators for a specific node.
+
+        Parameters
+        ----------
+        node_str : str
+            The string representation of the node.
+
+        Returns
+        -------
+        Tuple[str, str]
+            A tuple containing the prefix and suffix for the node.
+        """
+        if self.node_style == NodeStyle.CUSTOM:
+            # Ensure custom decorators are handled correctly
+            if not self.custom_decorators:
+                raise ValueError(
+                    "Custom decorators must be provided when using NodeStyle.CUSTOM"
+                )
+                # return '', ''
+
+            # TODO:implement customer decorators
+            # Ensure decorators are applied as needed (e.g., handle defaults if any node doesn't have a decorator)
+            for node, (prefix, suffix) in self.custom_decorators.items():
+                print(
+                    f"Node '{node}' will be decorated with prefix '{prefix}' and suffix '{suffix}'."
+                )
+
+        # Fallback to default styles if not CUSTOM
+        match self.node_style:
+            case NodeStyle.SQUARE:
+                return "[", "]"
+            case NodeStyle.ROUND:
+                return "(", ")"
+            case NodeStyle.DIAMOND:
+                return "<", ">"
+            case NodeStyle.MINIMAL:
+                return "", ""
+            case _:
+                return "[", "]"  # Default to square brackets

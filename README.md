@@ -282,7 +282,16 @@ These directional indicators are particularly useful for:
 
 - DOT file support
 - requires pydot
-  `pip install -r requirements\extra.txt`
+
+```bash
+pip install phart[extras]
+```
+
+or using requirements file
+
+```bash
+pip install -r requirements\extra.txt
+```
 
 ### Example
 
