@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "phart"
-version = "1.0.3"
+dynamic = ["version"]
 description = "Python Hierarchical ASCII Representation Tool - Pure Python graph visualization in ASCII, no external dependencies* (*except NetworkX)"
 requires-python= ">=3.10"
 readme = "README.md"
@@ -67,5 +67,9 @@ filterwarnings = ["error"]
 Homepage = "https://github.com/scottvr/phart"
 Repository = "https://github.com/scottvr/phart.git"
 Issues = "https://github.com/scottvr/phart/issues"
+
+[tool.hatch.version]
+path = "src/phart/__init__.py"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/phart"]

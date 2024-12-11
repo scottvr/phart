@@ -57,7 +57,7 @@ class LayoutOptions:
     layer_spacing: int = field(default=2)
     node_style: NodeStyle = NodeStyle.SQUARE
     show_arrows: bool = True
-    use_ascii: bool = False
+    use_ascii: Optional[bool] = None
 
     # Edge characters with ASCII fallbacks
     edge_vertical = EdgeChar("|", "│")
