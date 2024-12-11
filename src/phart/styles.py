@@ -91,10 +91,10 @@ class LayoutOptions:
 
             # Ensure decorators are applied as needed (e.g., handle defaults if any node doesn't have a decorator)
             # maybe set up default values for missing nodes or some such..
-            for node, (prefix, suffix) in self.custom_decorators.items():
-                print(
-                    f"Node '{node}' will be decorated with prefix '{prefix}' and suffix '{suffix}'."
-                )
+        #            for node, (prefix, suffix) in self.custom_decorators.items():
+        #                print(
+        #                    f"Node '{node}' will be decorated with prefix '{prefix}' and suffix '{suffix}'."
+        #                )
 
         if self.node_spacing <= 0:
             raise ValueError("node_spacing must be positive")
@@ -122,11 +122,10 @@ class LayoutOptions:
                 )
                 # return '', ''
             else:
-                return (
-                    self.custom_decorators[node_str]
-                    if self.custom_decorators[node_str]
-                    else ("", "")
-                )
+                try:
+                    return self.custom_decorators[node_str]
+                except KeyError:
+                    return ("", "")
 
         # Fallback to default styles if not CUSTOM
         match self.node_style:
