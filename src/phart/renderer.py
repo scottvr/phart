@@ -66,6 +66,7 @@ from .layout import LayoutManager
 from .styles import LayoutOptions, NodeStyle
 
 import sys
+import io
 
 
 class ASCIIRenderer:
@@ -135,11 +136,14 @@ class ASCIIRenderer:
     ) -> None:
         self.graph = graph
 
-        if use_ascii is None:
+        if options is not None and options.use_ascii is not None:
+            use_ascii = options.use_ascii
+        elif use_ascii is None:
             use_ascii = not self._can_use_unicode()
 
         if options is not None:
             self.options = options
+            self.options.use_ascii = use_ascii
         else:
             self.options = LayoutOptions(
                 node_style=node_style,
@@ -156,6 +160,22 @@ class ASCIIRenderer:
             return text.encode("utf-8").decode("utf-8")
         except UnicodeEncodeError:
             return text.encode("ascii", errors="replace").decode("ascii")
+
+    def _is_redirected() -> bool:
+        """Check if output is being redirected."""
+        if sys.platform == "win32":
+            import msvcrt
+            import ctypes
+
+            try:
+                fileno = sys.stdout.fileno()
+                handle = msvcrt.get_osfhandle(fileno)
+                return not bool(ctypes.windll.kernel32.GetConsoleMode(handle, None))
+            except OSError:
+                return True
+            except AttributeError:
+                return True
+        return not sys.stdout.isatty()
 
     def render(self) -> str:
         """
@@ -185,7 +205,7 @@ class ASCIIRenderer:
                 self.canvas[y][x + i] = char
 
         result = "\n".join("".join(row).rstrip() for row in self.canvas)
-        return self._ensure_encoding(result)
+        return result
 
     def draw(self, file: Optional[TextIO] = None) -> None:
         """
@@ -197,15 +217,25 @@ class ASCIIRenderer:
             File to write to. If None, writes to stdout
         """
 
-        if file is None:
-            import sys
-            import io
+        is_redirected = self._is_redirected() if file is None else False
 
-            if not self.options.use_ascii:
+        if file is None:
+            if is_redirected or self.options.use_ascii:
+                # Use ASCII when redirected or explicitly requested
+                old_use_ascii = self.options.use_ascii
+                self.options.use_ascii = True
+                try:
+                    print(self.render(), file=sys.stdout)
+                finally:
+                    self.options.use_ascii = old_use_ascii
+            else:
+                # Direct to console, try Unicode
                 sys.stdout = io.TextIOWrapper(
                     sys.stdout.buffer, encoding="utf-8", errors="replace"
                 )
-        print(self.render(), file=file)
+                print(self.render(), file=sys.stdout)
+        else:
+            print(self.render(), file=file)
 
     def write_to_file(self, filename: str) -> None:
         """

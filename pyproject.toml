@@ -4,23 +4,22 @@ build-backend = "hatchling.build"
 
 [project]
 name = "phart"
-version = "1.0.2"
+dynamic = ["version"]
 description = "Python Hierarchical ASCII Representation Tool - Pure Python graph visualization in ASCII, no external dependencies* (*except NetworkX)"
+requires-python= ">=3.10"
 readme = "README.md"
 license = "MIT"
 authors = [
     { name = "Scott VR", email = "scottvr@gmail.com" }
 ]
 dependencies = [
-    "networkx>=2.6.0",
+    "networkx>=3.3",
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Topic :: Software Development :: Libraries :: Python Modules",
@@ -53,7 +52,7 @@ test = [
 phart = "phart.cli:main"
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.10"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
@@ -68,5 +67,9 @@ filterwarnings = ["error"]
 Homepage = "https://github.com/scottvr/phart"
 Repository = "https://github.com/scottvr/phart.git"
 Issues = "https://github.com/scottvr/phart/issues"
+
+[tool.hatch.version]
+path = "src/phart/__init__.py"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/phart"]

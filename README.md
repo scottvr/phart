@@ -24,7 +24,8 @@
 
 =================================
 
-### In preparation for a 1.0 PyPi release 
+### In preparation for a 1.0 PyPi release
+
 I was doing some last-minute testing and came across this, from the networkx gallery:
 
 https://networkx.org/documentation/latest/auto_examples/drawing/plot_chess_masters.html#sphx-glr-auto-examples-drawing-plot-chess-masters-py
@@ -223,13 +224,15 @@ You may pronounce it the obvious monosyllabic way, or as "eff art", or perhaps "
 
 ## Really, why?
 
-While the mention of not being Perl or a PHP webapp may appear to be throwing shade at the existing solutions, but it is meant in a good-hearted way. Wrapping the OG Graph::Easy is a straightforeard way to go about it, and a web interface to the same is  a project I might create as well, but Perl being installed is not the sure uniquitous thing it omce was, and spinning up a Docker container in order to add ascii art graph output to a python tool seemed a bit excessive. 
+The mention of not being Perl or a PHP webapp may appear to be throwing shade at the existing solutions, but it is meant in a good-hearted way. Wrapping the OG Graph::Easy is a straightforeard way to go about it, and a web interface to the same is a project I might create as well, but Perl being installed is not the sure ubiquitous thing it omce was, and spinning up a Docker container in order to add ascii art graph output to a python tool seemed a bit excessive.
 
-Additionally, I'm not sure how I didn't find pydot2ascii - which is native pythom - when I first looked for a solution, but even if I had seen it I may not have realized that I could have exported my NX DAG to DOT, and then from DOT to ascii art.  
+Additionally, I'm not sure how I didn't find pydot2ascii - which is native pythom - when I first looked for a solution, but even if I had seen it I may not have realized that I could have exported my NX DAG to DOT, and then used pydot2ascii to go from DOT to ascii art.
 
-So now we have PHART, and the ability to render a NX digraph in ASCII/Unicode, read a DOT file, read GraphML, and a few other things in a well-tested Pythom module published to PyPi.  I hope ypu find it usedul. 
+So now we have PHART, and the ability to render a NX digraph in ASCII/Unicode, read a DOT file, read GraphML, and a few other things in a well-tested Pythom module published to PyPi. I hope ypu find it usedul.
 
 ## Installation
+
+requires Python >= 3.10 and NetworkX >= 3.3
 
 ```bash
 pip install phart
@@ -262,7 +265,7 @@ The renderer shows edge direction using arrows:
 
 - v : downward flow
 - ^ : upward flow
-- > or < : horizontal flow
+- &gt; or < : horizontal flow
 
 These directional indicators are particularly useful for:
 
