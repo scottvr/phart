@@ -121,8 +121,12 @@ if __name__ == "__main__":
     print("\nCustom Styling Example:")
     print("Different node styles for the same graph:")
     G = nx.balanced_tree(2, 2, create_using=nx.DiGraph)
+    mapping = {i: f"N{i}" for i in G.nodes()}
+    G = nx.relabel_nodes(G, mapping)
 
     for style in NodeStyle:
         print(f"\nUsing {style.name} style:")
-        renderer = ASCIIRenderer(G, node_style=style)
+        renderer = ASCIIRenderer(
+            G, node_style=style, custom_decorators={"N0": ("<<", ">>")}
+        )
         print(renderer.render())

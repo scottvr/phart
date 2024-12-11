@@ -58,7 +58,9 @@ class LayoutOptions:
     node_style: Union[NodeStyle, str] = NodeStyle.SQUARE
     show_arrows: bool = True
     use_ascii: Optional[bool] = None
-    custom_decorators: Optional[Dict[str, Tuple[str, str]]] = None
+    custom_decorators: Optional[Dict[str, Tuple[str, str]]] = field(
+        default_factory=dict
+    )
 
     # Edge characters with ASCII fallbacks
     edge_vertical = EdgeChar("|", "│")
@@ -79,6 +81,7 @@ class LayoutOptions:
                 raise ValueError(
                     f"Invalid node style '{self.node_style}'. Valid options are: {valid_styles}"
                 )
+
         if self.node_style == NodeStyle.CUSTOM:
             # Ensure custom decorators are handled correctly
             if not self.custom_decorators:
@@ -87,7 +90,7 @@ class LayoutOptions:
                 )
 
             # Ensure decorators are applied as needed (e.g., handle defaults if any node doesn't have a decorator)
-            # You could set up default values for missing nodes here if desired
+            # maybe set up default values for missing nodes or some such..
             for node, (prefix, suffix) in self.custom_decorators.items():
                 print(
                     f"Node '{node}' will be decorated with prefix '{prefix}' and suffix '{suffix}'."
@@ -118,12 +121,11 @@ class LayoutOptions:
                     "Custom decorators must be provided when using NodeStyle.CUSTOM"
                 )
                 # return '', ''
-
-            # TODO:implement customer decorators
-            # Ensure decorators are applied as needed (e.g., handle defaults if any node doesn't have a decorator)
-            for node, (prefix, suffix) in self.custom_decorators.items():
-                print(
-                    f"Node '{node}' will be decorated with prefix '{prefix}' and suffix '{suffix}'."
+            else:
+                return (
+                    self.custom_decorators[node_str]
+                    if self.custom_decoratos[node_str]
+                    else ("", "")
                 )
 
         # Fallback to default styles if not CUSTOM

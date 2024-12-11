@@ -132,6 +132,7 @@ class ASCIIRenderer:
         node_spacing: int = 4,
         layer_spacing: int = 2,
         use_ascii: Optional[bool] = None,
+        custom_decorators: Optional[Dict[str, Tuple[str, str]]] = None,
         options: Optional[LayoutOptions] = None,
     ) -> None:
         self.graph = graph
@@ -144,12 +145,14 @@ class ASCIIRenderer:
         if options is not None:
             self.options = options
             self.options.use_ascii = use_ascii
+            self.options.custom_decorators = custom_decorators
         else:
             self.options = LayoutOptions(
                 node_style=node_style,
                 node_spacing=node_spacing,
                 layer_spacing=layer_spacing,
                 use_ascii=use_ascii,
+                custom_decorators=custom_decorators,
             )
         self.layout_manager = LayoutManager(graph, self.options)
         self.canvas: List[List[str]] = []

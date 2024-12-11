@@ -4,6 +4,10 @@ import networkx as nx
 
 def example_binary_tree():
     """Example of rendering a binary tree"""
+    custom_decorators = {
+        "N0": ("<<", ">>"),
+        "N6": ("{{", "}}"),
+    }
     print("\nBinary Tree Example:")
     # Create a binary tree (r=2) of height 3
     G = nx.balanced_tree(r=2, h=3, create_using=nx.DiGraph)
@@ -13,7 +17,9 @@ def example_binary_tree():
 
     for style in NodeStyle:
         print(f"\nUsing {style.name} style:")
-        renderer = ASCIIRenderer(G, node_style=style)
+        renderer = ASCIIRenderer(
+            G, node_style=style, custom_decorators=custom_decorators
+        )
         print(renderer.render())
         print("\n" + "=" * 50)  # Add separator between styles
 
@@ -50,8 +56,6 @@ def example_custom_decorators():
     renderer = ASCIIRenderer(G, options)
     print(renderer.render())
     print("\n" + "=" * 50)  # Separator for clarity
-
-    # Use custom decorators in the LayoutOptions
 
 
 def example_dependency_graph():
