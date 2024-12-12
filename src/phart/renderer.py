@@ -113,6 +113,23 @@ class ASCIIRenderer:
     """
 
     @staticmethod
+    def _is_redirected() -> bool:
+        """Check if output is being redirected."""
+        if sys.platform == "win32":
+            import msvcrt
+            import ctypes
+
+            try:
+                fileno = sys.stdout.fileno()
+                handle = msvcrt.get_osfhandle(fileno)
+                return not bool(ctypes.windll.kernel32.GetConsoleMode(handle, None))
+            except OSError:
+                return True
+            except AttributeError:
+                return True
+        return not sys.stdout.isatty()
+
+    @staticmethod
     def _can_use_unicode() -> bool:
         """Internal check for Unicode support."""
         if sys.platform == "win32":
@@ -148,7 +165,6 @@ class ASCIIRenderer:
             options: LayoutOptions instance (must be passed as keyword arg)
         """
         self.graph = graph
-        # ... rest of initialization
 
         if options is not None and options.use_ascii is not None:
             use_ascii = options.use_ascii
@@ -182,23 +198,7 @@ class ASCIIRenderer:
         except UnicodeEncodeError:
             return text.encode("ascii", errors="replace").decode("ascii")
 
-    def _is_redirected(self) -> bool:
-        """Check if output is being redirected."""
-        if sys.platform == "win32":
-            import msvcrt
-            import ctypes
-
-            try:
-                fileno = sys.stdout.fileno()
-                handle = msvcrt.get_osfhandle(fileno)
-                return not bool(ctypes.windll.kernel32.GetConsoleMode(handle, None))
-            except OSError:
-                return True
-            except AttributeError:
-                return True
-        return not sys.stdout.isatty()
-
-    def render(self) -> str:
+    def render(self, print_config: Optional[bool]) -> str:
         """
         Render the graph as ASCII art.
 
@@ -207,6 +207,9 @@ class ASCIIRenderer:
         str
             ASCII representation of the graph
         """
+        if print_config:
+            print(dir(self.options))
+
         # Calculate layout and render to canvas
         positions, width, height = self.layout_manager.calculate_layout()
         if not positions:
