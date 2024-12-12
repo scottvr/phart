@@ -22,9 +22,10 @@ def demonstrate_node_styles():
 
     print("\nNode Styles:")
     for style in NodeStyle:
-        print(f"\n{style.name} style:")
-        renderer = ASCIIRenderer(G, node_style=style)
-        print(renderer.render())
+        if style.name not in "CUSTOM":
+            print(f"\n{style.name} style:")
+            renderer = ASCIIRenderer(G, node_style=style)
+            print(renderer.render())
 
 
 def demonstrate_cycle():
