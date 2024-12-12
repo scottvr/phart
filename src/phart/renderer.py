@@ -165,7 +165,6 @@ class ASCIIRenderer:
                 self.options.node_style = self.options.node_style
 
         else:
-            print("DBG: XXX - options was apparently none?!")
             self.options = LayoutOptions(
                 node_style=node_style,
                 node_spacing=node_spacing,
@@ -222,7 +221,7 @@ class ASCIIRenderer:
         # Draw nodes
         for node, (x, y) in positions.items():
             prefix, suffix = self.options.get_node_decorators(str(node))
-            print(f"DBG: {node} @ {x}, {y} - {prefix} {suffix}")
+            # print(f"DBG: {node} @ {x}, {y} - {prefix} {suffix}")
             label = f"{prefix}{node}{suffix}"
             for i, char in enumerate(label):
                 self.canvas[y][x + i] = char

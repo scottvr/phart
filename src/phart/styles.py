@@ -79,9 +79,9 @@ class LayoutOptions:
         self.instance_id = LayoutOptions._instance_counter
         LayoutOptions._instance_counter += 1
 
-        print(f"DBG TRACE: LayoutOptions instance {self.instance_id} created with:")
-        print(f"DBG TRACE: - node_style: {self.node_style}")
-        print(f"DBG TRACE: - custom_decorators: {self.custom_decorators}")
+        # print(f"DBG TRACE: LayoutOptions instance {self.instance_id} created with:")
+        # print(f"DBG TRACE: - node_style: {self.node_style}")
+        # print(f"DBG TRACE: - custom_decorators: {self.custom_decorators}")
 
         if isinstance(self.node_style, str):
             try:
@@ -109,7 +109,7 @@ class LayoutOptions:
 
         if self.node_spacing <= 0:
             raise ValueError("node_spacing must be positive")
-        if self.layer_spacing <= 0:
+        if self.layer_spacing < 0:
             raise ValueError("layer_spacing must be positive")
         if self.margin <= 0:
             raise ValueError("margin must be > = 1")
@@ -128,9 +128,9 @@ class LayoutOptions:
         Tuple[str, str]
             A tuple containing the prefix and suffix for the node.
         """
-        print(f"DBG TRACE: Entering get_node_decorators for node '{node_str}'")
+        # print(f"DBG TRACE: Entering get_node_decorators for node '{node_str}'")
 
-        print(f"DBG TRACE: Type self = {type(self)}")
+        # print(f"DBG TRACE: Type self = {type(self)}")
 
         current_style = (
             self.node_style.node_style
@@ -138,8 +138,8 @@ class LayoutOptions:
             else self.node_style
         )
 
-        print(f"DBG TRACE: After extraction, current_style = {current_style}")
-        print(f"DBG TRACE: Type of current_style = {type(current_style)}")
+        # print(f"DBG TRACE: After extraction, current_style = {current_style}")
+        # print(f"DBG TRACE: Type of current_style = {type(current_style)}")
 
         # Now check if we're in custom mode
         if current_style == NodeStyle.CUSTOM:

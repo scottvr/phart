@@ -53,7 +53,7 @@ class LayoutManager:
             Total width of node when rendered
         """
         prefix, suffix = self.options.get_node_decorators(node)
-        return len(node) + len(prefix) + len(suffix)
+        return len(str(node)) + len(str(prefix)) + len(str(suffix))
 
     def calculate_layout(self) -> Tuple[Dict[str, Tuple[int, int]], int, int]:
         """
@@ -127,14 +127,22 @@ class LayoutManager:
 
             component_width = max(layer_widths.values()) + 4  # Add margins
             component_height = (max(layers.keys()) + 1) * (
-                self.options.layer_spacing + 1
+                max(1, self.options.layer_spacing)
             )
             max_width = max(max_width, component_width)
 
             # Position nodes in this component
             positions = {}
             for layer, nodes in layers.items():
-                y = layer * (self.options.layer_spacing + 1) + total_height
+                y = (
+                    layer
+                    * (
+                        1
+                        if self.options.layer_spacing == 0
+                        else self.options.layer_spacing
+                    )
+                    + total_height
+                )
                 total_width = layer_widths[layer]
                 start_x = (max_width - total_width) // 2
                 current_x = start_x

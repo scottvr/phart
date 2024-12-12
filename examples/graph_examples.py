@@ -39,17 +39,15 @@ def example_custom_decorators():
         ]
     )
 
-    print(f"DBG: {G.nodes()}")
     # Define custom decorators for specific nodes
     custom_decorators = {
         "Start": ("<", ">"),
         "End": ("{{", "}}"),
     }
-    print(f"DBG: {custom_decorators.items()}")
 
     # Use custom decorators in the LayoutOptions
     options = LayoutOptions(
-        node_style=NodeStyle.CUSTOM,
+        node_style=NodeStyle.MINIMAL,
         custom_decorators=custom_decorators,
         node_spacing=4,
         layer_spacing=2,
@@ -79,7 +77,7 @@ def example_dependency_graph():
     options = LayoutOptions(
         node_style=NodeStyle.MINIMAL, node_spacing=6, layer_spacing=2
     )
-    renderer = ASCIIRenderer(G, options)
+    renderer = ASCIIRenderer(G, options=options)
     print(renderer.render())
 
 
