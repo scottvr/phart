@@ -198,7 +198,7 @@ class ASCIIRenderer:
         except UnicodeEncodeError:
             return text.encode("ascii", errors="replace").decode("ascii")
 
-    def render(self, print_config: Optional[bool]) -> str:
+    def render(self, print_config: Optional[bool] = False) -> str:
         """
         Render the graph as ASCII art.
 
