@@ -207,8 +207,6 @@ class ASCIIRenderer:
         str
             ASCII representation of the graph
         """
-        #        if print_config:
-        #            print(self.options)
 
         # Calculate layout and render to canvas
         positions, width, height = self.layout_manager.calculate_layout()
@@ -239,9 +237,6 @@ class ASCIIRenderer:
         final = f"{preamble}\n{result}" if preamble else result
         print(f"DBG: final length = {len(final)}")  # Check if concatenation worked
         return final
-
-    #        result = "\n".join("".join(row).rstrip() for row in self.canvas)
-    #        return result
 
     def draw(self, file: Optional[TextIO] = None) -> None:
         """
