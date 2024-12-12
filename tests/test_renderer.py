@@ -66,8 +66,8 @@ class TestASCIIRenderer(unittest.TestCase):
 
     def test_basic_chain(self):
         """Test rendering of a simple chain graph."""
-        renderer = ASCIIRenderer(self.chain)
-        result = renderer.render()
+        renderer = ASCIIRenderer(self.chain, layer_spacing=3)
+        result = renderer.render(print_config=True)
         lines = result.split("\n")
 
         for line in lines:
@@ -80,6 +80,9 @@ class TestASCIIRenderer(unittest.TestCase):
         self.assertTrue(any("C" in line and "B" not in line for line in lines))
 
         # Verify edge characters
+        print("checking for pipes")
+        for line in lines:
+            print(f"{line}\n")
         self.assertTrue(any("|" in line or "│" in line for line in lines))
 
     def test_tree_structure(self):

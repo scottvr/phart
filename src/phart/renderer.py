@@ -230,12 +230,9 @@ class ASCIIRenderer:
         preamble = ""
         if print_config:
             preamble = str(self.options)
-            print(f"DBG: preamble = '{preamble}'")  # Check if preamble has content
 
         result = "\n".join("".join(row).rstrip() for row in self.canvas)
-        print(f"DBG: result length = {len(result)}")  # Check if result has content
         final = f"{preamble}\n{result}" if preamble else result
-        print(f"DBG: final length = {len(final)}")  # Check if concatenation worked
         return final
 
     def draw(self, file: Optional[TextIO] = None) -> None:
