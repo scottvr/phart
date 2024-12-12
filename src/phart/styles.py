@@ -70,7 +70,8 @@ class LayoutOptions:
     edge_vertical = EdgeChar("|", "│")
     edge_horizontal = EdgeChar("-", "─")
     edge_cross = EdgeChar("+", "┼")
-    edge_arrow = EdgeChar(">", "→")
+    edge_arrow_r = EdgeChar(">", "→")
+    edge_arrow_l = EdgeChar("<", "←")
     edge_arrow_up = EdgeChar("^", "↑")
     edge_arrow_down = EdgeChar("v", "↓")
 

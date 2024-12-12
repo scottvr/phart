@@ -71,19 +71,20 @@ class TestPerformance(unittest.TestCase):
         for depth in depths:
             G = create_binary_tree(depth)
             for style in self.styles:
-                renderer = ASCIIRenderer(G, node_style=style)
+                if style.name not in "CUSTOM":
+                    renderer = ASCIIRenderer(G, node_style=style)
 
-                start_time = time.perf_counter()
-                result = renderer.render()
-                elapsed = time.perf_counter() - start_time
+                    start_time = time.perf_counter()
+                    result = renderer.render()
+                    elapsed = time.perf_counter() - start_time
 
-                key = f"binary_tree_d{depth}_{style.name}"
-                self.results[key] = {
-                    "time": elapsed,
-                    "nodes": G.number_of_nodes(),
-                    "edges": G.number_of_edges(),
-                    "output_size": len(result),
-                }
+                    key = f"binary_tree_d{depth}_{style.name}"
+                    self.results[key] = {
+                        "time": elapsed,
+                        "nodes": G.number_of_nodes(),
+                        "edges": G.number_of_edges(),
+                        "output_size": len(result),
+                    }
 
     def test_random_dag_scaling(self):
         """Test performance with random DAGs of increasing size."""

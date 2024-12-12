@@ -346,9 +346,9 @@ class ASCIIRenderer:
                 self.canvas[end_y + 1][end_x] = self.options.edge_arrow_up
             else:  # Horizontal arrow
                 if end_x > start_x:
-                    self.canvas[end_y][end_x - 1] = self.options.edge_arrow
+                    self.canvas[end_y][end_x - 1] = self.options.edge_arrow_r
                 else:
-                    self.canvas[end_y][start_x - 1] = "<"
+                    self.canvas[end_y][start_x - 1] = self.options.edge_arrow_l
 
         except IndexError as e:
             raise IndexError(f"Edge drawing exceeded canvas boundaries: {e}")

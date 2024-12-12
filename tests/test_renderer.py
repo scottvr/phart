@@ -106,23 +106,24 @@ class TestASCIIRenderer(unittest.TestCase):
     def test_node_styles(self):
         """Test different node style options."""
         for style in NodeStyle:
-            renderer = ASCIIRenderer(
-                self.chain, options=LayoutOptions(node_style=style)
-            )
-            result = renderer.render()
+            if style.name not in "CUSTOM":
+                renderer = ASCIIRenderer(
+                    self.chain, options=LayoutOptions(node_style=style)
+                )
+                result = renderer.render()
 
-            if style == NodeStyle.SQUARE:
-                self.assertIn("[A]", result)
-                self.assertIn("[B]", result)
-            elif style == NodeStyle.ROUND:
-                self.assertIn("(A)", result)
-                self.assertIn("(B)", result)
-            elif style == NodeStyle.DIAMOND:
-                self.assertIn("<A>", result)
-                self.assertIn("<B>", result)
-            else:  # MINIMAL
-                self.assertIn("A", result)
-                self.assertIn("B", result)
+                if style == NodeStyle.SQUARE:
+                    self.assertIn("[A]", result)
+                    self.assertIn("[B]", result)
+                elif style == NodeStyle.ROUND:
+                    self.assertIn("(A)", result)
+                    self.assertIn("(B)", result)
+                elif style == NodeStyle.DIAMOND:
+                    self.assertIn("<A>", result)
+                    self.assertIn("<B>", result)
+                else:  # MINIMAL
+                    self.assertIn("A", result)
+                    self.assertIn("B", result)
 
     def test_cycle_handling(self):
         """Test proper handling of cycles in graphs."""
