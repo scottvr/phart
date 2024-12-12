@@ -70,6 +70,8 @@ class TestASCIIRenderer(unittest.TestCase):
         result = renderer.render()
         lines = result.split("\n")
 
+        for line in lines:
+            print(f"DBG: xxx: line={line}")
         # Verify nodes appear in correct order
         self.assertTrue(any("A" in line and "B" not in line for line in lines))
         self.assertTrue(
