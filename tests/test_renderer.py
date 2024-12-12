@@ -80,7 +80,7 @@ class TestASCIIRenderer(unittest.TestCase):
         self.assertTrue(any("C" in line and "B" not in line for line in lines))
 
         # Verify edge characters
-        self.assertTrue(any("│" in line or "|" in line for line in lines))
+        self.assertTrue(any("|" in line or "│" in line for line in lines))
 
     def test_tree_structure(self):
         """Test rendering of a tree structure."""

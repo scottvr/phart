@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from typing import Tuple, Any, Optional, Union, Dict
 from enum import Enum
 
@@ -74,6 +74,13 @@ class LayoutOptions:
     edge_arrow_l = EdgeChar("<", "←")
     edge_arrow_up = EdgeChar("^", "↑")
     edge_arrow_down = EdgeChar("v", "↓")
+
+    def __str__(self) -> str:
+        # Get all dataclass fields and their current values from this instance
+        return f"""LayoutOptions: {', '.join(
+            f"{field.name}={getattr(self, field.name)}"
+            for field in fields(self)
+        )}"""
 
     def __post_init__(self) -> None:
         """Validate and normalize configuration values."""
