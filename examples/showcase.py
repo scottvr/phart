@@ -127,6 +127,8 @@ if __name__ == "__main__":
     for style in NodeStyle:
         print(f"\nUsing {style.name} style:")
         renderer = ASCIIRenderer(
-            G, node_style=style, custom_decorators={"N0": ("<<", ">>")}
+            G,
+            node_style=style,
+            custom_decorators={"N0": ("<<", ">>"), "N6": ("[[", "]]")},
         )
         print(renderer.render())

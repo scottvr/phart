@@ -7,6 +7,7 @@ def example_binary_tree():
     custom_decorators = {
         "N0": ("<<", ">>"),
         "N6": ("{{", "}}"),
+        "N9": ("|", "|"),
     }
     print("\nBinary Tree Example:")
     # Create a binary tree (r=2) of height 3
@@ -18,7 +19,7 @@ def example_binary_tree():
     for style in NodeStyle:
         print(f"\nUsing {style.name} style:")
         renderer = ASCIIRenderer(
-            G, node_style=style, custom_decorators=custom_decorators
+            G, node_style=style, custom_decorators=custom_decorators, node_spacing=4
         )
         print(renderer.render())
         print("\n" + "=" * 50)  # Add separator between styles
@@ -38,11 +39,13 @@ def example_custom_decorators():
         ]
     )
 
+    print(f"DBG: {G.nodes()}")
     # Define custom decorators for specific nodes
     custom_decorators = {
-        "Start": ("<<", ">>"),
+        "Start": ("<", ">"),
         "End": ("{{", "}}"),
     }
+    print(f"DBG: {custom_decorators.items()}")
 
     # Use custom decorators in the LayoutOptions
     options = LayoutOptions(
@@ -53,7 +56,7 @@ def example_custom_decorators():
     )
 
     # Render the graph with custom node decorations
-    renderer = ASCIIRenderer(G, options)
+    renderer = ASCIIRenderer(G, options=options)
     print(renderer.render())
     print("\n" + "=" * 50)  # Separator for clarity
 
@@ -103,5 +106,6 @@ def example_workflow():
 
 if __name__ == "__main__":
     example_binary_tree()
-    example_dependency_graph()
-    example_workflow()
+    # example_dependency_graph()
+    # example_workflow()
+    example_custom_decorators()

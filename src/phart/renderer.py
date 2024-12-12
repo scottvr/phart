@@ -128,6 +128,7 @@ class ASCIIRenderer:
     def __init__(
         self,
         graph: nx.Graph,
+        *,  # Force keyword args after this
         node_style: NodeStyle = NodeStyle.SQUARE,
         node_spacing: int = 4,
         layer_spacing: int = 2,
@@ -135,7 +136,19 @@ class ASCIIRenderer:
         custom_decorators: Optional[Dict[str, Tuple[str, str]]] = None,
         options: Optional[LayoutOptions] = None,
     ) -> None:
+        """Initialize the ASCII renderer.
+
+        Args:
+            graph: The networkx graph to render
+            node_style: Style for nodes (must be passed as keyword arg)
+            node_spacing: Horizontal spacing between nodes (must be passed as keyword arg)
+            layer_spacing: Vertical spacing between layers (must be passed as keyword arg)
+            use_ascii: Force ASCII output (must be passed as keyword arg)
+            custom_decorators: Custom node decorations (must be passed as keyword arg)
+            options: LayoutOptions instance (must be passed as keyword arg)
+        """
         self.graph = graph
+        # ... rest of initialization
 
         if options is not None and options.use_ascii is not None:
             use_ascii = options.use_ascii
@@ -145,8 +158,14 @@ class ASCIIRenderer:
         if options is not None:
             self.options = options
             self.options.use_ascii = use_ascii
-            self.options.custom_decorators = custom_decorators
+            if custom_decorators is not None:
+                self.options.custom_decorators = custom_decorators
+            # Make sure node_style is properly set to just the style enum
+            if isinstance(self.options, LayoutOptions):
+                self.options.node_style = self.options.node_style
+
         else:
+            print("DBG: XXX - options was apparently none?!")
             self.options = LayoutOptions(
                 node_style=node_style,
                 node_spacing=node_spacing,
@@ -203,6 +222,7 @@ class ASCIIRenderer:
         # Draw nodes
         for node, (x, y) in positions.items():
             prefix, suffix = self.options.get_node_decorators(str(node))
+            print(f"DBG: {node} @ {x}, {y} - {prefix} {suffix}")
             label = f"{prefix}{node}{suffix}"
             for i, char in enumerate(label):
                 self.canvas[y][x + i] = char
