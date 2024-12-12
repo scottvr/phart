@@ -182,7 +182,7 @@ class ASCIIRenderer:
         except UnicodeEncodeError:
             return text.encode("ascii", errors="replace").decode("ascii")
 
-    def _is_redirected() -> bool:
+    def _is_redirected(self) -> bool:
         """Check if output is being redirected."""
         if sys.platform == "win32":
             import msvcrt
