@@ -311,64 +311,82 @@ class ASCIIRenderer:
             KeyError: If either node is not in positions dictionary
             IndexError: If edge coordinates exceed canvas boundaries
         """
+
         if start not in positions or end not in positions:
-            raise KeyError(f"Node position not found: {start if start not in positions else end}")
+            raise KeyError(
+                f"Node position not found: {start if start not in positions else end}"
+            )
 
         start_x, start_y = positions[start]
         end_x, end_y = positions[end]
-    
+
         # Account for node decoration width
-        prefix, _ = self.options.get_node_decorators(start)
+        prefix, _ = self.options.get_node_decorators(str(start))
         start_x += len(prefix) + len(str(start)) // 2
         end_x += len(prefix) + len(str(end)) // 2
-    
+
         # Check if this is a bidirectional edge
-        is_bidirectional = (end, start) in self.graph.edges()
-    
+        is_bidirectional = (
+            not self.graph.is_directed()  # Undirected graphs are always bidirectional
+            or (end, start) in self.graph.edges()  # Explicit reverse edge exists
+        )
+
         try:
-            # Draw vertical line
-            min_y, max_y = min(start_y, end_y), max(start_y, end_y)
-            for y in range(min_y + 1, max_y):
-                curr_char = self.canvas[y][start_x]
-                if curr_char == self.options.edge_horizontal:
-                    self.canvas[y][start_x] = self.options.edge_cross
-                else:
-                    self.canvas[y][start_x] = self.options.edge_vertical
-    
-            # Draw horizontal line if needed
+            # For horizontal edges or edges that require horizontal segments
             if start_x != end_x:
-                y = end_y
+                y = min(start_y, end_y) if abs(start_y - end_y) <= 1 else start_y
                 x_start, x_end = min(start_x, end_x), max(start_x, end_x)
-                for x in range(x_start, x_end + 1):
+
+                # Draw horizontal line
+                for x in range(x_start + 1, x_end):
                     curr_char = self.canvas[y][x]
                     if curr_char == self.options.edge_vertical:
                         self.canvas[y][x] = self.options.edge_cross
                     else:
                         self.canvas[y][x] = self.options.edge_horizontal
-    
-            # Add appropriate arrow based on direction and bidirectionality
-            if is_bidirectional:
-                if end_y != start_y:  # Vertical bidirectional
-                    mid_y = (start_y + end_y) // 2
-                    self.canvas[mid_y][end_x] = self.options.edge_arrow_bidir_v
-                else:  # Horizontal bidirectional
-                    mid_x = (start_x + end_x) // 2
-                    self.canvas[end_y][mid_x] = self.options.edge_arrow_bidir_h
-            else:
-                # Single direction arrows (existing logic)
-                if end_y > start_y:  # Downward arrow
-                    self.canvas[end_y - 1][end_x] = self.options.edge_arrow_down
-                elif end_y < start_y:  # Upward arrow
-                    self.canvas[end_y + 1][end_x] = self.options.edge_arrow_up
-                else:  # Horizontal arrow
-                    if end_x > start_x:
-                        self.canvas[end_y][end_x - 1] = self.options.edge_arrow_r
+
+            # For vertical edges
+            if start_y != end_y:
+                x = end_x
+                y_start, y_end = min(start_y, end_y), max(start_y, end_y)
+
+                # Draw vertical line
+                for y in range(y_start + 1, y_end):
+                    curr_char = self.canvas[y][x]
+                    if curr_char == self.options.edge_horizontal:
+                        self.canvas[y][x] = self.options.edge_cross
                     else:
-                        self.canvas[end_y][start_x - 1] = self.options.edge_arrow_l
-    
+                        self.canvas[y][x] = self.options.edge_vertical
+
+            # Add appropriate arrow/decorator
+            if is_bidirectional:
+                if abs(end_y - start_y) > abs(
+                    end_x - start_x
+                ):  # More vertical than horizontal
+                    mid_y = (start_y + end_y) // 2
+                    self.canvas[mid_y][end_x] = self.options.edge_arrow_bidir_h
+                else:  # More horizontal than vertical
+                    mid_x = (start_x + end_x) // 2
+                    self.canvas[end_y][mid_x] = self.options.edge_arrow_bidir_v
+            else:
+                if start_y == end_y:  # Horizontal edge
+                    if start_x < end_x:  # Right
+                        self.canvas[end_y][end_x - 1] = self.options.edge_arrow_r
+                    else:  # Left
+                        self.canvas[end_y][end_x + 1] = self.options.edge_arrow_l
+                elif start_x == end_x:  # Vertical edge
+                    if start_y < end_y:  # Down
+                        self.canvas[end_y - 1][end_x] = self.options.edge_arrow_down
+                    else:  # Up
+                        self.canvas[end_y + 1][end_x] = self.options.edge_arrow_up
+                else:  # Diagonal edge needs both vertical and horizontal components
+                    if start_y < end_y:
+                        self.canvas[end_y - 1][end_x] = self.options.edge_arrow_down
+                    else:
+                        self.canvas[start_y - 1][start_x] = self.options.edge_arrow_up
+
         except IndexError as e:
             raise IndexError(f"Edge drawing exceeded canvas boundaries: {e}")
-    
 
     @classmethod
     def from_dot(cls, dot_string: str, **kwargs: Any) -> "ASCIIRenderer":
