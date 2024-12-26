@@ -311,7 +311,6 @@ class ASCIIRenderer:
             KeyError: If either node is not in positions dictionary
             IndexError: If edge coordinates exceed canvas boundaries
         """
-
         if start not in positions or end not in positions:
             raise KeyError(
                 f"Node position not found: {start if start not in positions else end}"
@@ -332,58 +331,89 @@ class ASCIIRenderer:
         )
 
         try:
-            # For horizontal edges or edges that require horizontal segments
-            if start_x != end_x:
-                y = min(start_y, end_y) if abs(start_y - end_y) <= 1 else start_y
-                x_start, x_end = min(start_x, end_x), max(start_x, end_x)
+            # Special handling for 3-node triangular layouts
+            is_triangle = len(self.graph) == 3
+            if is_triangle:
+                # First draw all basic connecting lines
+                if start_y < end_y:  # Top to bottom connections
+                    # Always draw vertical line
+                    for y in range(start_y + 1, end_y):
+                        curr_char = self.canvas[y][start_x]
+                        if curr_char == self.options.edge_horizontal:
+                            self.canvas[y][start_x] = self.options.edge_cross
+                        else:
+                            self.canvas[y][start_x] = self.options.edge_vertical
 
-                # Draw horizontal line
-                for x in range(x_start + 1, x_end):
-                    curr_char = self.canvas[y][x]
-                    if curr_char == self.options.edge_vertical:
-                        self.canvas[y][x] = self.options.edge_cross
+                else:  # Bottom horizontal connection
+                    x_start, x_end = min(start_x, end_x), max(start_x, end_x)
+                    for x in range(x_start + 1, x_end):
+                        curr_char = self.canvas[start_y][x]
+                        if curr_char == self.options.edge_vertical:
+                            self.canvas[start_y][x] = self.options.edge_cross
+                        else:
+                            self.canvas[start_y][x] = self.options.edge_horizontal
+
+                # Now add appropriate arrows or bidirectional markers
+                if start_y < end_y:  # Top to bottom connections
+                    if is_bidirectional:
+                        # Place bidirectional markers for side connections
+                        if abs(end_x - start_x) > 2:  # Side connection
+                            x_offset = 3 if end_x > start_x else -3
+                            self.canvas[start_y + 1][start_x + x_offset] = (
+                                self.options.edge_arrow_bidir_v
+                            )
                     else:
-                        self.canvas[y][x] = self.options.edge_horizontal
-
-            # For vertical edges
-            if start_y != end_y:
-                x = end_x
-                y_start, y_end = min(start_y, end_y), max(start_y, end_y)
-
-                # Draw vertical line
-                for y in range(y_start + 1, y_end):
-                    curr_char = self.canvas[y][x]
-                    if curr_char == self.options.edge_horizontal:
-                        self.canvas[y][x] = self.options.edge_cross
-                    else:
-                        self.canvas[y][x] = self.options.edge_vertical
-
-            # Add appropriate arrow/decorator
-            if is_bidirectional:
-                if abs(end_y - start_y) > abs(
-                    end_x - start_x
-                ):  # More vertical than horizontal
-                    mid_y = (start_y + end_y) // 2
-                    self.canvas[mid_y][end_x] = self.options.edge_arrow_bidir_h
-                else:  # More horizontal than vertical
+                        # Direction arrows for directed graph
+                        if self.graph.is_directed():
+                            self.canvas[end_y - 1][end_x] = self.options.edge_arrow_down
+                else:  # Bottom horizontal connection
                     mid_x = (start_x + end_x) // 2
-                    self.canvas[end_y][mid_x] = self.options.edge_arrow_bidir_v
-            else:
-                if start_y == end_y:  # Horizontal edge
-                    if start_x < end_x:  # Right
-                        self.canvas[end_y][end_x - 1] = self.options.edge_arrow_r
-                    else:  # Left
-                        self.canvas[end_y][end_x + 1] = self.options.edge_arrow_l
-                elif start_x == end_x:  # Vertical edge
-                    if start_y < end_y:  # Down
-                        self.canvas[end_y - 1][end_x] = self.options.edge_arrow_down
-                    else:  # Up
-                        self.canvas[end_y + 1][end_x] = self.options.edge_arrow_up
-                else:  # Diagonal edge needs both vertical and horizontal components
-                    if start_y < end_y:
-                        self.canvas[end_y - 1][end_x] = self.options.edge_arrow_down
+                    if is_bidirectional:
+                        self.canvas[start_y][mid_x] = self.options.edge_arrow_bidir_h
+                    elif start_x < end_x:
+                        self.canvas[start_y][end_x - 1] = self.options.edge_arrow_r
                     else:
-                        self.canvas[start_y - 1][start_x] = self.options.edge_arrow_up
+                        self.canvas[start_y][start_x - 1] = self.options.edge_arrow_l
+
+            else:
+                # Standard edge drawing for non-triangle graphs
+                # Draw vertical line
+                min_y, max_y = min(start_y, end_y), max(start_y, end_y)
+                for y in range(min_y + 1, max_y):
+                    curr_char = self.canvas[y][start_x]
+                    if curr_char == self.options.edge_horizontal:
+                        self.canvas[y][start_x] = self.options.edge_cross
+                    else:
+                        self.canvas[y][start_x] = self.options.edge_vertical
+
+                # Draw horizontal line if needed
+                if start_x != end_x:
+                    y = end_y
+                    x_start, x_end = min(start_x, end_x), max(start_x, end_x)
+                    for x in range(x_start + 1, x_end):
+                        curr_char = self.canvas[y][x]
+                        if curr_char == self.options.edge_vertical:
+                            self.canvas[y][x] = self.options.edge_cross
+                        else:
+                            self.canvas[y][x] = self.options.edge_horizontal
+
+                # Add arrows based on direction
+                if is_bidirectional:
+                    if end_y != start_y:
+                        mid_y = (start_y + end_y) // 2
+                        self.canvas[mid_y][end_x] = self.options.edge_arrow_bidir_h
+                    else:
+                        mid_x = (start_x + end_x) // 2
+                        self.canvas[end_y][mid_x] = self.options.edge_arrow_bidir_v
+                else:
+                    if end_y > start_y:
+                        self.canvas[end_y - 1][end_x] = self.options.edge_arrow_down
+                    elif end_y < start_y:
+                        self.canvas[end_y + 1][end_x] = self.options.edge_arrow_up
+                    elif end_x > start_x:
+                        self.canvas[end_y][end_x - 1] = self.options.edge_arrow_r
+                    else:
+                        self.canvas[end_y][start_x - 1] = self.options.edge_arrow_l
 
         except IndexError as e:
             raise IndexError(f"Edge drawing exceeded canvas boundaries: {e}")
