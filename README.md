@@ -228,7 +228,7 @@ The mention of not being Perl or a PHP webapp may appear to be throwing shade at
 
 Additionally, I'm not sure how I didn't find pydot2ascii - which is native python - when I first looked for a solution, but even if I had seen it I may not have realized that I could have exported my NX DAG to DOT, and then used pydot2ascii to go from DOT to ascii art.
 
-So now we have PHART, and the ability to render a NX digraph in ASCII/Unicode, read a DOT file, read GraphML, and a few other things in a well-tested Pythom module published to PyPi. I hope you find it useful.
+So now we have PHART, and the ability to render a NX digraph in ASCII/Unicode, read a DOT file, read GraphML, and a few other things in a well-tested Python module published to PyPi. I hope you find it useful.
 
 ## Installation
 
