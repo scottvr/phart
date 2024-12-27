@@ -356,28 +356,17 @@ class ASCIIRenderer:
                 # Now add appropriate arrows or bidirectional markers
                 if start_y < end_y:  # Top to bottom connections
                     if is_bidirectional:
-                        # Place bidirectional markers for side connections
-                        if abs(end_x - start_x) > 2:  # Side connection
-                            x_offset = 3 if end_x > start_x else -3
-                            self.canvas[start_y + 1][start_x + x_offset] = (
-                                self.options.edge_arrow_bidir_v
-                            )
-                    else:
-                        # Direction arrows for directed graph
-                        if self.graph.is_directed():
-                            self.canvas[end_y - 1][end_x] = self.options.edge_arrow_down
+                        # Place vertical bidirectional marker at the top
+                        self.canvas[start_y + 1][start_x] = (
+                            self.options.edge_arrow_bidir_h
+                        )
                 else:  # Bottom horizontal connection
                     mid_x = (start_x + end_x) // 2
                     if is_bidirectional:
-                        self.canvas[start_y][mid_x] = self.options.edge_arrow_bidir_h
-                    elif start_x < end_x:
-                        self.canvas[start_y][end_x - 1] = self.options.edge_arrow_r
-                    else:
-                        self.canvas[start_y][start_x - 1] = self.options.edge_arrow_l
+                        self.canvas[start_y][mid_x] = self.options.edge_arrow_bidir_v
 
             else:
-                # Standard edge drawing for non-triangle graphs
-                # Draw vertical line
+                # Standard edge drawing for non-triangle graphs (unchanged)
                 min_y, max_y = min(start_y, end_y), max(start_y, end_y)
                 for y in range(min_y + 1, max_y):
                     curr_char = self.canvas[y][start_x]
@@ -386,7 +375,6 @@ class ASCIIRenderer:
                     else:
                         self.canvas[y][start_x] = self.options.edge_vertical
 
-                # Draw horizontal line if needed
                 if start_x != end_x:
                     y = end_y
                     x_start, x_end = min(start_x, end_x), max(start_x, end_x)
@@ -397,7 +385,6 @@ class ASCIIRenderer:
                         else:
                             self.canvas[y][x] = self.options.edge_horizontal
 
-                # Add arrows based on direction
                 if is_bidirectional:
                     if end_y != start_y:
                         mid_y = (start_y + end_y) // 2
