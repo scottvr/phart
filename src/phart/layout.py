@@ -4,7 +4,7 @@ This module handles the calculation of node positions and edge routing
 for ASCII graph visualization.
 """
 
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Set
 
 import networkx as nx  # type: ignore
 
@@ -125,14 +125,14 @@ class LayoutManager:
             roots = [max(graph.nodes(), key=lambda n: graph.degree(n))]
 
         # Calculate distances within component
-        distances = {}
+        distances: Dict[str, int] = {}
         for root in roots:
             lengths = nx.single_source_shortest_path_length(graph, root)
             for node, dist in lengths.items():
                 distances[node] = min(distances.get(node, dist), dist)
 
         # Group nodes by layer
-        layers = {}
+        layers: Dict[int, Set[str]] = {}
         for node, layer in distances.items():
             if layer not in layers:
                 layers[layer] = set()
