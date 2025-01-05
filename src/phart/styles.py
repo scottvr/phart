@@ -74,9 +74,9 @@ class LayoutOptions:
     edge_arrow_l = EdgeChar("<", "←")
     edge_arrow_up = EdgeChar("^", "↑")
     edge_arrow_down = EdgeChar("v", "↓")
-    edge_arrow_bidir_v = EdgeChar('⟷', '⟷')  
-    edge_arrow_bidir_h = EdgeChar('↕', '↕')  
-    
+    edge_arrow_bidir_v = EdgeChar("⟷", "⟷")
+    edge_arrow_bidir_h = EdgeChar("↕", "↕")
+
     def __str__(self) -> str:
         # Get all dataclass fields and their current values from this instance
         return f"""LayoutOptions: {', '.join(
