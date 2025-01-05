@@ -55,10 +55,21 @@ class LayoutManager:
         prefix, suffix = self.options.get_node_decorators(node)
         return len(str(node)) + len(str(prefix)) + len(str(suffix))
 
+    def _calculate_minimum_x_position(self, node_width: int) -> int:
+        """Calculate minimum x position that allows for edge drawing."""
+        return 2 if not self.options.use_ascii else 3  # More space for ASCII markers
+
     def calculate_layout(self) -> Tuple[Dict[str, Tuple[int, int]], int, int]:
         """Calculate node positions using layout appropriate for graph structure."""
         if not self.graph:
             return {}, 0, 0
+
+        # Calculate max node width for spacing adjustment
+        max_node_width = max(
+            self._get_node_width(str(node)) for node in self.graph.nodes()
+        )
+        # Base spacing is max(configured spacing, node width)
+        effective_spacing = max(self.options.node_spacing, max_node_width)
 
         # Group nodes by connected component
         components = list(
@@ -74,16 +85,16 @@ class LayoutManager:
         for component in components:
             subgraph = self.graph.subgraph(component)
 
-            # Special handling for 3-node cycles
+            # Special handling for triangular components
             is_triangle = len(component) == 3 and (
                 not self.graph.is_directed()
                 or len(list(nx.simple_cycles(subgraph))) > 0
             )
 
             if is_triangle:
-                positions = self._layout_triangle(subgraph)
+                positions = self._layout_triangle(subgraph, effective_spacing)
             else:
-                positions = self._layout_hierarchical(subgraph)
+                positions = self._layout_hierarchical(subgraph, effective_spacing)
 
             # Get component dimensions
             component_width = max(x for x, _ in positions.values()) + 4
@@ -102,40 +113,13 @@ class LayoutManager:
 
         return component_layouts, max_width, total_height
 
-    def _layout_triangle(self, graph: nx.Graph) -> Dict[str, Tuple[int, int]]:
-        """Layout specifically optimized for 3-node graphs."""
-        nodes = list(graph.nodes())
-        positions = {}
-
-        # Calculate node widths
-        widths = {node: self._get_node_width(str(node)) for node in nodes}
-
-        # Calculate total width needed
-        total_width = max(
-            # Width of top node
-            widths[nodes[0]],
-            # Width of bottom two nodes plus spacing
-            widths[nodes[1]] + self.options.node_spacing + widths[nodes[2]],
-        )
-
-        # Center the top node
-        center_x = total_width // 2
-        positions[nodes[0]] = (center_x - widths[nodes[0]] // 2, 0)
-
-        # Position bottom nodes with even spacing
-        left_x = 0
-        positions[nodes[1]] = (left_x, 2)
-
-        right_x = total_width - widths[nodes[2]]
-        positions[nodes[2]] = (right_x, 2)
-
-        return positions
-
-    def _layout_hierarchical(self, graph: nx.Graph) -> Dict[str, Tuple[int, int]]:
-        """Standard hierarchical layout for non-triangle components."""
+    def _layout_hierarchical(
+        self, graph: nx.Graph, spacing: int
+    ) -> Dict[str, Tuple[int, int]]:
+        """Standard hierarchical layout with adjusted spacing."""
         if graph.is_directed():
             roots = [n for n, d in graph.in_degree() if d == 0]
-            if not roots:  # Handle cycles by picking highest out-degree node
+            if not roots:
                 roots = [max(graph.nodes(), key=lambda n: graph.out_degree(n))]
         else:
             roots = [max(graph.nodes(), key=lambda n: graph.degree(n))]
@@ -154,13 +138,15 @@ class LayoutManager:
                 layers[layer] = set()
             layers[layer].add(node)
 
-        # Calculate positions using existing logic
+        # Calculate positions
         positions = {}
         layer_widths = {}
+
         for layer, nodes in layers.items():
-            total_width = sum(self._get_node_width(n) for n in nodes)
-            spacing = (len(nodes) - 1) * self.options.node_spacing
-            layer_widths[layer] = total_width + spacing
+            total_width = sum(self._get_node_width(str(n)) for n in nodes)
+            # Use provided spacing parameter instead of self.options.node_spacing
+            total_spacing = (len(nodes) - 1) * spacing
+            layer_widths[layer] = total_width + total_spacing
 
         max_width = max(layer_widths.values()) if layer_widths else 0
 
@@ -174,6 +160,37 @@ class LayoutManager:
 
             for node in sorted(nodes):
                 positions[node] = (current_x, y)
-                current_x += self._get_node_width(node) + self.options.node_spacing
+                current_x += self._get_node_width(str(node)) + spacing
+
+        return positions
+
+    def _layout_triangle(
+        self, graph: nx.Graph, spacing: int
+    ) -> Dict[str, Tuple[int, int]]:
+        """Triangle layout with adjusted spacing."""
+        nodes = list(graph.nodes())
+        positions = {}
+
+        # Calculate node widths
+        widths = {node: self._get_node_width(str(node)) for node in nodes}
+
+        # Calculate total width needed including spacing
+        total_width = max(
+            widths[nodes[0]],  # Width of top node
+            widths[nodes[1]]
+            + spacing
+            + widths[nodes[2]],  # Width of bottom two nodes plus spacing
+        )
+
+        # Center the top node
+        center_x = total_width // 2
+        positions[nodes[0]] = (center_x - widths[nodes[0]] // 2, 0)
+
+        # Position bottom nodes with spacing
+        left_x = 0
+        positions[nodes[1]] = (left_x, 2)
+
+        right_x = total_width - widths[nodes[2]]
+        positions[nodes[2]] = (right_x, 2)
 
         return positions
