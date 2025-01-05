@@ -167,9 +167,18 @@ class LayoutManager:
     def _layout_triangle(
         self, graph: nx.Graph, spacing: int
     ) -> Dict[str, Tuple[int, int]]:
-        """Triangle layout with adjusted spacing."""
-        nodes = list(graph.nodes())
+        """Triangle layout with adjusted spacing, respecting cycle order."""
         positions = {}
+
+        # Get cycle order if directed
+        if graph.is_directed():
+            cycles = list(nx.simple_cycles(graph))
+            if cycles:
+                nodes = cycles[0]  # Use first cycle's order
+            else:
+                nodes = list(graph.nodes())
+        else:
+            nodes = list(graph.nodes())
 
         # Calculate node widths
         widths = {node: self._get_node_width(str(node)) for node in nodes}
@@ -179,18 +188,23 @@ class LayoutManager:
             widths[nodes[0]],  # Width of top node
             widths[nodes[1]]
             + spacing
-            + widths[nodes[2]],  # Width of bottom two nodes plus spacing
+            + widths[nodes[2]],  # Width of bottom nodes plus spacing
         )
 
-        # Center the top node
+        # Position first node in cycle at top center
         center_x = total_width // 2
         positions[nodes[0]] = (center_x - widths[nodes[0]] // 2, 0)
 
-        # Position bottom nodes with spacing
+        # Position second node at bottom left
         left_x = 0
         positions[nodes[1]] = (left_x, 2)
 
+        # Position third node at bottom right
         right_x = total_width - widths[nodes[2]]
         positions[nodes[2]] = (right_x, 2)
+
+        # Debug the layout
+        #        print(f"DEBUG: Triangle cycle order: {nodes}")
+        #        print(f"DEBUG: Triangle positions: {positions}")
 
         return positions
