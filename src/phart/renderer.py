@@ -345,7 +345,7 @@ class ASCIIRenderer:
         start_x, start_y = positions[start]
         end_x, end_y = positions[end]
 
-        # Calculate center points first (keep these working as before)
+        # Calculate center points
         prefix, _ = self.options.get_node_decorators(str(start))
         start_width = len(str(start)) + len(str(prefix))
         end_width = len(str(end)) + len(str(prefix))
@@ -353,20 +353,29 @@ class ASCIIRenderer:
         start_center = start_x + start_width // 2
         end_center = end_x + end_width // 2
 
-        # For arrow placement, calculate one character before the label starts
-        arrow_right_pos = end_x - 1  # For left-pointing arrows
+        # End node edges for arrow placement
+        end_right = end_x + end_width
         arrow_left_pos = end_x - 1  # For right-pointing arrows
 
-        #        print(f"DEBUG: Drawing edge {start}->{end}")
-        #        print(f"DEBUG: start_center={start_center}, end_center={end_center}")
-        #        print(f"DEBUG: arrow_left_pos={arrow_left_pos}, arrow_right_pos={arrow_right_pos}")
+        # Check if this is a bidirectional edge
+        is_bidirectional = (
+            not self.graph.is_directed() or (end, start) in self.graph.edges()
+        )
 
         try:
             # Case 1: Straight vertical connection
             if start_center == end_center:
+                # Draw vertical line
                 for y in range(start_y + 1, end_y - 1):
                     self.canvas[y][start_center] = self.options.edge_vertical
-                self.canvas[end_y - 1][end_center] = self.options.edge_arrow_down
+
+                if is_bidirectional:
+                    # Place bidirectional marker in middle
+                    mid_y = (start_y + end_y) // 2
+                    self.canvas[mid_y][start_center] = self.options.edge_arrow_bidir_h
+                else:
+                    # Add down arrow at end
+                    self.canvas[end_y - 1][end_center] = self.options.edge_arrow_down
                 return
 
             # Case 2: Edges that turn (down and left/right)
@@ -375,35 +384,48 @@ class ASCIIRenderer:
                 for y in range(start_y + 1, end_y - 1):
                     self.canvas[y][start_center] = self.options.edge_vertical
 
-                # Add down arrow at bottom of vertical
-                self.canvas[end_y - 1][start_center] = self.options.edge_arrow_down
+                if is_bidirectional:
+                    # For bidirectional vertical segment
+                    mid_y = (start_y + end_y) // 2
+                    self.canvas[mid_y][start_center] = self.options.edge_arrow_bidir_h
+                else:
+                    # Add down arrow at bottom of vertical
+                    self.canvas[end_y - 1][start_center] = self.options.edge_arrow_down
 
                 # Add crossing point
                 self.canvas[end_y][start_center] = self.options.edge_cross
 
                 # Draw horizontal segment with arrow
                 if start_center < end_center:  # Moving right
-                    #                    print(f"DEBUG: Drawing right arrow at {arrow_left_pos}")
                     for x in range(start_center + 1, arrow_left_pos):
                         self.canvas[end_y][x] = self.options.edge_horizontal
-                    self.canvas[end_y][arrow_left_pos] = self.options.edge_arrow_r
+                    if not is_bidirectional:
+                        self.canvas[end_y][arrow_left_pos] = self.options.edge_arrow_r
                 else:  # Moving left
-                    #                    print(f"DEBUG: Drawing left arrow at {arrow_right_pos}")
-                    for x in range(arrow_right_pos + 1, start_center):
+                    for x in range(end_right + 1, start_center):
                         self.canvas[end_y][x] = self.options.edge_horizontal
-                    self.canvas[end_y][arrow_right_pos] = self.options.edge_arrow_l
+                    if not is_bidirectional:
+                        self.canvas[end_y][end_right + 1] = self.options.edge_arrow_l
                 return
 
             # Case 3: Same level horizontal
             if start_y == end_y:
-                if start_center < end_center:  # Moving right
-                    for x in range(start_center + 1, arrow_left_pos):
+                if is_bidirectional:
+                    # Draw horizontal line with bidirectional marker
+                    for x in range(start_center + 1, end_center):
                         self.canvas[start_y][x] = self.options.edge_horizontal
-                    self.canvas[start_y][arrow_left_pos] = self.options.edge_arrow_r
-                else:  # Moving left
-                    for x in range(arrow_right_pos + 1, start_center):
-                        self.canvas[start_y][x] = self.options.edge_horizontal
-                    self.canvas[start_y][arrow_right_pos] = self.options.edge_arrow_l
+                    mid_x = (start_center + end_center) // 2
+                    self.canvas[start_y][mid_x] = self.options.edge_arrow_bidir_v
+                else:
+                    # Draw directional arrow
+                    if start_center < end_center:  # Moving right
+                        for x in range(start_center + 1, arrow_left_pos):
+                            self.canvas[start_y][x] = self.options.edge_horizontal
+                        self.canvas[start_y][arrow_left_pos] = self.options.edge_arrow_r
+                    else:  # Moving left
+                        for x in range(end_right + 1, start_center):
+                            self.canvas[start_y][x] = self.options.edge_horizontal
+                        self.canvas[start_y][end_right + 1] = self.options.edge_arrow_l
 
         except IndexError as e:
             raise IndexError(f"Edge drawing exceeded canvas boundaries: {e}")
