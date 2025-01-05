@@ -213,7 +213,7 @@ class ASCIIRenderer:
         if not positions:
             return ""
 
-        print("DEBUG: Original positions:", positions)
+        #        print("DEBUG: Original positions:", positions)
 
         # Add left padding to all positions
         padding_left = 4 if not self.options.use_ascii else 6
@@ -221,7 +221,7 @@ class ASCIIRenderer:
             node: (x + padding_left, y) for node, (x, y) in positions.items()
         }
 
-        print("DEBUG: Adjusted positions:", adjusted_positions)
+        #        print("DEBUG: Adjusted positions:", adjusted_positions)
 
         # Initialize canvas with adjusted positions
         self._init_canvas(width, height, adjusted_positions)
@@ -230,11 +230,11 @@ class ASCIIRenderer:
         for start, end in self.graph.edges():
             try:
                 self._draw_edge(start, end, adjusted_positions)
-            except IndexError as e:
-                print(f"DEBUG: Error drawing edge {start}->{end}: {e}")
-                print(f"DEBUG: Start pos: {adjusted_positions[start]}")
-                print(f"DEBUG: End pos: {adjusted_positions[end]}")
-                print(f"DEBUG: Canvas size: {len(self.canvas[0])}x{len(self.canvas)}")
+            except IndexError:
+                #                print(f"DEBUG: Error drawing edge {start}->{end}: {e}")
+                #                print(f"DEBUG: Start pos: {adjusted_positions[start]}")
+                #                print(f"DEBUG: End pos: {adjusted_positions[end]}")
+                #                print(f"DEBUG: Canvas size: {len(self.canvas[0])}x{len(self.canvas)}")
                 raise
 
         # Draw nodes
@@ -328,8 +328,8 @@ class ASCIIRenderer:
         # Add vertical padding
         final_height = height + 2
 
-        print(f"DEBUG: Canvas initialized with {final_width}x{final_height}")
-        print(f"DEBUG: Max node end position: {max_node_end}")
+        #        print(f"DEBUG: Canvas initialized with {final_width}x{final_height}")
+        #        print(f"DEBUG: Max node end position: {max_node_end}")
 
         self.canvas = [[" " for _ in range(final_width)] for _ in range(final_height)]
 
