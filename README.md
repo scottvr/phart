@@ -300,6 +300,7 @@ phart --charset ascii graph.dot
 # +-A-+
 # |   |
 # +-B-+
+```
 
 ## File Format Support
 
