@@ -7,6 +7,7 @@ from typing import Optional
 
 from .renderer import ASCIIRenderer
 from .styles import NodeStyle
+from .charset import CharSet
 
 
 def parse_args() -> argparse.Namespace:
@@ -28,11 +29,6 @@ def parse_args() -> argparse.Namespace:
         help="Node style (default: square)",
     )
     parser.add_argument(
-        "--ascii",
-        action="store_true",
-        help="Force ASCII output (no Unicode box characters)",
-    )
-    parser.add_argument(
         "--node-spacing",
         type=int,
         default=4,
@@ -44,6 +40,21 @@ def parse_args() -> argparse.Namespace:
         default=2,
         help="Vertical space between layers (default: 2)",
     )
+    parser.add_argument(
+        "--charset",
+        type=CharSet,
+        choices=list(CharSet),
+        default=CharSet.UNICODE,
+        help="Character set to use for rendering (default: unicode)",
+    )
+    # Maintain backwards compatibility
+    parser.add_argument(
+        "--ascii",
+        action="store_true",
+        help="Force ASCII output (deprecated, use --charset ascii instead)",
+        dest="use_legacy_ascii",
+    )
+
     return parser.parse_args()
 
 
