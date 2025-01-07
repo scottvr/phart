@@ -288,7 +288,7 @@ PHART supports multiple character sets for rendering:
 
 Example:
 
-````bash
+```bash
 # Using Unicode (default)
 phart graph.dot
 # ┌─A─┐
@@ -311,7 +311,7 @@ phart --charset ascii graph.dot
 
 ```bash
 pip install phart[extras]
-````
+```
 
 or using requirements file
 
