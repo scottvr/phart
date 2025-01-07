@@ -7,6 +7,7 @@
 ## Features
 
 - Pure Python implementation
+- Render using 7-bit ASCII or unicode characters
 - No external dependencies (except NetworkX)
 - Multiple node styles (square, round, diamond)
 - Customizable edge characters
@@ -276,6 +277,30 @@ These directional indicators are particularly useful for:
 
 # Extras
 
+## Character Sets
+
+PHART supports multiple character sets for rendering:
+
+- `--charset unicode` (default): Uses Unicode box drawing characters and arrows for
+  cleaner visualization
+- `--charset ascii`: Uses only 7-bit ASCII characters, ensuring maximum compatibility
+  with all terminals
+
+Example:
+
+````bash
+# Using Unicode (default)
+phart graph.dot
+# ┌─A─┐
+# │   │
+# └─B─┘
+
+# Using ASCII only
+phart --charset ascii graph.dot
+# +-A-+
+# |   |
+# +-B-+
+
 ## File Format Support
 
 ### DOT Files
@@ -285,7 +310,7 @@ These directional indicators are particularly useful for:
 
 ```bash
 pip install phart[extras]
-```
+````
 
 or using requirements file
 
