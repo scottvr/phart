@@ -113,54 +113,6 @@ class ASCIIRenderer:
     """
 
     @staticmethod
-    def _can_use_unicode() -> bool:
-        """Internal check for Unicode support."""
-        if sys.platform == "win32":
-            try:
-                import ctypes
-
-                kernel32 = ctypes.windll.kernel32
-                return bool(kernel32.GetConsoleOutputCP() == 65001)
-            except BaseException:
-                return False
-        return True
-
-    def __init__(
-        self,
-        graph: nx.Graph,
-        node_style: NodeStyle = NodeStyle.SQUARE,
-        node_spacing: int = 4,
-        layer_spacing: int = 2,
-        use_ascii: Optional[bool] = None,
-        options: Optional[LayoutOptions] = None,
-    ) -> None:
-        self.graph = graph
-
-        if options is not None and options.use_ascii is not None:
-            use_ascii = options.use_ascii
-        elif use_ascii is None:
-            use_ascii = not self._can_use_unicode()
-
-        if options is not None:
-            self.options = options
-            self.options.use_ascii = use_ascii
-        else:
-            self.options = LayoutOptions(
-                node_style=node_style,
-                node_spacing=node_spacing,
-                layer_spacing=layer_spacing,
-                use_ascii=use_ascii,
-            )
-        self.layout_manager = LayoutManager(graph, self.options)
-        self.canvas: List[List[str]] = []
-
-    def _ensure_encoding(self, text: str) -> str:
-        """Internal method to handle encoding safely."""
-        try:
-            return text.encode("utf-8").decode("utf-8")
-        except UnicodeEncodeError:
-            return text.encode("ascii", errors="replace").decode("ascii")
-
     def _is_redirected() -> bool:
         """Check if output is being redirected."""
         if sys.platform == "win32":
@@ -177,7 +129,76 @@ class ASCIIRenderer:
                 return True
         return not sys.stdout.isatty()
 
-    def render(self) -> str:
+    @staticmethod
+    def _can_use_unicode() -> bool:
+        """Internal check for Unicode support."""
+        if sys.platform == "win32":
+            try:
+                import ctypes
+
+                kernel32 = ctypes.windll.kernel32
+                return bool(kernel32.GetConsoleOutputCP() == 65001)
+            except BaseException:
+                return False
+        return True
+
+    def __init__(
+        self,
+        graph: nx.Graph,
+        *,  # Force keyword args after this
+        node_style: NodeStyle = NodeStyle.SQUARE,
+        node_spacing: int = 4,
+        layer_spacing: int = 2,
+        use_ascii: Optional[bool] = None,
+        custom_decorators: Optional[Dict[str, Tuple[str, str]]] = None,
+        options: Optional[LayoutOptions] = None,
+    ) -> None:
+        """Initialize the ASCII renderer.
+
+        Args:
+            graph: The networkx graph to render
+            node_style: Style for nodes (must be passed as keyword arg)
+            node_spacing: Horizontal spacing between nodes (must be passed as keyword arg)
+            layer_spacing: Vertical spacing between layers (must be passed as keyword arg)
+            use_ascii: Force ASCII output (must be passed as keyword arg)
+            custom_decorators: Custom node decorations (must be passed as keyword arg)
+            options: LayoutOptions instance (must be passed as keyword arg)
+        """
+        self.graph = graph
+
+        if options is not None and options.use_ascii is not None:
+            use_ascii = options.use_ascii
+        elif use_ascii is None:
+            use_ascii = not self._can_use_unicode()
+
+        if options is not None:
+            self.options = options
+            self.options.use_ascii = use_ascii
+            if custom_decorators is not None:
+                self.options.custom_decorators = custom_decorators
+            # Make sure node_style is properly set to just the style enum
+            if isinstance(self.options, LayoutOptions):
+                self.options.node_style = self.options.node_style
+
+        else:
+            self.options = LayoutOptions(
+                node_style=node_style,
+                node_spacing=node_spacing,
+                layer_spacing=layer_spacing,
+                use_ascii=use_ascii,
+                custom_decorators=custom_decorators,
+            )
+        self.layout_manager = LayoutManager(graph, self.options)
+        self.canvas: List[List[str]] = []
+
+    def _ensure_encoding(self, text: str) -> str:
+        """Internal method to handle encoding safely."""
+        try:
+            return text.encode("utf-8").decode("utf-8")
+        except UnicodeEncodeError:
+            return text.encode("ascii", errors="replace").decode("ascii")
+
+    def render(self, print_config: Optional[bool] = False) -> str:
         """
         Render the graph as ASCII art.
 
@@ -186,26 +207,47 @@ class ASCIIRenderer:
         str
             ASCII representation of the graph
         """
-        # Calculate layout and render to canvas
+
+        # Calculate layout
         positions, width, height = self.layout_manager.calculate_layout()
         if not positions:
             return ""
 
-        self._init_canvas(width, height)
+        #        print("DEBUG: Original positions:", positions)
+
+        # Add left padding to all positions
+        padding_left = 4 if not self.options.use_ascii else 6
+        adjusted_positions = {
+            node: (x + padding_left, y) for node, (x, y) in positions.items()
+        }
+
+        #        print("DEBUG: Adjusted positions:", adjusted_positions)
+
+        # Initialize canvas with adjusted positions
+        self._init_canvas(width, height, adjusted_positions)
 
         # Draw edges first
         for start, end in self.graph.edges():
-            self._draw_edge(start, end, positions)
+            try:
+                self._draw_edge(start, end, adjusted_positions)
+            except IndexError:
+                #                print(f"DEBUG: Error drawing edge {start}->{end}: {e}")
+                #                print(f"DEBUG: Start pos: {adjusted_positions[start]}")
+                #                print(f"DEBUG: End pos: {adjusted_positions[end]}")
+                #                print(f"DEBUG: Canvas size: {len(self.canvas[0])}x{len(self.canvas)}")
+                raise
 
         # Draw nodes
-        for node, (x, y) in positions.items():
+        for node, (x, y) in adjusted_positions.items():
             prefix, suffix = self.options.get_node_decorators(str(node))
             label = f"{prefix}{node}{suffix}"
             for i, char in enumerate(label):
                 self.canvas[y][x + i] = char
 
+        # Build final string, trimming trailing spaces
+        preamble = str(self.options) + "\n" if print_config else ""
         result = "\n".join("".join(row).rstrip() for row in self.canvas)
-        return result
+        return f"{preamble}{result}" if preamble else result
 
     def draw(self, file: Optional[TextIO] = None) -> None:
         """
@@ -250,7 +292,9 @@ class ASCIIRenderer:
         with open(filename, "w", encoding="utf-8") as f:
             f.write(self.render())
 
-    def _init_canvas(self, width: int, height: int) -> None:
+    def _init_canvas(
+        self, width: int, height: int, positions: Dict[str, Tuple[int, int]]
+    ) -> None:
         """
         Initialize the rendering canvas with given dimensions.
 
@@ -266,23 +310,33 @@ class ASCIIRenderer:
                 f"Canvas dimensions must be positive (got {width}x{height})"
             )
 
-        self.canvas = [[" " for _ in range(width)] for _ in range(height)]
+        # Calculate required width based on rightmost node position plus its width
+        max_node_end = 0
+        for node, (x, y) in positions.items():
+            node_width = sum(
+                len(part) for part in self.options.get_node_decorators(str(node))
+            ) + len(str(node))
+            node_end = x + node_width
+            max_node_end = max(max_node_end, node_end)
+
+        # Add padding for edge decorators and bidirectional markers
+        padding_right = (
+            4 if not self.options.use_ascii else 6
+        )  # Extra space for ASCII markers
+        final_width = max_node_end + padding_right
+
+        # Add vertical padding
+        final_height = height + 2
+
+        #        print(f"DEBUG: Canvas initialized with {final_width}x{final_height}")
+        #        print(f"DEBUG: Max node end position: {max_node_end}")
+
+        self.canvas = [[" " for _ in range(final_width)] for _ in range(final_height)]
 
     def _draw_edge(
         self, start: str, end: str, positions: Dict[str, Tuple[int, int]]
     ) -> None:
-        """
-        Draw an edge between two nodes on the canvas.
-
-        Args:
-            start: Source node identifier
-            end: Target node identifier
-            positions: Dictionary mapping nodes to their (x, y) coordinates
-
-        Raises:
-            KeyError: If either node is not in positions dictionary
-            IndexError: If edge coordinates exceed canvas boundaries
-        """
+        """Draw an edge between two nodes on the canvas."""
         if start not in positions or end not in positions:
             raise KeyError(
                 f"Node position not found: {start if start not in positions else end}"
@@ -291,42 +345,106 @@ class ASCIIRenderer:
         start_x, start_y = positions[start]
         end_x, end_y = positions[end]
 
-        # Account for node decoration width
-        prefix, _ = self.options.get_node_decorators(start)
-        start_x += len(prefix) + len(str(start)) // 2
-        end_x += len(prefix) + len(str(end)) // 2
+        # Calculate center points and edges
+        prefix, _ = self.options.get_node_decorators(str(start))
+        start_width = len(str(start)) + len(str(prefix))
+        end_width = len(str(end)) + len(str(prefix))
+
+        start_center = start_x + start_width // 2
+        end_center = end_x + end_width // 2
+
+        # Check if this is a bidirectional edge
+        is_bidirectional = (
+            not self.graph.is_directed() or (end, start) in self.graph.edges()
+        )
 
         try:
-            # Draw vertical line
-            min_y, max_y = min(start_y, end_y), max(start_y, end_y)
-            for y in range(min_y + 1, max_y):
-                curr_char = self.canvas[y][start_x]
-                if curr_char == self.options.edge_horizontal:
-                    self.canvas[y][start_x] = self.options.edge_cross
-                else:
-                    self.canvas[y][start_x] = self.options.edge_vertical
+            # Case 1: Straight vertical connection
+            if start_center == end_center:
+                min_y, max_y = min(start_y, end_y), max(start_y, end_y)
+                # Draw vertical line
+                for y in range(min_y + 1, max_y):
+                    self.canvas[y][start_center] = self.options.edge_vertical
 
-            # Draw horizontal line if needed
-            if start_x != end_x:
-                y = end_y
-                x_start, x_end = min(start_x, end_x), max(start_x, end_x)
-                for x in range(x_start, x_end + 1):
-                    curr_char = self.canvas[y][x]
-                    if curr_char == self.options.edge_vertical:
-                        self.canvas[y][x] = self.options.edge_cross
+                if is_bidirectional:
+                    # Place bidirectional marker in middle
+                    mid_y = (start_y + end_y) // 2
+                    self.canvas[mid_y][start_center] = self.options.edge_arrow_bidir_h
+                else:
+                    # Add arrow in the appropriate direction
+                    if start_y < end_y:  # Moving down
+                        self.canvas[max_y - 1][start_center] = (
+                            self.options.edge_arrow_down
+                        )
+                    else:  # Moving up
+                        self.canvas[min_y + 1][start_center] = (
+                            self.options.edge_arrow_up
+                        )
+                return
+
+            # Case 2: Edges that turn (vertical and horizontal components)
+            if start_y != end_y:
+                min_y, max_y = min(start_y, end_y), max(start_y, end_y)
+                going_up = end_y < start_y
+
+                # Draw vertical segment
+                for y in range(min_y + 1, max_y):
+                    self.canvas[y][start_center] = self.options.edge_vertical
+
+                if is_bidirectional:
+                    # Place bidirectional marker in middle of vertical segment
+                    mid_y = (start_y + end_y) // 2
+                    self.canvas[mid_y][start_center] = self.options.edge_arrow_bidir_h
+                else:
+                    # Add vertical arrow in appropriate direction
+                    if going_up:
+                        self.canvas[min_y + 1][start_center] = (
+                            self.options.edge_arrow_up
+                        )
                     else:
-                        self.canvas[y][x] = self.options.edge_horizontal
+                        self.canvas[max_y - 1][start_center] = (
+                            self.options.edge_arrow_down
+                        )
 
-            # Add arrow
-            if end_y > start_y:  # Downward arrow
-                self.canvas[end_y - 1][end_x] = self.options.edge_arrow_down
-            elif end_y < start_y:  # Upward arrow
-                self.canvas[end_y + 1][end_x] = self.options.edge_arrow_up
-            else:  # Horizontal arrow
-                if end_x > start_x:
-                    self.canvas[end_y][end_x - 1] = self.options.edge_arrow
+                # Add crossing point at the turn
+                y_cross = min_y if going_up else max_y
+                self.canvas[y_cross][start_center] = self.options.edge_cross
+
+                # Draw horizontal segment with arrow
+                if start_center < end_center:  # Moving right
+                    for x in range(start_center + 1, end_x - 1):
+                        self.canvas[y_cross][x] = self.options.edge_horizontal
+                    if not is_bidirectional:
+                        self.canvas[y_cross][end_x - 1] = self.options.edge_arrow_r
+                else:  # Moving left
+                    for x in range(end_x + end_width + 1, start_center):
+                        self.canvas[y_cross][x] = self.options.edge_horizontal
+                    if not is_bidirectional:
+                        self.canvas[y_cross][end_x + end_width + 1] = (
+                            self.options.edge_arrow_l
+                        )
+                return
+
+            # Case 3: Same level horizontal (unchanged)
+            if start_y == end_y:
+                if is_bidirectional:
+                    # Draw horizontal line with bidirectional marker
+                    for x in range(start_center + 1, end_center):
+                        self.canvas[start_y][x] = self.options.edge_horizontal
+                    mid_x = (start_center + end_center) // 2
+                    self.canvas[start_y][mid_x] = self.options.edge_arrow_bidir_v
                 else:
-                    self.canvas[end_y][start_x - 1] = "<"
+                    # Draw directional arrow
+                    if start_center < end_center:  # Moving right
+                        for x in range(start_center + 1, end_x - 1):
+                            self.canvas[start_y][x] = self.options.edge_horizontal
+                        self.canvas[start_y][end_x - 1] = self.options.edge_arrow_r
+                    else:  # Moving left
+                        for x in range(end_x + end_width + 1, start_center):
+                            self.canvas[start_y][x] = self.options.edge_horizontal
+                        self.canvas[start_y][end_x + end_width + 1] = (
+                            self.options.edge_arrow_l
+                        )
 
         except IndexError as e:
             raise IndexError(f"Edge drawing exceeded canvas boundaries: {e}")

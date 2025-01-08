@@ -17,9 +17,8 @@ def example_dependency_tree():
             ("helpers.py", "constants.py"),
         ]
     )
-
     options = LayoutOptions(
-        node_style=NodeStyle.MINIMAL, node_spacing=4, layer_spacing=1
+        node_style=NodeStyle.MINIMAL, node_spacing=6, layer_spacing=4
     )
     renderer = ASCIIRenderer(G, options=options)
     print(renderer.render())
@@ -42,7 +41,7 @@ def example_hierarchical_org():
     )
 
     options = LayoutOptions(
-        node_style=NodeStyle.SQUARE, node_spacing=6, layer_spacing=2
+        node_style=NodeStyle.SQUARE, node_spacing=6, layer_spacing=4
     )
     renderer = ASCIIRenderer(G, options=options)
     print(renderer.render())
@@ -64,7 +63,7 @@ def example_network_topology():
         ]
     )
 
-    options = LayoutOptions(node_style=NodeStyle.ROUND, node_spacing=5, layer_spacing=2)
+    options = LayoutOptions(node_style=NodeStyle.ROUND, node_spacing=5, layer_spacing=4)
     renderer = ASCIIRenderer(G, options=options)
     print(renderer.render())
 
@@ -87,7 +86,7 @@ def example_workflow():
     )
 
     options = LayoutOptions(
-        node_style=NodeStyle.DIAMOND, node_spacing=4, layer_spacing=1
+        node_style=NodeStyle.DIAMOND, node_spacing=4, layer_spacing=3
     )
     renderer = ASCIIRenderer(G, options=options)
     print(renderer.render())
@@ -121,8 +120,14 @@ if __name__ == "__main__":
     print("\nCustom Styling Example:")
     print("Different node styles for the same graph:")
     G = nx.balanced_tree(2, 2, create_using=nx.DiGraph)
+    mapping = {i: f"N{i}" for i in G.nodes()}
+    G = nx.relabel_nodes(G, mapping)
 
     for style in NodeStyle:
         print(f"\nUsing {style.name} style:")
-        renderer = ASCIIRenderer(G, node_style=style)
+        renderer = ASCIIRenderer(
+            G,
+            node_style=style,
+            custom_decorators={"N0": ("<<", ">>"), "N6": ("[[", "]]")},
+        )
         print(renderer.render())

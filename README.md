@@ -7,6 +7,7 @@
 ## Features
 
 - Pure Python implementation
+- Render using 7-bit ASCII or unicode characters
 - No external dependencies (except NetworkX)
 - Multiple node styles (square, round, diamond)
 - Customizable edge characters
@@ -226,9 +227,9 @@ You may pronounce it the obvious monosyllabic way, or as "eff art", or perhaps "
 
 The mention of not being Perl or a PHP webapp may appear to be throwing shade at the existing solutions, but it is meant in a good-hearted way. Wrapping the OG Graph::Easy is a straightforeard way to go about it, and a web interface to the same is a project I might create as well, but Perl being installed is not the sure ubiquitous thing it omce was, and spinning up a Docker container in order to add ascii art graph output to a python tool seemed a bit excessive.
 
-Additionally, I'm not sure how I didn't find pydot2ascii - which is native pythom - when I first looked for a solution, but even if I had seen it I may not have realized that I could have exported my NX DAG to DOT, and then used pydot2ascii to go from DOT to ascii art.
+Additionally, I'm not sure how I didn't find pydot2ascii - which is native python - when I first looked for a solution, but even if I had seen it I may not have realized that I could have exported my NX DAG to DOT, and then used pydot2ascii to go from DOT to ascii art.
 
-So now we have PHART, and the ability to render a NX digraph in ASCII/Unicode, read a DOT file, read GraphML, and a few other things in a well-tested Pythom module published to PyPi. I hope ypu find it usedul.
+So now we have PHART, and the ability to render a NX digraph in ASCII/Unicode, read a DOT file, read GraphML, and a few other things in a well-tested Python module published to PyPi. I hope you find it useful.
 
 ## Installation
 
@@ -276,13 +277,47 @@ These directional indicators are particularly useful for:
 
 # Extras
 
+## Character Sets
+
+PHART supports multiple character sets for rendering:
+
+- `--charset unicode` (default): Uses Unicode box drawing characters and arrows for
+  cleaner visualization
+- `--charset ascii`: Uses only 7-bit ASCII characters, ensuring maximum compatibility
+  with all terminals
+
+Example:
+
+```bash
+# Using Unicode (default)
+phart graph.dot
+# ┌─A─┐
+# │   │
+# └─B─┘
+
+# Using ASCII only
+phart --charset ascii graph.dot
+# +-A-+
+# |   |
+# +-B-+
+```
+
 ## File Format Support
 
 ### DOT Files
 
 - DOT file support
 - requires pydot
-  `pip install -r requirements\extra.txt`
+
+```bash
+pip install phart[extras]
+```
+
+or using requirements file
+
+```bash
+pip install -r requirements\extra.txt
+```
 
 ### Example
 
