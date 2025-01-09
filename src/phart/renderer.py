@@ -142,6 +142,8 @@ class ASCIIRenderer:
                 return False
         return True
 
+    default_options: Optional[LayoutOptions] = None
+
     def __init__(
         self,
         graph: nx.Graph,
@@ -179,7 +181,8 @@ class ASCIIRenderer:
             # Make sure node_style is properly set to just the style enum
             if isinstance(self.options, LayoutOptions):
                 self.options.node_style = self.options.node_style
-
+        elif self.default_options is not None:
+            self.options = self.default_options
         else:
             self.options = LayoutOptions(
                 node_style=node_style,
@@ -332,6 +335,26 @@ class ASCIIRenderer:
         #        print(f"DEBUG: Max node end position: {max_node_end}")
 
         self.canvas = [[" " for _ in range(final_width)] for _ in range(final_height)]
+
+    def _draw_vertical_segment(self, x, start_y, end_y, marker=None):
+        for y in range(start_y + 1, end_y):
+            self.canvas[y][x] = self.options.edge_vertical
+        if marker:
+            mid_y = (start_y + end_y) // 2
+            self.canvas[mid_y][x] = marker
+
+    def _draw_horizontal_segment(self, y, start_x, end_x, marker=None):
+        for x in range(start_x + 1, end_x):
+            self.canvas[y][x] = self.options.edge_horizontal
+        if marker:
+            mid_x = (start_x + end_x) // 2
+            self.canvas[y][mid_x] = marker
+
+    def _safe_draw(self, x, y, char):
+        try:
+            self.canvas[y][x] = char
+        except IndexError:
+            raise IndexError(f"Drawing exceeded canvas bounds at ({x}, {y})")
 
     def _draw_edge(
         self, start: str, end: str, positions: Dict[str, Tuple[int, int]]

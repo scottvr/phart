@@ -118,9 +118,9 @@ if __name__ == "__main__":
     example_dot_import()
 
     print("\nCustom Styling Example:")
-    print("Different node styles for the same graph:")
+    print("Different node styles for the same balanced tree:")
     G = nx.balanced_tree(2, 2, create_using=nx.DiGraph)
-    mapping = {i: f"N{i}" for i in G.nodes()}
+    mapping = {i: f"{i}" for i in G.nodes()}
     G = nx.relabel_nodes(G, mapping)
 
     for style in NodeStyle:
@@ -128,6 +128,6 @@ if __name__ == "__main__":
         renderer = ASCIIRenderer(
             G,
             node_style=style,
-            custom_decorators={"N0": ("<<", ">>"), "N6": ("[[", "]]")},
+            custom_decorators={"0": ("<<", ">>"), "6": ("[[", "]]")},
         )
-        print(renderer.render())
+        renderer.draw()

@@ -1,11 +1,12 @@
 """Tests for PHART CLI functionality."""
 
 import unittest
-from pathlib import Path
 import tempfile
-from phart.cli import main
+from pathlib import Path
 import sys
 from io import StringIO
+
+from phart.cli import main
 
 
 class TestCLI(unittest.TestCase):
@@ -22,6 +23,47 @@ class TestCLI(unittest.TestCase):
         }
         """
         self.test_text_file.write_text(self.dot_content, encoding="utf-8")
+        # Create test Python file with main() function
+        self.py_main_file = Path(self.temp_dir) / "test_main.py"
+        main_content = """
+import networkx as nx
+from phart import ASCIIRenderer
+
+def main():
+    G = nx.DiGraph()
+    G.add_edges_from([("A", "B"), ("B", "C")])
+    renderer = ASCIIRenderer(G)
+    print(renderer.render())
+"""
+        self.py_main_file.write_text(main_content, encoding="utf-8")
+
+        # Create test Python file with __main__ block
+        self.py_block_file = Path(self.temp_dir) / "test_block.py"
+        block_content = """
+import networkx as nx
+from phart import ASCIIRenderer
+
+if __name__ == "__main__":
+    G = nx.DiGraph()
+    G.add_edges_from([("X", "Y"), ("Y", "Z")])
+    renderer = ASCIIRenderer(G)
+    print(renderer.render())
+"""
+        self.py_block_file.write_text(block_content, encoding="utf-8")
+
+        # Create test Python file with custom function
+        self.py_custom_file = Path(self.temp_dir) / "test_custom.py"
+        custom_content = """
+import networkx as nx
+from phart import ASCIIRenderer
+
+def demonstrate_graph():
+    G = nx.DiGraph()
+    G.add_edges_from([("P", "Q"), ("Q", "R")])
+    renderer = ASCIIRenderer(G)
+    print(renderer.render())
+"""
+        self.py_custom_file.write_text(custom_content, encoding="utf-8")
 
         # Save original stdout/stderr
         self.old_stdout = sys.stdout
@@ -48,6 +90,7 @@ class TestCLI(unittest.TestCase):
         exit_code = main()
         self.assertEqual(exit_code, 0)
         output = self.stdout.getvalue()
+        print(output)
         self.assertIn("A", output)
         self.assertIn("B", output)
         self.assertIn("C", output)
@@ -63,12 +106,50 @@ class TestCLI(unittest.TestCase):
         self.assertIn("(B)", output)
         self.assertEqual(self.stderr.getvalue(), "")
 
-    def test_ascii_option(self):
-        """Test ASCII-only output."""
+    def test_charset_unicode(self):
+        """Test explicit unicode charset option."""
+        sys.argv = ["phart", "--charset", "unicode", str(self.test_text_file)]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        # Should find at least one unicode character
+        self.assertTrue(any(ord(c) > 127 for c in output))
+        self.assertEqual(self.stderr.getvalue(), "")
+
+    def test_charset_ascii(self):
+        """Test ASCII charset option."""
+        sys.argv = ["phart", "--charset", "ascii", str(self.test_text_file)]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        # All characters should be ASCII
+        self.assertTrue(all(ord(c) < 128 for c in output))
+        self.assertEqual(self.stderr.getvalue(), "")
+
+    def test_legacy_ascii_flag(self):
+        """Test that legacy --ascii flag still works."""
         sys.argv = ["phart", "--ascii", str(self.test_text_file)]
         exit_code = main()
         self.assertEqual(exit_code, 0)
         output = self.stdout.getvalue()
+        # All characters should be ASCII
+        self.assertTrue(all(ord(c) < 128 for c in output))
+        self.assertEqual(self.stderr.getvalue(), "")
+
+    def test_charset_and_legacy_flag(self):
+        """Test interaction between --charset and --ascii flags."""
+        # When both specified, --ascii should override --charset unicode
+        sys.argv = [
+            "phart",
+            "--charset",
+            "unicode",
+            "--ascii",
+            str(self.test_text_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        # Should still be ASCII-only despite unicode charset
         self.assertTrue(all(ord(c) < 128 for c in output))
         self.assertEqual(self.stderr.getvalue(), "")
 
@@ -88,3 +169,48 @@ class TestCLI(unittest.TestCase):
         error_msg = self.stderr.getvalue()
         self.assertIn("Error", error_msg)
         self.assertIn("Could not parse file as GraphML or DOT format", error_msg)
+
+    def test_python_with_main(self):
+        """Test executing Python file with main() function."""
+        sys.argv = ["phart", str(self.py_main_file)]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertIn("A", output)
+        self.assertIn("B", output)
+        self.assertIn("C", output)
+        self.assertEqual(self.stderr.getvalue(), "")
+
+    def test_python_with_main_block(self):
+        """Test executing Python file with __main__ block."""
+        sys.argv = ["phart", str(self.py_block_file)]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertIn("X", output)
+        self.assertIn("Y", output)
+        self.assertIn("Z", output)
+        self.assertEqual(self.stderr.getvalue(), "")
+
+    def test_python_custom_function(self):
+        """Test executing Python file with custom function."""
+        sys.argv = [
+            "phart",
+            str(self.py_custom_file),
+            "--function",
+            "demonstrate_graph",
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertIn("P", output)
+        self.assertIn("Q", output)
+        self.assertIn("R", output)
+        self.assertEqual(self.stderr.getvalue(), "")
+
+    def test_python_missing_function(self):
+        """Test error handling for missing function."""
+        sys.argv = ["phart", str(self.py_custom_file), "--function", "nonexistent"]
+        exit_code = main()
+        self.assertEqual(exit_code, 1)
+        self.assertIn("Error: Function 'nonexistent' not found", self.stderr.getvalue())

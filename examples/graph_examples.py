@@ -16,6 +16,14 @@ def example_binary_tree():
     mapping = {i: f"N{i}" for i in G.nodes()}
     G = nx.relabel_nodes(G, mapping)
 
+    renderer = ASCIIRenderer(
+        G,
+        node_style=NodeStyle.SQUARE,
+        custom_decorators=custom_decorators,
+        node_spacing=4,
+    )
+    print(renderer.render())
+
     for style in NodeStyle:
         print(f"\nUsing {style.name} style:")
         renderer = ASCIIRenderer(

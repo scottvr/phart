@@ -354,29 +354,57 @@ renderer = ASCIIRenderer.from_graphml("graph.graphml")
 print(renderer.render())
 ```
 
-## Command Line Usage
+## Python Files
 
-PHART can be used from the command line to render graph files:
+PHART can directly execute Python files that create and render graphs. When given a Python file, PHART will:
+
+1. First try to execute the specified function (if `--function` is provided)
+2. Otherwise, try to execute a `main()` function if one exists
+3. Finally, execute code in the `if __name__ == "__main__":` block
+
+Example Python file:
+
+```python
+import networkx as nx
+from phart import ASCIIRenderer
+
+def main():
+    # Create a simple directed graph
+    G = nx.DiGraph()
+    G.add_edges_from([("A", "B"), ("B", "C")])
+
+    # Create renderer and display the graph
+    renderer = ASCIIRenderer(G)
+    print(renderer.render())
+
+if __name__ == "__main__":
+    main()
+```
+
+You can execute this file in several ways:
 
 ```bash
-# Basic usage
-phart input.dot
+# Execute main() or __main__ block (default behavior)
+phart graph.py
 
-# Save to file instead of stdout
-phart input.dot -o output.txt
+# Execute a specific function
+phart graph.py --function demonstrate_graph
 
-# GraphML input
-phart input.graphml --output viz.txt
-
-# Change node style
-phart --style round input.dot
-
-# Force ASCII output (no Unicode)
-phart --ascii input.dot
-
-# Adjust spacing
-phart --node-spacing 6 --layer-spacing 3 input.dot
+# Use specific rendering options
+phart graph.py --charset ascii --style round
 ```
+
+### Option Handling
+
+When executing Python files, PHART intelligently merges command-line options with any
+options specified in your code:
+
+- Options set in your Python code (like custom_decorators or specific node styles) are preserved
+- Command-line options will override general settings (like --charset or --style)
+- Custom settings (like custom_decorators) are never overridden by command-line defaults
+
+This means you can set specific options in your code while still using command-line
+options to adjust general rendering settings.
 
 ## License
 
