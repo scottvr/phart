@@ -59,6 +59,26 @@ class LayoutManager:
         """Calculate minimum x position that allows for edge drawing."""
         return 2 if not self.options.use_ascii else 3  # More space for ASCII markers
 
+    def _draw_vertical_segment(self, x, start_y, end_y, marker=None):
+        for y in range(start_y + 1, end_y):
+            self.canvas[y][x] = self.options.edge_vertical
+        if marker:
+            mid_y = (start_y + end_y) // 2
+            self.canvas[mid_y][x] = marker
+
+    def _draw_horizontal_segment(self, y, start_x, end_x, marker=None):
+        for x in range(start_x + 1, end_x):
+            self.canvas[y][x] = self.options.edge_horizontal
+        if marker:
+            mid_x = (start_x + end_x) // 2
+            self.canvas[y][mid_x] = marker
+
+    def _safe_draw(self, x, y, char):
+        try:
+            self.canvas[y][x] = char
+        except IndexError:
+            raise IndexError(f"Drawing exceeded canvas bounds at ({x}, {y})")
+
     def calculate_layout(self) -> Tuple[Dict[str, Tuple[int, int]], int, int]:
         """Calculate node positions using layout appropriate for graph structure."""
         if not self.graph:
