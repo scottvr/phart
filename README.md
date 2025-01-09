@@ -367,7 +367,7 @@ Example Python file:
 import networkx as nx
 from phart import ASCIIRenderer
 
-def main():
+def demonstrate_graph():
     # Create a simple directed graph
     G = nx.DiGraph()
     G.add_edges_from([("A", "B"), ("B", "C")])
@@ -377,7 +377,7 @@ def main():
     print(renderer.render())
 
 if __name__ == "__main__":
-    main()
+    demonstrate_graph()
 ```
 
 You can execute this file in several ways:
