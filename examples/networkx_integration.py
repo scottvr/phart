@@ -1,4 +1,5 @@
 """Examples of PHART visualization with various NetworkX graph types."""
+# src path: examples\networkx_integration.py
 
 import networkx as nx
 from phart import ASCIIRenderer, NodeStyle, LayoutOptions

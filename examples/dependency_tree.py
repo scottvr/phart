@@ -1,6 +1,7 @@
 """
 Example of using PHART to visualize package dependencies.
 """
+# src path: examples\dependency_tree.py
 
 import networkx as nx
 from phart import ASCIIRenderer, NodeStyle

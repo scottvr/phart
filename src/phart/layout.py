@@ -3,6 +3,7 @@
 This module handles the calculation of node positions and edge routing
 for ASCII graph visualization.
 """
+# src path: src\phart\layout.py
 
 from typing import Dict, Tuple, Set
 

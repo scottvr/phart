@@ -1,4 +1,5 @@
 """Showcase of PHART's graph visualization capabilities."""
+# src path: examples\showcase.py
 
 import networkx as nx
 from phart import ASCIIRenderer, NodeStyle, LayoutOptions

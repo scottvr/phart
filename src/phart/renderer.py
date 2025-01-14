@@ -57,6 +57,7 @@ See Also
 * NetworkX: https://networkx.org/
 * Graphviz: https://graphviz.org/
 """
+# src path: src\phart\renderer.py
 
 from typing import Any, Dict, List, Optional, TextIO, Tuple
 

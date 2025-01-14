@@ -1,3 +1,4 @@
+# src path: src\phart\__init__.py
 from .renderer import ASCIIRenderer
 from .styles import LayoutOptions, NodeStyle
 

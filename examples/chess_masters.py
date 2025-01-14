@@ -8,6 +8,7 @@ Data source: https://chessproblem.my-free-games.com/chess/games/Download-PGN.php
 Original example adapted from NetworkX gallery:
 https://networkx.org/documentation/latest/auto_examples/drawing/plot_chess_masters.html
 """
+# src path: examples\chess_masters.py
 
 import bz2
 from pathlib import Path

@@ -1,6 +1,7 @@
 """
 Simple examples demonstrating basic PHART usage.
 """
+# src path: examples\simple_graph.py
 
 import networkx as nx
 from phart import ASCIIRenderer, NodeStyle

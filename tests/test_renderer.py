@@ -1,4 +1,5 @@
 """Test suite for PHART ASCII graph renderer."""
+# src path: tests\test_renderer.py
 
 import unittest
 import sys

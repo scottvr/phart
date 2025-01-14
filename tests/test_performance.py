@@ -1,4 +1,5 @@
 """Performance tests for PHART ASCII renderer."""
+# src path: tests\test_performance.py
 
 import random
 import time

@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 """Generate requirements/*.txt files from pyproject.toml."""
+# src path: tools\generate_requirements.py
 
 import sys
 from pathlib import Path
