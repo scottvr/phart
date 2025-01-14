@@ -70,13 +70,15 @@ class LayoutOptions:
     # Edge characters with ASCII fallbacks
     edge_vertical = EdgeChar("|", "│")
     edge_horizontal = EdgeChar("-", "─")
-    edge_cross = EdgeChar("+", "┼")
+    edge_cross = EdgeChar(
+        "+", "+"
+    )  # '┼' seems unnecessarily large, and will be replaced by proper corner chars soon
     edge_arrow_r = EdgeChar(">", "→")
     edge_arrow_l = EdgeChar("<", "←")
     edge_arrow_up = EdgeChar("^", "↑")
     edge_arrow_down = EdgeChar("v", "↓")
-    edge_arrow_bidir_v = EdgeChar("⟷", "⟷")
-    edge_arrow_bidir_h = EdgeChar("↕", "↕")
+    edge_arrow_bidir_v = EdgeChar("-", "⟷")
+    edge_arrow_bidir_h = EdgeChar("|", "↕")
 
     def __str__(self) -> str:
         # Get all dataclass fields and their current values from this instance
