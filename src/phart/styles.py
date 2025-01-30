@@ -98,16 +98,18 @@ class LayoutOptions:
     # Instance-specific ID (unchanged)
     instance_id: int = field(init=False)
 
-    # Edge characters (unchanged)
+    # Edge characters with ASCII fallbacks
     edge_vertical = EdgeChar("|", "│")
     edge_horizontal = EdgeChar("-", "─")
-    edge_cross = EdgeChar("+", "┼")
+    edge_cross = EdgeChar(
+        "+", "+"
+    )  # '┼' seems unnecessarily large, and will be replaced by proper corner chars soon
     edge_arrow_r = EdgeChar(">", "→")
     edge_arrow_l = EdgeChar("<", "←")
     edge_arrow_up = EdgeChar("^", "↑")
     edge_arrow_down = EdgeChar("v", "↓")
-    edge_arrow_bidir_v = EdgeChar("⟷", "⟷")
-    edge_arrow_bidir_h = EdgeChar("↕", "↕")
+    edge_arrow_bidir_v = EdgeChar("-", "⟷")
+    edge_arrow_bidir_h = EdgeChar("|", "↕")
 
     def __post_init__(self) -> None:
         """Validate and normalize configuration values."""
