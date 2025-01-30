@@ -7,7 +7,7 @@ from phart import ASCIIRenderer, NodeStyle, LayoutOptions
 
 def show_graph(G, title, style=NodeStyle.MINIMAL):
     """Helper to display a graph with title."""
-    options = LayoutOptions(node_style=style, node_spacing=6, layer_spacing=2)
+    options = LayoutOptions(node_style=style, node_spacing=5, layer_spacing=3)
     print(f"\n{title}")
     print("=" * len(title))
     renderer = ASCIIRenderer(G, options=options)
@@ -36,6 +36,7 @@ def main():
     G = nx.bull_graph()
     G = nx.DiGraph(G)  # Convert to directed
     show_graph(G, "Bull Graph", NodeStyle.DIAMOND)
+    show_graph(G, "Bull Graph", NodeStyle.MINIMAL)
 
     G = nx.petersen_graph()
     G = nx.DiGraph(G)  # Convert to directed
