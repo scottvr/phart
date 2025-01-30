@@ -12,63 +12,6 @@ from .styles import NodeStyle, LayoutOptions
 from .charset import CharSet
 
 
-def parse_args() -> argparse.Namespace:
-    """Parse command line arguments."""
-    parser = argparse.ArgumentParser(
-        description="PHART: Python Hierarchical ASCII Rendering Tool"
-    )
-    parser.add_argument(
-        "input", type=Path, help="Input file (.dot, .graphml, or .py format)"
-    )
-    parser.add_argument(
-        "--output",
-        "-o",
-        type=Path,
-        help="Output file (if not specified, prints to stdout)",
-    )
-    parser.add_argument(
-        "--style",
-        choices=[s.name.lower() for s in NodeStyle],
-        default="square",
-        help="Node style (default: square)",
-    )
-    parser.add_argument(
-        "--node-spacing",
-        type=int,
-        default=4,
-        help="Horizontal space between nodes (default: 4)",
-    )
-    parser.add_argument(
-        "--layer-spacing",
-        type=int,
-        default=2,
-        help="Vertical space between layers (default: 2)",
-    )
-    parser.add_argument(
-        "--charset",
-        type=CharSet,
-        choices=list(CharSet),
-        default=CharSet.UNICODE,
-        help="Character set to use for rendering (default: unicode)",
-    )
-    # Maintain backwards compatibility
-    parser.add_argument(
-        "--ascii",
-        action="store_true",
-        help="Force ASCII output (deprecated, use --charset ascii instead)",
-        dest="use_legacy_ascii",
-    )
-    parser.add_argument(
-        "--function",
-        "-f",
-        type=str,
-        help="Function to call in Python file (default: main)",
-        default="main",
-    )
-
-    return parser.parse_args()
-
-
 def load_python_module(file_path: Path) -> Any:
     """
     Dynamically load a Python file as a module.
@@ -122,6 +65,99 @@ def merge_layout_options(
     return merged
 
 
+# In cli.py, update the parse_args function:
+
+
+def parse_args() -> argparse.Namespace:
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(
+        description="PHART: Python Hierarchical ASCII Rendering Tool"
+    )
+
+    parser.add_argument(
+        "input", type=Path, help="Input file (.dot, .graphml, or .py format)"
+    )
+    parser.add_argument(
+        "--output",
+        "-o",
+        type=Path,
+        help="Output file (if not specified, prints to stdout)",
+    )
+    parser.add_argument(
+        "--style",
+        choices=[s.name.lower() for s in NodeStyle],
+        default="square",
+        help="Node style (default: square)",
+    )
+    parser.add_argument(
+        "--node-spacing",
+        type=int,
+        default=4,
+        help="Horizontal space between nodes (default: 4)",
+    )
+    parser.add_argument(
+        "--layer-spacing",
+        type=int,
+        default=2,
+        help="Vertical space between layers (default: 2)",
+    )
+
+    layout_group = parser.add_argument_group("Advanced Layout Options")
+    layout_group.add_argument(
+        "--left-padding",
+        type=int,
+        default=4,
+        help="Extra space on left side of diagram (default: 4)",
+    )
+    layout_group.add_argument(
+        "--right-padding",
+        type=int,
+        default=4,
+        help="Extra space on right side of diagram (default: 4)",
+    )
+    layout_group.add_argument(
+        "--min-edge-space",
+        type=int,
+        default=2,
+        help="Minimum space needed between nodes for edge drawing (default: 2)",
+    )
+    layout_group.add_argument(
+        "--no-preserve-triangle",
+        action="store_false",
+        dest="preserve_triangle_shape",
+        help="Don't preserve triangular layout proportions",
+    )
+    layout_group.add_argument(
+        "--triangle-ratio",
+        type=float,
+        default=0.866,
+        help="Height to width ratio for triangles (default: 0.866)",
+    )
+
+    parser.add_argument(
+        "--charset",
+        type=CharSet,
+        choices=list(CharSet),
+        default=CharSet.UNICODE,
+        help="Character set to use for rendering (default: unicode)",
+    )
+    parser.add_argument(
+        "--ascii",
+        action="store_true",
+        help="Force ASCII output (deprecated, use --charset ascii instead)",
+        dest="use_legacy_ascii",
+    )
+    parser.add_argument(
+        "--function",
+        "-f",
+        type=str,
+        help="Function to call in Python file (default: main)",
+        default="main",
+    )
+
+    return parser.parse_args()
+
+
 def create_layout_options(args: argparse.Namespace) -> LayoutOptions:
     """Create LayoutOptions from CLI arguments."""
     return LayoutOptions(
@@ -129,6 +165,11 @@ def create_layout_options(args: argparse.Namespace) -> LayoutOptions:
         node_spacing=args.node_spacing,
         layer_spacing=args.layer_spacing,
         use_ascii=(args.charset == CharSet.ASCII or args.use_legacy_ascii),
+        left_padding=args.left_padding,
+        right_padding=args.right_padding,
+        min_edge_space=args.min_edge_space,
+        preserve_triangle_shape=args.preserve_triangle_shape,
+        triangle_height_ratio=args.triangle_ratio,
     )
 
 

@@ -5,7 +5,7 @@ for ASCII graph visualization.
 """
 # src path: src\phart\layout.py
 
-from typing import Dict, Tuple, Set
+from typing import Dict, Tuple
 
 import networkx as nx  # type: ignore
 
@@ -39,6 +39,42 @@ class LayoutManager:
         self.node_positions: Dict[str, Tuple[int, int]] = {}
         self.max_width = 0
         self.max_height = 0
+
+    def calculate_canvas_dimensions(
+        self, positions: Dict[str, Tuple[int, int]]
+    ) -> Tuple[int, int]:
+        """
+        Calculate required canvas dimensions based on layout and node decorations.
+
+        Args:
+            positions: Dictionary of node positions
+
+        Returns:
+            Tuple of (width, height) for the canvas
+        """
+        if not positions:
+            return 0, 0
+
+        # Calculate width needed for nodes and decorations
+        max_node_end = 0
+        for node, (x, y) in positions.items():
+            node_width = sum(
+                len(part) for part in self.options.get_node_decorators(str(node))
+            ) + len(str(node))
+            node_end = x + node_width
+            max_node_end = max(max_node_end, node_end)
+
+        # Add configured padding plus extra space for edge decorators
+        extra_edge_space = (
+            6 if self.options.use_ascii else 4
+        )  # ASCII needs more space for markers
+        final_width = max_node_end + self.options.right_padding + extra_edge_space
+
+        # Calculate height including padding
+        max_y = max(y for _, y in positions.values())
+        final_height = max_y + 2  # Add minimal vertical padding
+
+        return final_width, final_height
 
     def _get_node_width(self, node: str) -> int:
         """Calculate display width of a node including decorators.
@@ -85,12 +121,8 @@ class LayoutManager:
         if not self.graph:
             return {}, 0, 0
 
-        # Calculate max node width for spacing adjustment
-        max_node_width = max(
-            self._get_node_width(str(node)) for node in self.graph.nodes()
-        )
-        # Base spacing is max(configured spacing, node width)
-        effective_spacing = max(self.options.node_spacing, max_node_width)
+        # Use the effective node spacing considering edges
+        effective_spacing = self.options.get_effective_node_spacing(has_edges=True)
 
         # Group nodes by connected component
         components = list(
@@ -112,21 +144,24 @@ class LayoutManager:
                 or len(list(nx.simple_cycles(subgraph))) > 0
             )
 
-            if is_triangle:
+            if is_triangle and self.options.preserve_triangle_shape:
                 positions = self._layout_triangle(subgraph, effective_spacing)
             else:
                 positions = self._layout_hierarchical(subgraph, effective_spacing)
 
             # Get component dimensions
-            component_width = max(x for x, _ in positions.values()) + 4
+            component_width = (
+                max(x for x, _ in positions.values()) + self.options.right_padding
+            )
             component_height = max(y for _, y in positions.values()) + 2
 
             # Update layout dimensions
             max_width = max(max_width, component_width)
 
-            # Shift positions to account for previous components
+            # Shift positions to account for previous components and left padding
             shifted_positions = {
-                node: (x, y + total_height) for node, (x, y) in positions.items()
+                node: (x + self.options.left_padding, y + total_height)
+                for node, (x, y) in positions.items()
             }
 
             component_layouts.update(shifted_positions)
@@ -134,98 +169,117 @@ class LayoutManager:
 
         return component_layouts, max_width, total_height
 
-    def _layout_hierarchical(
-        self, graph: nx.Graph, spacing: int
-    ) -> Dict[str, Tuple[int, int]]:
-        """Standard hierarchical layout with adjusted spacing."""
+    def _is_true_triangle(self, graph: nx.Graph) -> bool:
+        """
+        Determine if the graph should use a triangular layout.
+        """
+        if len(graph) != 3:
+            return False
+
+        # Always use triangle layout for complete graphs (triad type 300)
+        if len(graph.edges()) == 6:
+            return True
+
         if graph.is_directed():
-            roots = [n for n, d in graph.in_degree() if d == 0]
-            if not roots:
-                roots = [max(graph.nodes(), key=lambda n: graph.out_degree(n))]
-        else:
-            roots = [max(graph.nodes(), key=lambda n: graph.degree(n))]
+            cycles = list(nx.simple_cycles(graph))
+            if cycles and len(cycles[0]) == 3:
+                return True
 
-        # Calculate distances within component
-        distances: Dict[str, int] = {}
-        for root in roots:
-            lengths = nx.single_source_shortest_path_length(graph, root)
-            for node, dist in lengths.items():
-                distances[node] = min(distances.get(node, dist), dist)
+            # Use triangle for balanced patterns
+            in_degrees = [d for _, d in graph.in_degree()]
+            out_degrees = [d for _, d in graph.out_degree()]
+            degree_diff = max(abs(i - o) for i, o in zip(in_degrees, out_degrees))
+            if degree_diff <= 1:
+                return True
 
-        # Group nodes by layer
-        layers: Dict[int, Set[str]] = {}
-        for node, layer in distances.items():
-            if layer not in layers:
-                layers[layer] = set()
-            layers[layer].add(node)
+        return False
 
-        # Calculate positions
-        positions = {}
-        layer_widths = {}
+    def _is_true_triangle(self, graph: nx.Graph) -> bool:
+        """
+        Determine if the graph should use a triangular layout.
+        """
+        if len(graph) != 3:
+            return False
 
-        for layer, nodes in layers.items():
-            total_width = sum(self._get_node_width(str(n)) for n in nodes)
-            # Use provided spacing parameter instead of self.options.node_spacing
-            total_spacing = (len(nodes) - 1) * spacing
-            layer_widths[layer] = total_width + total_spacing
+        # Always use triangle layout for complete graphs (triad type 300)
+        if len(graph.edges()) == 6:
+            return True
 
-        max_width = max(layer_widths.values()) if layer_widths else 0
+        if graph.is_directed():
+            cycles = list(nx.simple_cycles(graph))
+            if cycles and len(cycles[0]) == 3:
+                return True
 
-        for layer, nodes in layers.items():
-            y = layer * (
-                1 if self.options.layer_spacing == 0 else self.options.layer_spacing
-            )
-            total_width = layer_widths[layer]
-            start_x = (max_width - total_width) // 2
-            current_x = start_x
+            # Use triangle for balanced patterns
+            in_degrees = [d for _, d in graph.in_degree()]
+            out_degrees = [d for _, d in graph.out_degree()]
+            degree_diff = max(abs(i - o) for i, o in zip(in_degrees, out_degrees))
+            if degree_diff <= 1:
+                return True
 
-            for node in sorted(nodes):
-                positions[node] = (current_x, y)
-                current_x += self._get_node_width(str(node)) + spacing
-
-        return positions
+        return False
 
     def _layout_triangle(
         self, graph: nx.Graph, spacing: int
     ) -> Dict[str, Tuple[int, int]]:
-        """Triangle layout with adjusted spacing, respecting cycle order."""
+        """
+        Position nodes in an equilateral triangle pattern.
+        Fully respects user's spacing preferences.
+        """
+        nodes = sorted(graph.nodes())
         positions = {}
 
-        # Get cycle order if directed
-        if graph.is_directed():
-            cycles = list(nx.simple_cycles(graph))
-            if cycles:
-                nodes = cycles[0]  # Use first cycle's order
-            else:
-                nodes = list(graph.nodes())
-        else:
-            nodes = list(graph.nodes())
+        # Use exactly the spacing the user specified
+        width = spacing * 3  # Total width of the triangle base
+        height = spacing * 2  # Height of the triangle
 
-        # Calculate node widths
-        widths = {node: self._get_node_width(str(node)) for node in nodes}
+        # Position nodes
+        top_node = nodes[0]
+        left_node = nodes[1]
+        right_node = nodes[2]
 
-        # Calculate total width needed including spacing
-        total_width = max(
-            widths[nodes[0]],  # Width of top node
-            widths[nodes[1]]
-            + spacing
-            + widths[nodes[2]],  # Width of bottom nodes plus spacing
-        )
+        positions[top_node] = (width // 2, 0)  # Top center
+        positions[left_node] = (0, height)  # Bottom left
+        positions[right_node] = (width, height)  # Bottom right
 
-        # Position first node in cycle at top center
-        center_x = total_width // 2
-        positions[nodes[0]] = (center_x - widths[nodes[0]] // 2, 0)
+        return positions
 
-        # Position second node at bottom left
-        left_x = 0
-        positions[nodes[1]] = (left_x, 2)
+    def _layout_hierarchical(
+        self, graph: nx.Graph, spacing: int
+    ) -> Dict[str, Tuple[int, int]]:
+        """
+        Position nodes in a hierarchical layout.
+        Fully respects user's spacing preferences.
+        """
+        positions = {}
 
-        # Position third node at bottom right
-        right_x = total_width - widths[nodes[2]]
-        positions[nodes[2]] = (right_x, 2)
+        if not graph.is_directed():
+            return super()._layout_hierarchical(graph, spacing)
 
-        # Debug the layout
-        #        print(f"DEBUG: Triangle cycle order: {nodes}")
-        #        print(f"DEBUG: Triangle positions: {positions}")
+        # For directed graphs, determine natural hierarchy
+        in_degrees = dict(graph.in_degree())
+        out_degrees = dict(graph.out_degree())
+
+        # Find root nodes (more outgoing than incoming edges)
+        roots = [n for n in graph.nodes() if out_degrees[n] > in_degrees[n]]
+
+        if not roots:
+            max_out = max(out_degrees.values())
+            roots = [n for n, d in out_degrees.items() if d == max_out]
+
+        # Position root nodes at top
+        root_x = spacing
+        for root in roots:
+            positions[root] = (root_x, 0)
+            root_x += spacing * 2
+
+        # Position remaining nodes
+        remaining = set(graph.nodes()) - set(roots)
+        if remaining:
+            y_pos = spacing * 2
+            x_pos = 0
+            for node in remaining:
+                positions[node] = (x_pos, y_pos)
+                x_pos += spacing * 2
 
         return positions

@@ -1,5 +1,91 @@
+"""triad_generator.py - Generates and visualizes all possible directed triads."""
+
 from phart import ASCIIRenderer, NodeStyle
+from phart.layout import LayoutManager
 import networkx as nx
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+
+def should_use_triangle_layout(graph: nx.Graph) -> bool:
+    """Determine if triangle layout is appropriate for this graph."""
+    if len(graph) != 3:
+        return False
+
+    # Only use triangle layout for specific simple patterns
+    if graph.is_directed():
+        edge_count = len(graph.edges())
+        if edge_count <= 3:  # Simple triangle patterns only
+            return True
+
+        # Check for specific patterns we know work well with triangle layout
+        if edge_count == 4 and any(
+            len(list(nx.simple_cycles(graph))) == 1 for cycle in nx.simple_cycles(graph)
+        ):
+            return True
+
+    return False
+
+
+# Monkey patch the LayoutManager's calculate_layout method
+original_calculate_layout = LayoutManager.calculate_layout
+
+
+def new_calculate_layout(self):
+    """Patched version of calculate_layout that's more selective about triangle layouts."""
+    if not self.graph:
+        return {}, 0, 0
+
+    # Calculate max node width for spacing adjustment
+    max_node_width = max(self._get_node_width(str(node)) for node in self.graph.nodes())
+    # Base spacing is max(configured spacing, node width)
+    effective_spacing = max(self.options.node_spacing, max_node_width)
+
+    # Group nodes by connected component
+    components = list(
+        nx.weakly_connected_components(self.graph)
+        if self.graph.is_directed()
+        else nx.connected_components(self.graph)
+    )
+
+    component_layouts = {}
+    max_width = 0
+    total_height = 0
+
+    for component in components:
+        subgraph = self.graph.subgraph(component)
+
+        # Modified decision logic for using triangle layout
+        is_triangle = should_use_triangle_layout(subgraph)
+
+        if is_triangle:
+            positions = self._layout_triangle(subgraph, effective_spacing)
+        else:
+            positions = self._layout_hierarchical(subgraph, effective_spacing)
+
+        # Get component dimensions
+        component_width = max(x for x, _ in positions.values()) + 4
+        component_height = max(y for _, y in positions.values()) + 2
+
+        # Update layout dimensions
+        max_width = max(max_width, component_width)
+
+        # Shift positions to account for previous components
+        shifted_positions = {
+            node: (x, y + total_height) for node, (x, y) in positions.items()
+        }
+
+        component_layouts.update(shifted_positions)
+        total_height += component_height + self.options.layer_spacing
+
+    return component_layouts, max_width, total_height
+
+
+# Apply the monkey patch
+LayoutManager.calculate_layout = new_calculate_layout
 
 
 def generate_triads():
@@ -28,50 +114,64 @@ def generate_triads():
         G = nx.DiGraph()
         G.add_nodes_from([1, 2, 3])  # Always add all three nodes
         G.add_edges_from(edge_list)
+        logger.debug(f"Created {name} with edges: {G.edges()}")
         graphs[name] = G
 
     return graphs
 
 
+def render_triad(name: str, graph: nx.DiGraph) -> str:
+    """Render a single triad with its name."""
+    try:
+        logger.debug(f"Attempting to render {name}")
+
+        # Create renderer with minimal spacing
+        renderer = ASCIIRenderer(
+            graph,
+            node_style=NodeStyle.SQUARE,
+            node_spacing=2,  # Reduce horizontal spacing
+            layer_spacing=1,  # Reduce vertical spacing
+        )
+
+        # Get the rendered output
+        rendered = renderer.render()
+        logger.debug(f"Raw rendered output:\n{rendered}")
+
+        # Clean up excess whitespace while preserving structure
+        lines = [line.rstrip() for line in rendered.split("\n")]
+        while lines and not lines[-1].strip():
+            lines.pop()
+
+        # Find the maximum line width
+        max_width = max(len(line) for line in lines) + 2
+
+        # Create bordered output
+        output = []
+        output.append("=" * max_width)
+        output.append(f"|{name:^{max_width-2}}|")
+        output.append("-" * max_width)
+        for line in lines:
+            output.append(f"|{line:<{max_width-2}}|")
+        output.append("=" * max_width)
+
+        return "\n".join(output)
+
+    except Exception as e:
+        logger.exception(f"Error rendering {name}")
+        return f"Error rendering {name}: {str(e)}\nGraph edges: {list(graph.edges())}"
+
+
 def render_all_triads():
-    """Render all triads using PHART and output in a grid-like format."""
+    """Render all triads using PHART."""
     triads = generate_triads()
 
-    # Calculate the width needed for each diagram to create a grid effect
-    sample_render = ASCIIRenderer(
-        next(iter(triads.values())), node_style=NodeStyle.SQUARE
-    ).render()
-    width = max(len(line) for line in sample_render.split("\n")) + 4  # Add padding
-
-    # We'll create 4 rows of 4 diagrams each
-    output = []
-    current_row = []
+    print("Rendering all triads:")
+    print()
 
     for name, graph in triads.items():
-        renderer = ASCIIRenderer(graph, node_style=NodeStyle.SQUARE)
-        rendered = renderer.render()
-
-        # Add title above the diagram
-        diagram_lines = [f"{name:^{width}}"]
-        print(f"{diagram_lines}")
-        diagram_lines.extend(line.ljust(width) for line in rendered.split("\n"))
-
-        current_row.append(diagram_lines)
-
-        if len(current_row) == 4:  # Start new row after 4 diagrams
-            # Combine diagrams in the row
-            for i in range(len(current_row[0])):  # For each line
-                output.append("".join(diag[i] for diag in current_row))
-            output.append("")  # Add blank line between rows
-            current_row = []
-
-    # Handle any remaining diagrams in the last row
-    if current_row:
-        for i in range(len(current_row[0])):
-            output.append("".join(diag[i] for diag in current_row))
-
-    return "\n".join(output)
+        print(render_triad(name, graph))
+        print()
 
 
 if __name__ == "__main__":
-    print(render_all_triads())
+    render_all_triads()

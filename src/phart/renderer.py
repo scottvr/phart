@@ -206,43 +206,34 @@ class ASCIIRenderer:
         """
         Render the graph as ASCII art.
 
-        Returns
-        -------
-        str
-            ASCII representation of the graph
-        """
+        Args:
+            print_config: Whether to include configuration info in output
 
+        Returns:
+            String containing the ASCII representation of the graph
+        """
         # Calculate layout
-        positions, width, height = self.layout_manager.calculate_layout()
+        positions, base_width, base_height = self.layout_manager.calculate_layout()
         if not positions:
             return ""
 
-        #        print("DEBUG: Original positions:", positions)
+        # Get required canvas dimensions based on layout
+        canvas_width, canvas_height = self.layout_manager.calculate_canvas_dimensions(
+            positions
+        )
 
-        # Add left padding to all positions
-        padding_left = 4 if not self.options.use_ascii else 6
-        adjusted_positions = {
-            node: (x + padding_left, y) for node, (x, y) in positions.items()
-        }
-
-        #        print("DEBUG: Adjusted positions:", adjusted_positions)
-
-        # Initialize canvas with adjusted positions
-        self._init_canvas(width, height, adjusted_positions)
+        # Initialize blank canvas
+        self._init_canvas(canvas_width, canvas_height, positions)
 
         # Draw edges first
         for start, end in self.graph.edges():
             try:
-                self._draw_edge(start, end, adjusted_positions)
+                self._draw_edge(start, end, positions)
             except IndexError:
-                #                print(f"DEBUG: Error drawing edge {start}->{end}: {e}")
-                #                print(f"DEBUG: Start pos: {adjusted_positions[start]}")
-                #                print(f"DEBUG: End pos: {adjusted_positions[end]}")
-                #                print(f"DEBUG: Canvas size: {len(self.canvas[0])}x{len(self.canvas)}")
                 raise
 
         # Draw nodes
-        for node, (x, y) in adjusted_positions.items():
+        for node, (x, y) in positions.items():
             prefix, suffix = self.options.get_node_decorators(str(node))
             label = f"{prefix}{node}{suffix}"
             for i, char in enumerate(label):
@@ -300,11 +291,12 @@ class ASCIIRenderer:
         self, width: int, height: int, positions: Dict[str, Tuple[int, int]]
     ) -> None:
         """
-        Initialize the rendering canvas with given dimensions.
+        Initialize blank canvas with given dimensions.
 
         Args:
             width: Canvas width in characters
             height: Canvas height in characters
+            positions: Node positions (kept for API compatibility)
 
         Raises:
             ValueError: If dimensions are negative or zero
@@ -314,28 +306,7 @@ class ASCIIRenderer:
                 f"Canvas dimensions must be positive (got {width}x{height})"
             )
 
-        # Calculate required width based on rightmost node position plus its width
-        max_node_end = 0
-        for node, (x, y) in positions.items():
-            node_width = sum(
-                len(part) for part in self.options.get_node_decorators(str(node))
-            ) + len(str(node))
-            node_end = x + node_width
-            max_node_end = max(max_node_end, node_end)
-
-        # Add padding for edge decorators and bidirectional markers
-        padding_right = (
-            4 if not self.options.use_ascii else 6
-        )  # Extra space for ASCII markers
-        final_width = max_node_end + padding_right
-
-        # Add vertical padding
-        final_height = height + 2
-
-        #        print(f"DEBUG: Canvas initialized with {final_width}x{final_height}")
-        #        print(f"DEBUG: Max node end position: {max_node_end}")
-
-        self.canvas = [[" " for _ in range(final_width)] for _ in range(final_height)]
+        self.canvas = [[" " for _ in range(width)] for _ in range(height)]
 
     def _draw_vertical_segment(self, x, start_y, end_y, marker=None):
         for y in range(start_y + 1, end_y):
