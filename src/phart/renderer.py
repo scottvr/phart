@@ -203,55 +203,46 @@ class ASCIIRenderer:
             return text.encode("ascii", errors="replace").decode("ascii")
 
     def render(self, print_config: Optional[bool] = False) -> str:
-        """
-        Render the graph as ASCII art.
-
-        Returns
-        -------
-        str
-            ASCII representation of the graph
-        """
-
-        # Calculate layout
+        """Render the graph as ASCII art."""
         positions, width, height = self.layout_manager.calculate_layout()
         if not positions:
             return ""
 
-        #        print("DEBUG: Original positions:", positions)
-
-        # Add left padding to all positions
-        padding_left = 4 if not self.options.use_ascii else 6
-        adjusted_positions = {
-            node: (x + padding_left, y) for node, (x, y) in positions.items()
-        }
-
-        #        print("DEBUG: Adjusted positions:", adjusted_positions)
-
         # Initialize canvas with adjusted positions
-        self._init_canvas(width, height, adjusted_positions)
+        self._init_canvas(width, height, positions)
 
-        # Draw edges first
-        for start, end in self.graph.edges():
-            try:
-                self._draw_edge(start, end, adjusted_positions)
-            except IndexError:
-                #                print(f"DEBUG: Error drawing edge {start}->{end}: {e}")
-                #                print(f"DEBUG: Start pos: {adjusted_positions[start]}")
-                #                print(f"DEBUG: End pos: {adjusted_positions[end]}")
-                #                print(f"DEBUG: Canvas size: {len(self.canvas[0])}x{len(self.canvas)}")
-                raise
+        # Only try to draw edges if we have any
+        if self.graph.edges():
+            for start, end in self.graph.edges():
+                if start in positions and end in positions:
+                    try:
+                        self._draw_edge(start, end, positions)
+                    except IndexError as e:
+                        # For debugging, print more info about what failed
+                        pos_info = (
+                            f"start_pos={positions[start]}, end_pos={positions[end]}"
+                        )
+                        edge_info = f"edge={start}->{end}"
+                        canvas_info = f"canvas={len(self.canvas)}x{len(self.canvas[0])}"
+                        raise IndexError(
+                            f"Edge drawing failed: {edge_info}, {pos_info}, {canvas_info}"
+                        ) from e
 
         # Draw nodes
-        for node, (x, y) in adjusted_positions.items():
+        for node, (x, y) in positions.items():
             prefix, suffix = self.options.get_node_decorators(str(node))
             label = f"{prefix}{node}{suffix}"
             for i, char in enumerate(label):
-                self.canvas[y][x + i] = char
+                try:
+                    self.canvas[y][x + i] = char
+                except IndexError as e:
+                    pos_info = f"pos=({x},{y}), i={i}, label={label}"
+                    canvas_info = f"canvas={len(self.canvas)}x{len(self.canvas[0])}"
+                    raise IndexError(
+                        f"Node drawing failed: {pos_info}, {canvas_info}"
+                    ) from e
 
-        # Build final string, trimming trailing spaces
-        preamble = str(self.options) + "\n" if print_config else ""
-        result = "\n".join("".join(row).rstrip() for row in self.canvas)
-        return f"{preamble}{result}" if preamble else result
+        return "\n".join("".join(row).rstrip() for row in self.canvas)
 
     def draw(self, file: Optional[TextIO] = None) -> None:
         """
@@ -300,40 +291,42 @@ class ASCIIRenderer:
         self, width: int, height: int, positions: Dict[str, Tuple[int, int]]
     ) -> None:
         """
-        Initialize the rendering canvas with given dimensions.
+        Initialize blank canvas with given dimensions.
 
         Args:
             width: Canvas width in characters
             height: Canvas height in characters
+            positions: Node positions (kept for API compatibility)
 
         Raises:
-            ValueError: If dimensions are negative or zero
+            ValueError: If dimensions are negative
         """
-        if width <= 0 or height <= 0:
-            raise ValueError(
-                f"Canvas dimensions must be positive (got {width}x{height})"
+        # Calculate minimum dimensions needed
+        max_x_pos = max(x for x, _ in positions.values()) if positions else 0
+        max_y_pos = max(y for _, y in positions.values()) if positions else 0
+
+        # Calculate width needed for widest node plus its position
+        max_node_width = (
+            max(
+                sum(len(part) for part in self.options.get_node_decorators(str(node)))
+                + len(str(node))
+                for node in positions.keys()
             )
+            if positions
+            else 1
+        )
 
-        # Calculate required width based on rightmost node position plus its width
-        max_node_end = 0
-        for node, (x, y) in positions.items():
-            node_width = sum(
-                len(part) for part in self.options.get_node_decorators(str(node))
-            ) + len(str(node))
-            node_end = x + node_width
-            max_node_end = max(max_node_end, node_end)
+        # Ensure minimum dimensions that can hold all nodes and edges
+        min_width = max_x_pos + max_node_width + 1  # +1 for safety margin
+        min_height = max_y_pos + 3  # +3 to ensure room for edges between layers
 
-        # Add padding for edge decorators and bidirectional markers
-        padding_right = (
-            4 if not self.options.use_ascii else 6
-        )  # Extra space for ASCII markers
-        final_width = max_node_end + padding_right
+        final_width = max(width, min_width)
+        final_height = max(height, min_height)
 
-        # Add vertical padding
-        final_height = height + 2
-
-        #        print(f"DEBUG: Canvas initialized with {final_width}x{final_height}")
-        #        print(f"DEBUG: Max node end position: {max_node_end}")
+        if final_width < 0 or final_height < 0:
+            raise ValueError(
+                f"Canvas dimensions must not be negative (got {width}x{height})"
+            )
 
         self.canvas = [[" " for _ in range(final_width)] for _ in range(final_height)]
 

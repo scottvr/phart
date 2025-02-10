@@ -5,19 +5,19 @@ import networkx as nx
 def generate_triads():
     """Generate all 16 possible directed triads with their standard naming."""
     triads = {
-        #        "003": [],  # Empty triad
-        #        "012": [(1, 2)],  # Single edge
-        #        "102": [(1, 2), (2, 1)],  # Mutual edge
-        #        "021D": [(3, 1), (3, 2)],  # Two edges down
-        #        "021U": [(1, 3), (2, 3)],  # Two edges up
-        #        "021C": [(1, 3), (3, 2)],  # Two edges chain
-        #        "111D": [(1, 2), (2, 1), (3, 1)],  # Mutual + single down
-        #        "111U": [(1, 2), (2, 1), (1, 3)],  # Mutual + single up
-        #        "030T": [(1, 2), (3, 2), (1, 3)],  # Three edges triangle
-        #        "030C": [(1, 3), (3, 2), (2, 1)],  # Three edges cyclic
-        #        "201": [(1, 2), (2, 1), (3, 1), (1, 3)],  # Four edges
-        #        "120D": [(1, 2), (2, 1), (3, 1), (3, 2)],  # Four edges down
-        #        "120U": [(1, 2), (2, 1), (1, 3), (2, 3)],  # Four edges up
+        "003": [],  # Empty triad
+        "012": [(1, 2)],  # Single edge
+        "102": [(1, 2), (2, 1)],  # Mutual edge
+        "021D": [(3, 1), (3, 2)],  # Two edges down
+        "021U": [(1, 3), (2, 3)],  # Two edges up
+        "021C": [(1, 3), (3, 2)],  # Two edges chain
+        "111D": [(1, 2), (2, 1), (3, 1)],  # Mutual + single down
+        "111U": [(1, 2), (2, 1), (1, 3)],  # Mutual + single up
+        "030T": [(1, 2), (3, 2), (1, 3)],  # Three edges triangle
+        "030C": [(1, 3), (3, 2), (2, 1)],  # Three edges cyclic
+        "201": [(1, 2), (2, 1), (3, 1), (1, 3)],  # Four edges
+        "120D": [(1, 2), (2, 1), (3, 1), (3, 2)],  # Four edges down
+        "120U": [(1, 2), (2, 1), (1, 3), (2, 3)],  # Four edges up
         "120C": [(1, 2), (2, 1), (1, 3), (3, 2)],  # Four edges cycle
         "210": [(1, 2), (2, 1), (1, 3), (3, 2), (2, 3)],  # Five edges
         "300": [(1, 2), (2, 1), (2, 3), (3, 2), (1, 3), (3, 1)],  # Complete

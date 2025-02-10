@@ -3,36 +3,13 @@
 This module handles the calculation of node positions and edge routing
 for ASCII graph visualization.
 """
-# src path: src\phart\layout.py
 
-from typing import Dict, Tuple, Set
-
-import networkx as nx  # type: ignore
-
+from typing import Dict, Tuple, Any, Set
+import networkx as nx
 from .styles import LayoutOptions
 
 
 class LayoutManager:
-    """
-    Manages the calculation of node positions and layout logic.
-
-    This class handles the conversion of graph structure into a
-    2D coordinate system suitable for ASCII rendering.
-
-    Parameters
-    ----------
-    graph : NetworkX graph
-        Graph to lay out
-    options : LayoutOptions
-        Layout configuration
-
-    Notes
-    -----
-    The layout algorithm uses a hierarchical approach optimized for
-    directed graphs and trees. For undirected graphs, a root node
-    is chosen based on degree centrality.
-    """
-
     def __init__(self, graph: nx.Graph, options: LayoutOptions):
         self.graph = graph
         self.options = options
@@ -56,96 +33,176 @@ class LayoutManager:
         prefix, suffix = self.options.get_node_decorators(node)
         return len(str(node)) + len(str(prefix)) + len(str(suffix))
 
-    def _calculate_minimum_x_position(self, node_width: int) -> int:
-        """Calculate minimum x position that allows for edge drawing."""
-        return 2 if not self.options.use_ascii else 3  # More space for ASCII markers
+    def _calculate_node_importance(self, graph: nx.DiGraph, node: Any) -> float:
+        """
+        Calculate node importance based on multiple factors.
 
-    def _draw_vertical_segment(self, x, start_y, end_y, marker=None):
-        for y in range(start_y + 1, end_y):
-            self.canvas[y][x] = self.options.edge_vertical
-        if marker:
-            mid_y = (start_y + end_y) // 2
-            self.canvas[mid_y][x] = marker
+        Higher score = more important node that should be positioned prominently.
+        Factors:
+        - Degree centrality (both in and out)
+        - Number of bidirectional relationships
+        - Position in any cycles
+        """
+        # Get basic degree information
+        in_degree = graph.in_degree(node)
+        out_degree = graph.out_degree(node)
 
-    def _draw_horizontal_segment(self, y, start_x, end_x, marker=None):
-        for x in range(start_x + 1, end_x):
-            self.canvas[y][x] = self.options.edge_horizontal
-        if marker:
-            mid_x = (start_x + end_x) // 2
-            self.canvas[y][mid_x] = marker
+        # Count bidirectional relationships
+        bidir_count = sum(
+            1 for nbr in graph.neighbors(node) if graph.has_edge(nbr, node)
+        )
 
-    def _safe_draw(self, x, y, char):
-        try:
-            self.canvas[y][x] = char
-        except IndexError:
-            raise IndexError(f"Drawing exceeded canvas bounds at ({x}, {y})")
+        # Calculate score based on:
+        # - Overall connectivity (degrees)
+        # - Bidirectional relationships (weighted more heavily)
+        # - Balance of in/out edges
+        score = (
+            in_degree
+            + out_degree  # Basic connectivity
+            + bidir_count * 2  # Bidirectional relationships (weighted)
+            + -abs(in_degree - out_degree)
+        )  # Penalize imbalanced in/out
+
+        return score
+
+    def _should_use_vertical_layout(self, graph: nx.DiGraph) -> bool:
+        """
+        Determine if graph should use vertical layout based on edge density and patterns.
+
+        A vertical layout (one node top, others below) is preferred when:
+        - Graph is dense (many edges relative to possible edges)
+        - Has significant bidirectional relationships
+        """
+        if len(graph) != 3:
+            return False
+
+        # Calculate edge density
+        possible_edges = len(graph) * (len(graph) - 1)  # For directed graph
+        actual_edges = len(graph.edges())
+        density = actual_edges / possible_edges
+
+        # Count bidirectional relationships
+        bidir_count = (
+            sum(1 for u, v in graph.edges() if graph.has_edge(v, u)) // 2
+        )  # Divide by 2 as each bidir edge is counted twice
+
+        # Use vertical layout if:
+        # - Dense (>50% of possible edges) OR
+        # - Has multiple bidirectional relationships
+        return density > 0.5 or bidir_count > 1
+
+    def _layout_vertical(
+        self, graph: nx.DiGraph, spacing: int
+    ) -> Dict[str, Tuple[int, int]]:
+        """
+        Layout graph vertically with most important node on top.
+
+        Prioritizes:
+        - Edge visibility
+        - Minimal crossings
+        - Clear bidirectional relationships
+        """
+        positions = {}
+        nodes = list(graph.nodes())
+
+        # Score nodes by importance
+        node_scores = {
+            node: self._calculate_node_importance(graph, node) for node in nodes
+        }
+
+        # Choose top node (highest score)
+        top_node = max(nodes, key=lambda n: node_scores[n])
+
+        # Get remaining nodes
+        bottom_nodes = [n for n in nodes if n != top_node]
+
+        # Sort bottom nodes by their relationships with top node
+        bottom_nodes.sort(
+            key=lambda n: (
+                graph.has_edge(top_node, n),  # Edges from top
+                graph.has_edge(n, top_node),  # Edges to top
+                node_scores[n],  # Overall importance
+            ),
+            reverse=True,
+        )
+
+        # Calculate node widths
+        widths = {node: self._get_node_width(str(node)) for node in nodes}
+
+        # Calculate total width needed
+        bottom_width = widths[bottom_nodes[0]] + widths[bottom_nodes[1]] + spacing
+
+        # Position nodes with proper centering
+        top_x = (bottom_width - widths[top_node]) // 2
+
+        # Use layer_spacing for vertical distance (like hierarchical layout)
+        layer_height = (
+            1 if self.options.layer_spacing == 0 else self.options.layer_spacing
+        )
+
+        positions[top_node] = (top_x, 0)
+
+        # Position bottom nodes using consistent layer height
+        current_x = 0
+        positions[bottom_nodes[0]] = (current_x, layer_height)
+        current_x += widths[bottom_nodes[0]] + spacing
+        positions[bottom_nodes[1]] = (current_x, layer_height)
+
+        return positions
 
     def calculate_layout(self) -> Tuple[Dict[str, Tuple[int, int]], int, int]:
         """Calculate node positions using layout appropriate for graph structure."""
         if not self.graph:
             return {}, 0, 0
 
-        # Calculate max node width for spacing adjustment
-        max_node_width = max(
-            self._get_node_width(str(node)) for node in self.graph.nodes()
-        )
-        # Base spacing is max(configured spacing, node width)
-        effective_spacing = max(self.options.node_spacing, max_node_width)
+        effective_spacing = self.options.get_effective_node_spacing(has_edges=True)
 
-        # Group nodes by connected component
-        components = list(
-            nx.weakly_connected_components(self.graph)
-            if self.graph.is_directed()
-            else nx.connected_components(self.graph)
-        )
+        # For directed graphs with 3 nodes, check if we should use vertical layout
+        # Get positions using appropriate layout method
+        if (
+            isinstance(self.graph, nx.DiGraph)
+            and len(self.graph) == 3
+            and self._should_use_vertical_layout(self.graph)
+        ):
+            positions = self._layout_vertical(self.graph, effective_spacing)
+        else:
+            # Fallback to standard hierarchical layout
+            positions = self._layout_hierarchical(self.graph, effective_spacing)
 
-        component_layouts = {}
-        max_width = 0
-        total_height = 0
+        # Calculate base dimensions from positions
+        # Ensure minimum width for node display
+        node_widths = [self._get_node_width(str(node)) for node in self.graph.nodes()]
+        min_width = max(node_widths) if node_widths else 0
 
-        for component in components:
-            subgraph = self.graph.subgraph(component)
+        base_width = max(min_width, max((x for x, _ in positions.values()), default=0))
 
-            # Special handling for triangular components
-            is_triangle = len(component) == 3 and (
-                not self.graph.is_directed()
-                or len(list(nx.simple_cycles(subgraph))) > 0
-            )
+        # Ensure we have at least enough height for the nodes
+        base_height = max(y for _, y in positions.values()) if positions else 0
+        if base_height == 0 and positions:  # If we have nodes but no height
+            base_height = self.options.layer_spacing  # Use at least one layer of height
 
-            if is_triangle:
-                positions = self._layout_triangle(subgraph, effective_spacing)
-            else:
-                positions = self._layout_hierarchical(subgraph, effective_spacing)
-
-            # Get component dimensions
-            component_width = max(x for x, _ in positions.values()) + 4
-            component_height = max(y for _, y in positions.values()) + 2
-
-            # Update layout dimensions
-            max_width = max(max_width, component_width)
-
-            # Shift positions to account for previous components
-            shifted_positions = {
-                node: (x, y + total_height) for node, (x, y) in positions.items()
-            }
-
-            component_layouts.update(shifted_positions)
-            total_height += component_height + self.options.layer_spacing
-
-        return component_layouts, max_width, total_height
+        return positions, base_width, base_height
 
     def _layout_hierarchical(
         self, graph: nx.Graph, spacing: int
     ) -> Dict[str, Tuple[int, int]]:
-        """Standard hierarchical layout with adjusted spacing."""
+        """Position nodes in a hierarchical layout preserving layers.
+
+        This is the standard layout for non-triad cases, organizing nodes into
+        clear hierarchical layers based on graph structure.
+        """
         if graph.is_directed():
             roots = [n for n, d in graph.in_degree() if d == 0]
             if not roots:
-                roots = [max(graph.nodes(), key=lambda n: graph.out_degree(n))]
+                # If no clear root, use node with highest out-degree
+                root = max(graph.nodes(), key=lambda n: graph.out_degree(n))
+                roots = [root]
         else:
-            roots = [max(graph.nodes(), key=lambda n: graph.degree(n))]
+            # For undirected, use degree centrality
+            root = max(graph.nodes(), key=lambda n: graph.degree(n))
+            roots = [root]
 
-        # Calculate distances within component
+        # Calculate distances from roots to organize layers
         distances: Dict[str, int] = {}
         for root in roots:
             lengths = nx.single_source_shortest_path_length(graph, root)
@@ -159,18 +216,19 @@ class LayoutManager:
                 layers[layer] = set()
             layers[layer].add(node)
 
-        # Calculate positions
+        # Calculate positions preserving layer structure
         positions = {}
         layer_widths = {}
 
+        # Calculate width needed for each layer
         for layer, nodes in layers.items():
             total_width = sum(self._get_node_width(str(n)) for n in nodes)
-            # Use provided spacing parameter instead of self.options.node_spacing
             total_spacing = (len(nodes) - 1) * spacing
             layer_widths[layer] = total_width + total_spacing
 
         max_width = max(layer_widths.values()) if layer_widths else 0
 
+        # Position nodes within their layers
         for layer, nodes in layers.items():
             y = layer * (
                 1 if self.options.layer_spacing == 0 else self.options.layer_spacing
@@ -183,49 +241,36 @@ class LayoutManager:
                 positions[node] = (current_x, y)
                 current_x += self._get_node_width(str(node)) + spacing
 
-        return positions
-
-    def _layout_triangle(
-        self, graph: nx.Graph, spacing: int
-    ) -> Dict[str, Tuple[int, int]]:
-        """Triangle layout with adjusted spacing, respecting cycle order."""
-        positions = {}
-
-        # Get cycle order if directed
-        if graph.is_directed():
-            cycles = list(nx.simple_cycles(graph))
-            if cycles:
-                nodes = cycles[0]  # Use first cycle's order
-            else:
-                nodes = list(graph.nodes())
-        else:
-            nodes = list(graph.nodes())
-
-        # Calculate node widths
-        widths = {node: self._get_node_width(str(node)) for node in nodes}
-
-        # Calculate total width needed including spacing
-        total_width = max(
-            widths[nodes[0]],  # Width of top node
-            widths[nodes[1]]
-            + spacing
-            + widths[nodes[2]],  # Width of bottom nodes plus spacing
+        return (
+            positions  # Just return positions, let calculate_layout handle dimensions
         )
 
-        # Position first node in cycle at top center
-        center_x = total_width // 2
-        positions[nodes[0]] = (center_x - widths[nodes[0]] // 2, 0)
+    def calculate_canvas_dimensions(
+        self, positions: Dict[str, Tuple[int, int]]
+    ) -> Tuple[int, int]:
+        """Calculate required canvas dimensions based on layout and node decorations."""
+        if not positions:
+            return 0, 0
 
-        # Position second node at bottom left
-        left_x = 0
-        positions[nodes[1]] = (left_x, 2)
+        # Calculate width needed for nodes and decorations
+        max_node_end = 0
+        for node, (x, y) in positions.items():
+            node_width = sum(
+                len(part) for part in self.options.get_node_decorators(str(node))
+            ) + len(str(node))
+            node_end = x + node_width
+            max_node_end = max(max_node_end, node_end)
 
-        # Position third node at bottom right
-        right_x = total_width - widths[nodes[2]]
-        positions[nodes[2]] = (right_x, 2)
+        # Add configured padding plus extra space for edge decorators
+        extra_edge_space = (
+            6 if self.options.use_ascii else 4
+        )  # ASCII needs more space for markers
+        final_width = max(
+            1, max_node_end + self.options.right_padding + extra_edge_space
+        )
 
-        # Debug the layout
-        #        print(f"DEBUG: Triangle cycle order: {nodes}")
-        #        print(f"DEBUG: Triangle positions: {positions}")
+        # Calculate height including padding, ensuring minimum height
+        max_y = max(y for _, y in positions.values())
+        final_height = max(1, max_y + 2)  # Ensure at least height of 1
 
-        return positions
+        return final_width, final_height
