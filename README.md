@@ -353,6 +353,10 @@ renderer = ASCIIRenderer.from_graphml("graph.graphml")
 print(renderer.render())
 ```
 
+or, of course just
+```bash
+phart graph.graphml 
+```
 ## Python Files
 
 PHART can directly execute Python files that create and render graphs. When given a Python file, PHART will:
