@@ -212,6 +212,7 @@ Different node styles for the same graph:
    v      v      |      v
   <3>----<4>    <5>----<6>
 ```
+
 </details>
 
 ## Why PHART?
@@ -236,6 +237,45 @@ requires Python >= 3.10 and NetworkX >= 3.3
 
 ```bash
 pip install phart
+```
+
+## The CLI
+
+These docs are pretty out of date now, which I will try to remedy soon.
+In the mean time, I should mention that the primary focus lately has been
+use from the CLI command `phart` which is installed when you install via pip.
+This repor is well ahead of the release in PyPi as I work on some specific
+graphlet features for a user. I will update the docs to match when the package is released.
+But to fill in some of the info garp here is the CLI usage info, which should be
+self-explanatory to many of you.
+
+```bash
+└─$ phart --help
+usage: phart [-h] [--output OUTPUT] [--style {minimal,square,round,diamond,custom}]
+             [--node-spacing NODE_SPACING] [--layer-spacing LAYER_SPACING] [--charset {ascii,unicode}]
+             [--ascii] [--function FUNCTION]
+             input
+
+PHART: Python Hierarchical ASCII Rendering Tool
+
+positional arguments:
+  input                 Input file (.dot, .graphml, or .py format)
+
+options:
+  -h, --help            show this help message and exit
+  --output OUTPUT, -o OUTPUT
+                        Output file (if not specified, prints to stdout)
+  --style {minimal,square,round,diamond,custom}
+                        Node style (default: square)
+  --node-spacing NODE_SPACING
+                        Horizontal space between nodes (default: 4)
+  --layer-spacing LAYER_SPACING
+                        Vertical space between layers (default: 2)
+  --charset {ascii,unicode}
+                        Character set to use for rendering (default: unicode)
+  --ascii               Force ASCII output (deprecated, use --charset ascii instead)
+  --function FUNCTION, -f FUNCTION
+                        Function to call in Python file (default: main)
 ```
 
 ## Quick Start

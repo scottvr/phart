@@ -350,6 +350,43 @@ class ASCIIRenderer:
         except IndexError:
             raise IndexError(f"Drawing exceeded canvas bounds at ({x}, {y})")
 
+    def _is_terminal(
+        self, positions: Dict[str, Tuple[int, int]], node: str, x: int, y: int
+    ) -> bool:
+        """
+        Check if a position represents a node connection point.
+
+        A terminal is the point where an edge connects to a node, typically the
+        node's center point on its boundary.
+        """
+        if node not in positions:
+            return False
+        node_x, node_y = positions[node]
+        prefix, _ = self.options.get_node_decorators(str(node))
+        node_width = len(str(node)) + len(str(prefix))
+        node_center = node_x + node_width // 2
+
+        return y == node_y and x == node_center
+
+    def _draw_direction(
+        self, y: int, x: int, direction: str, is_terminal: bool = False
+    ) -> None:
+        """
+        Draw a directional indicator, respecting terminal points.
+
+        Terminal points always show direction as they represent actual node connections.
+        Non-terminal points preserve existing directional indicators to maintain path clarity.
+        """
+        if is_terminal:
+            # Always show direction at node connection points
+            self.canvas[y][x] = direction
+        elif self.canvas[y][x] not in (
+            self.options.edge_arrow_up,
+            self.options.edge_arrow_down,
+        ):
+            # Only draw direction on non-terminals if there isn't already a direction
+            self.canvas[y][x] = direction
+
     def _draw_edge(
         self, start: str, end: str, positions: Dict[str, Tuple[int, int]]
     ) -> None:
@@ -362,7 +399,7 @@ class ASCIIRenderer:
         start_x, start_y = positions[start]
         end_x, end_y = positions[end]
 
-        # Calculate center points and edges
+        # Calculate node widths for edge positioning
         prefix, _ = self.options.get_node_decorators(str(start))
         start_width = len(str(start)) + len(str(prefix))
         end_width = len(str(end)) + len(str(prefix))
@@ -376,180 +413,156 @@ class ASCIIRenderer:
         )
 
         try:
-            # Case 1: Straight vertical connection
-            if start_center == end_center:
-                min_y, max_y = min(start_y, end_y), max(start_y, end_y)
-                # Draw vertical line
-                for y in range(min_y + 1, max_y):
-                    self.canvas[y][start_center] = self.options.edge_vertical
-
+            # Case 1: Same level horizontal connection
+            if start_y == end_y:
+                min_x = min(start_center, end_center)
+                max_x = max(start_center, end_center)
+                for x in range(min_x + 1, max_x):
+                    self.canvas[start_y][x] = self.options.edge_horizontal
                 if is_bidirectional:
-                    # Place bidirectional marker in middle
-                    mid_y = (start_y + end_y) // 2
-                    self.canvas[mid_y][start_center] = self.options.edge_arrow_bidir_h
+                    self.canvas[start_y][min_x + 1] = self.options.edge_arrow_r
+                    self.canvas[start_y][max_x - 1] = self.options.edge_arrow_l
                 else:
-                    # Add arrow in the appropriate direction
-                    if start_y < end_y:  # Moving down
-                        self.canvas[max_y - 1][start_center] = (
-                            self.options.edge_arrow_down
-                        )
-                    else:  # Moving up
-                        self.canvas[min_y + 1][start_center] = (
-                            self.options.edge_arrow_up
-                        )
-                return
+                    if start_center < end_center:
+                        self.canvas[start_y][max_x - 1] = self.options.edge_arrow_r
+                    else:
+                        self.canvas[start_y][min_x + 1] = self.options.edge_arrow_l
 
-            # Case 2: Edges that turn (vertical and horizontal components)
-            if start_y != end_y:
-                min_y, max_y = min(start_y, end_y), max(start_y, end_y)
-                going_up = end_y < start_y
+            # Case 2: Top to bottom connection
+            elif start_y < end_y or end_y < start_y:
+                # Identify top and bottom nodes
+                top_node = start if start_y < end_y else end
+                bottom_node = end if start_y < end_y else start
+                top_x, top_y = positions[top_node]
+                bottom_x, bottom_y = positions[bottom_node]
+
+                # Calculate centers
+                top_center = top_x + (len(str(top_node)) + len(str(prefix))) // 2
+                bottom_center = (
+                    bottom_x + (len(str(bottom_node)) + len(str(prefix))) // 2
+                )
+
+                # Draw horizontal segment from top node to vertical drop point
+                min_x = min(top_center, bottom_center)
+                max_x = max(top_center, bottom_center)
+                y = top_y
+                for x in range(min_x + 1, max_x):
+                    self.canvas[y][x] = self.options.edge_horizontal
+
+                # Add crossing point
+                self.canvas[y][bottom_center] = self.options.edge_cross
 
                 # Draw vertical segment
-                for y in range(min_y + 1, max_y):
-                    self.canvas[y][start_center] = self.options.edge_vertical
+                for y in range(top_y + 1, bottom_y):
+                    self.canvas[y][bottom_center] = self.options.edge_vertical
 
+                # Add direction indicators
                 if is_bidirectional:
-                    # Place bidirectional marker in middle of vertical segment
-                    mid_y = (start_y + end_y) // 2
-                    self.canvas[mid_y][start_center] = self.options.edge_arrow_bidir_h
+                    # Place arrows at both ends
+                    self.canvas[top_y + 1][bottom_center] = self.options.edge_arrow_up
+                    self.canvas[bottom_y - 1][bottom_center] = (
+                        self.options.edge_arrow_down
+                    )
                 else:
-                    # Add vertical arrow in appropriate direction
-                    if going_up:
-                        self.canvas[min_y + 1][start_center] = (
+                    # Add arrow based on direction
+                    if start_y < end_y:  # Top to bottom
+                        self.canvas[top_y + 1][bottom_center] = (
                             self.options.edge_arrow_up
                         )
-                    else:
-                        self.canvas[max_y - 1][start_center] = (
+                    else:  # Bottom to top
+                        self.canvas[bottom_y - 1][bottom_center] = (
                             self.options.edge_arrow_down
-                        )
-
-                # Add crossing point at the turn
-                y_cross = min_y if going_up else max_y
-                self.canvas[y_cross][start_center] = self.options.edge_cross
-
-                # Draw horizontal segment with arrow
-                if start_center < end_center:  # Moving right
-                    for x in range(start_center + 1, end_x - 1):
-                        self.canvas[y_cross][x] = self.options.edge_horizontal
-                    if not is_bidirectional:
-                        self.canvas[y_cross][end_x - 1] = self.options.edge_arrow_r
-                else:  # Moving left
-                    for x in range(end_x + end_width + 1, start_center):
-                        self.canvas[y_cross][x] = self.options.edge_horizontal
-                    if not is_bidirectional:
-                        self.canvas[y_cross][end_x + end_width + 1] = (
-                            self.options.edge_arrow_l
-                        )
-                return
-
-            # Case 3: Same level horizontal (unchanged)
-            if start_y == end_y:
-                if is_bidirectional:
-                    # Draw horizontal line with bidirectional marker
-                    for x in range(start_center + 1, end_center):
-                        self.canvas[start_y][x] = self.options.edge_horizontal
-                    mid_x = (start_center + end_center) // 2
-                    self.canvas[start_y][mid_x] = self.options.edge_arrow_bidir_v
-                else:
-                    # Draw directional arrow
-                    if start_center < end_center:  # Moving right
-                        for x in range(start_center + 1, end_x - 1):
-                            self.canvas[start_y][x] = self.options.edge_horizontal
-                        self.canvas[start_y][end_x - 1] = self.options.edge_arrow_r
-                    else:  # Moving left
-                        for x in range(end_x + end_width + 1, start_center):
-                            self.canvas[start_y][x] = self.options.edge_horizontal
-                        self.canvas[start_y][end_x + end_width + 1] = (
-                            self.options.edge_arrow_l
                         )
 
         except IndexError as e:
             raise IndexError(f"Edge drawing exceeded canvas boundaries: {e}")
 
-    @classmethod
-    def from_dot(cls, dot_string: str, **kwargs: Any) -> "ASCIIRenderer":
-        """
-        Create a renderer from a DOT format string.
 
-        Parameters
-        ----------
-        dot_string : str
-            Graph description in DOT format
-        **kwargs
-            Additional arguments passed to the constructor
+@classmethod
+def from_dot(cls, dot_string: str, **kwargs: Any) -> "ASCIIRenderer":
+    """
+    Create a renderer from a DOT format string.
 
-        Returns
-        -------
-        ASCIIRenderer
-            New renderer instance
+    Parameters
+    ----------
+    dot_string : str
+        Graph description in DOT format
+    **kwargs
+        Additional arguments passed to the constructor
 
-        Raises
-        ------
-        ImportError
-            If pydot is not available
-        ValueError
-            If DOT string doesn't contain any valid graphs
+    Returns
+    -------
+    ASCIIRenderer
+        New renderer instance
 
-        Examples
-        --------
-        >>> dot = '''
-        ... digraph {
-        ...     A -> B
-        ...     B -> C
-        ... }
-        ... '''
-        >>> renderer = ASCIIRenderer.from_dot(dot)
-        >>> print(renderer.render())
-        A
-        |
-        B
-        |
-        C
-        """
+    Raises
+    ------
+    ImportError
+        If pydot is not available
+    ValueError
+        If DOT string doesn't contain any valid graphs
 
-        try:
-            import pydot  # type: ignore
-        except ImportError:
-            raise ImportError("pydot is required for DOT format support")
+    Examples
+    --------
+    >>> dot = '''
+    ... digraph {
+    ...     A -> B
+    ...     B -> C
+    ... }
+    ... '''
+    >>> renderer = ASCIIRenderer.from_dot(dot)
+    >>> print(renderer.render())
+    A
+    |
+    B
+    |
+    C
+    """
 
-        graphs = pydot.graph_from_dot_data(dot_string)
-        if not graphs:
-            raise ValueError("No valid graphs found in DOT string")
+    try:
+        import pydot  # type: ignore
+    except ImportError:
+        raise ImportError("pydot is required for DOT format support")
 
-        # Take first graph from the list
-        G = nx.nx_pydot.from_pydot(graphs[0])
+    graphs = pydot.graph_from_dot_data(dot_string)
+    if not graphs:
+        raise ValueError("No valid graphs found in DOT string")
+
+    # Take first graph from the list
+    G = nx.nx_pydot.from_pydot(graphs[0])
+    if not isinstance(G, nx.DiGraph):
+        G = nx.DiGraph(G)
+    return cls(G, **kwargs)
+
+
+@classmethod
+def from_graphml(cls, graphml_file: str, **kwargs: Any) -> "ASCIIRenderer":
+    """
+    Create a renderer from a GraphML file.
+
+    Parameters
+    ----------
+    graphml_file : str
+        Path to GraphML file
+    **kwargs
+        Additional arguments passed to the constructor
+
+    Returns
+    -------
+    ASCIIRenderer
+        New renderer instance
+
+    Raises
+    ------
+    ImportError
+        If NetworkX graphml support is not available
+    ValueError
+        If file cannot be read as GraphML
+    """
+    try:
+        G = nx.read_graphml(graphml_file)
         if not isinstance(G, nx.DiGraph):
             G = nx.DiGraph(G)
         return cls(G, **kwargs)
-
-    @classmethod
-    def from_graphml(cls, graphml_file: str, **kwargs: Any) -> "ASCIIRenderer":
-        """
-        Create a renderer from a GraphML file.
-
-        Parameters
-        ----------
-        graphml_file : str
-            Path to GraphML file
-        **kwargs
-            Additional arguments passed to the constructor
-
-        Returns
-        -------
-        ASCIIRenderer
-            New renderer instance
-
-        Raises
-        ------
-        ImportError
-            If NetworkX graphml support is not available
-        ValueError
-            If file cannot be read as GraphML
-        """
-        try:
-            G = nx.read_graphml(graphml_file)
-            if not isinstance(G, nx.DiGraph):
-                G = nx.DiGraph(G)
-            return cls(G, **kwargs)
-        except Exception as e:
-            raise ValueError(f"Failed to read GraphML file: {e}")
+    except Exception as e:
+        raise ValueError(f"Failed to read GraphML file: {e}")

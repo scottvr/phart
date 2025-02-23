@@ -75,15 +75,3 @@ def render_all_triads():
 
 if __name__ == "__main__":
     print(render_all_triads())
-    G = nx.balanced_tree(2, 2, create_using=nx.DiGraph)
-    mapping = {i: f"{i}" for i in G.nodes()}
-    G = nx.relabel_nodes(G, mapping)
-
-    for style in NodeStyle:
-        print(f"\nUsing {style.name} style:")
-        renderer = ASCIIRenderer(
-            G,
-            node_style=style,
-            custom_decorators={"0": ("<<", ">>"), "6": ("[[", "]]")},
-        )
-        renderer.draw()
