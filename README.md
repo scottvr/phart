@@ -217,7 +217,7 @@ Different node styles for the same graph:
 
 ## Why PHART?
 
-Because it is necessary? OK, sorry... Actually it had a few other names early on, but when it came time to upload to PyPi, we discovered the early names we chose were already taken so we had to choose a new name. We wanted to mash up the relevant terms ("graph", "ascii", "art", "chart", and such) and bonus if the new name is a fitting acronym.
+Because it demanded to come out. OK, sorry... Actually it had a few other names early on, but when it came time to upload to PyPi, we discovered the early names we chose were already taken so we had to choose a new name. We wanted to mash up the relevant terms ("graph", "ascii", "art", "chart", and such) and bonus if the new name is a fitting acronym.
 
 In the case of PHART, the acronym made from the first letters of the obvious first words to come to mind was discovered to spell PHART after the non abbreviated words were suggested. Fortuitous; so it had to be. Also, as I am beginning to update the usage instructions and the examples and their output in the README to more accurately reflect current capabilities, it occurs to me that the name may not be as fitting anymore. At first release PHART only handled DAGs and fairly strictly rendered a heirarchical layout. 
 
