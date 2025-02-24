@@ -9,12 +9,13 @@
 - Pure Python implementation
 - Render using 7-bit ASCII or unicode characters
 - No external dependencies (except NetworkX)
-- Multiple node styles (square, round, diamond)
+- Multiple node styles (square, round, diamond, custom)
 - Customizable edge characters
 - Support for directed and undirected graphs
 - Handles cycles and complex layouts
 - Bidirectional edge support
-
+- Orthogonal (yet correct, though perhaps unexpected) Triad Layout
+  
 ## Examples
 
 <details>
