@@ -219,9 +219,13 @@ Different node styles for the same graph:
 
 Because it is necessary? OK, sorry... Actually it had a few other names early on, but when it came time to upload to PyPi, we discovered the early names we chose were already taken so we had to choose a new name. We wanted to mash up the relevant terms ("graph", "ascii", "art", "chart", and such) and bonus if the new name is a fitting acronym.
 
-In the case of PHART, the acronym made from the first letters of the obvious first words to come to mind was discovered to spell PHART after the non abbreviated words were suggested. Fortuitous; so it had to be.
+In the case of PHART, the acronym made from the first letters of the obvious first words to come to mind was discovered to spell PHART after the non abbreviated words were suggested. Fortuitous; so it had to be. Also, as I am beginning to update the usage instructions and the examples and their output in the README to more accurately reflect current capabilities, it occurs to me that the name may not be as fitting anymore. At first release PHART only handled DAGs and fairly strictly rendered a heirarchical layout. 
 
-You may pronounce it the obvious monosyllabic way, or as "eff art", or perhaps "pee heart", or any way that you like, so long as the audience you are speaking it to knows it is PHART you are referring to.
+As it's capabilities have increased (by user request if you can believe that!) faster than my knowledge of Graphs and the layout thereof, and my lack of deep understanding of exactly what NetworkX's focus and strengths are (to be fair, their dev lists and Roadmap would seem to align quite well with me not fully understanding their focus and direction, and I mean no disrespect; it's way beyond me.) Anyway, as such at times I struggle with having to remind myself "that information is already known - to the graph - you don't need to calculate or keep track of that, similarly with certain layout decisions that really don't need to be pondered by PHART at all I have spent too many hours working on. 
+
+So it might be more properly named something that indicates that it sometimes adheres mostly to a Hierarchical Layout strategy, but other times it might be more accurately branded an Orthogonal Layout. Either way, I'm not sure I knew either of those were terms for some known thing at the time I started implementing. Nevertheless, perhaps its name needs to expand along with its function. Something incorporating Orthogonal Layout. Hmm.. "**OL-PHART**" perhaps. Maybe it has become **B**oundary **I**nvariant **G**eodesic **O**rthogonal **L**ayout **PHART** - BIGOL-PHART.
+
+Regardless, you may pronounce it the obvious monosyllabic way, or as "eff art", or perhaps "pee heart", or any way that you like, so long as the audience you are speaking it to knows it is PHART you are referring to.
 
 ## Really, why?
 
