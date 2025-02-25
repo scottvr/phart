@@ -478,91 +478,91 @@ class ASCIIRenderer:
             raise IndexError(f"Edge drawing exceeded canvas boundaries: {e}")
 
 
-@classmethod
-def from_dot(cls, dot_string: str, **kwargs: Any) -> "ASCIIRenderer":
-    """
-    Create a renderer from a DOT format string.
-
-    Parameters
-    ----------
-    dot_string : str
-        Graph description in DOT format
-    **kwargs
-        Additional arguments passed to the constructor
-
-    Returns
-    -------
-    ASCIIRenderer
-        New renderer instance
-
-    Raises
-    ------
-    ImportError
-        If pydot is not available
-    ValueError
-        If DOT string doesn't contain any valid graphs
-
-    Examples
-    --------
-    >>> dot = '''
-    ... digraph {
-    ...     A -> B
-    ...     B -> C
-    ... }
-    ... '''
-    >>> renderer = ASCIIRenderer.from_dot(dot)
-    >>> print(renderer.render())
-    A
-    |
-    B
-    |
-    C
-    """
-
-    try:
-        import pydot  # type: ignore
-    except ImportError:
-        raise ImportError("pydot is required for DOT format support")
-
-    graphs = pydot.graph_from_dot_data(dot_string)
-    if not graphs:
-        raise ValueError("No valid graphs found in DOT string")
-
-    # Take first graph from the list
-    G = nx.nx_pydot.from_pydot(graphs[0])
-    if not isinstance(G, nx.DiGraph):
-        G = nx.DiGraph(G)
-    return cls(G, **kwargs)
-
-
-@classmethod
-def from_graphml(cls, graphml_file: str, **kwargs: Any) -> "ASCIIRenderer":
-    """
-    Create a renderer from a GraphML file.
-
-    Parameters
-    ----------
-    graphml_file : str
-        Path to GraphML file
-    **kwargs
-        Additional arguments passed to the constructor
-
-    Returns
-    -------
-    ASCIIRenderer
-        New renderer instance
-
-    Raises
-    ------
-    ImportError
-        If NetworkX graphml support is not available
-    ValueError
-        If file cannot be read as GraphML
-    """
-    try:
-        G = nx.read_graphml(graphml_file)
+    @classmethod
+    def from_dot(cls, dot_string: str, **kwargs: Any) -> "ASCIIRenderer":
+        """
+        Create a renderer from a DOT format string.
+    
+        Parameters
+        ----------
+        dot_string : str
+            Graph description in DOT format
+        **kwargs
+            Additional arguments passed to the constructor
+    
+        Returns
+        -------
+        ASCIIRenderer
+            New renderer instance
+    
+        Raises
+        ------
+        ImportError
+            If pydot is not available
+        ValueError
+            If DOT string doesn't contain any valid graphs
+    
+        Examples
+        --------
+        >>> dot = '''
+        ... digraph {
+        ...     A -> B
+        ...     B -> C
+        ... }
+        ... '''
+        >>> renderer = ASCIIRenderer.from_dot(dot)
+        >>> print(renderer.render())
+        A
+        |
+        B
+        |
+        C
+        """
+    
+        try:
+            import pydot  # type: ignore
+        except ImportError:
+            raise ImportError("pydot is required for DOT format support")
+    
+        graphs = pydot.graph_from_dot_data(dot_string)
+        if not graphs:
+            raise ValueError("No valid graphs found in DOT string")
+    
+        # Take first graph from the list
+        G = nx.nx_pydot.from_pydot(graphs[0])
         if not isinstance(G, nx.DiGraph):
             G = nx.DiGraph(G)
         return cls(G, **kwargs)
-    except Exception as e:
-        raise ValueError(f"Failed to read GraphML file: {e}")
+    
+    
+    @classmethod
+    def from_graphml(cls, graphml_file: str, **kwargs: Any) -> "ASCIIRenderer":
+        """
+        Create a renderer from a GraphML file.
+    
+        Parameters
+        ----------
+        graphml_file : str
+            Path to GraphML file
+        **kwargs
+            Additional arguments passed to the constructor
+    
+        Returns
+        -------
+        ASCIIRenderer
+            New renderer instance
+    
+        Raises
+        ------
+        ImportError
+            If NetworkX graphml support is not available
+        ValueError
+            If file cannot be read as GraphML
+        """
+        try:
+            G = nx.read_graphml(graphml_file)
+            if not isinstance(G, nx.DiGraph):
+                G = nx.DiGraph(G)
+            return cls(G, **kwargs)
+        except Exception as e:
+            raise ValueError(f"Failed to read GraphML file: {e}")
