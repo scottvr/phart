@@ -1,0 +1,24 @@
+Loaded 685 chess games between 25 players
+
+         +────────────────────────────────────────────────────[Botvinnik, Mikhail M]─────────────────────────────────────────────────────+
+         ↓                   ↓               ↓                    ↓                        ↓                       ↓                     ↓
+[Bronstein, David I]    [Euwe, Max]────[Keres, Paul]────[Petrosian, Tigran V]────[Reshevsky, Samuel H]────[Smyslov, Vassily V]    [Tal, Mikhail N]
+                                                             ↓                       ↓
+                                               +──[Alekhine, Alexander A]+   [Spassky, Boris V]───+
+                                               ↓                         ↓                        ↓
+                                      [Bogoljubow, Efim D]    [Capablanca, Jose Raul]    [Fischer, Robert J]
+                                                                        ↓
+                          +─────────────────────────────────────[Lasker, Emanuel]────────────────────────────────────+
+                          ↓                      ↓                     ↓                      ↓                      ↓
+                 [Janowski, Dawid M]    [Marshall, Frank J]────[Schlechter, Carl]────[Steinitz, Wilhelm]    [Tarrasch, Siegbert]
+                                               ↓                       ↓                         ↓
+                                     [Chigorin, Mikhail I]    [Gunsberg, Isidor A]    [Zukertort, Johannes H]
+
+
+
+Most frequent openings:
+ECO C52: 20 games
+ECO D58: 14 games
+ECO D40: 11 games
+ECO D53: 11 games
+ECO C15: 11 games
