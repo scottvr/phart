@@ -406,6 +406,8 @@ phart graph.graphml
 ```
 ## Python Files
 
+While developing and testing some new functionality, I had some demo scripts that themselves contained functions for spitting out various graphs and I wanted to test just a specific graph's function from a given file, so this feature was added; likely no one else will ever need this functionality.
+
 PHART can directly execute Python files that create and render graphs. When given a Python file, PHART will:
 
 1. First try to execute the specified function (if `--function` is provided)
