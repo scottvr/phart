@@ -24,10 +24,6 @@
 
 ## PHART Graph Visualization Examples
 
-=====================
-
-### In preparation for a 1.0 PyPi release
-
 I was doing some last-minute testing and came across this, from the networkx gallery:
 
 https://networkx.org/documentation/latest/auto_examples/drawing/plot_chess_masters.html#sphx-glr-auto-examples-drawing-plot-chess-masters-py
