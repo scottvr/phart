@@ -2,13 +2,11 @@
 
 **PHART:** The Python Hierarchical ASCII Representation Tool - A Pure Python graph visualization in ASCII, no external dependencies\*
 
-\* except NetworkX, which should be mentioned prominently. but **phart** will **not** require you to stand up a webserver to run PHP and install Perl and some libraries just to render a Graph in 7-bit text (or UTF-8 or Unicode) from Python.
+\* except NetworkX, which should be mentioned prominently, as rendering NX digraphs as ASCII was the entire reason for phart's creation. but **phart** will **not** require you to stand up a webserver to run PHP and install Perl and some libraries just to render a Graph in 7-bit text (or UTF-8 or Unicode) from Python.
 
 ## Features
 
-- Pure Python implementation
 - Render using 7-bit ASCII or unicode characters
-- No external dependencies (except NetworkX)
 - Multiple node styles (square, round, diamond, custom)
 - Customizable edge characters
 - Support for directed and undirected graphs
@@ -214,25 +212,25 @@ Different node styles for the same graph:
 
 ## Why PHART?
 
-Because it demanded to come out. OK, sorry... Actually it had a few other names early on, but when it came time to upload to PyPi, we discovered the early names we chose were already taken so we had to choose a new name. We wanted to mash up the relevant terms ("graph", "ascii", "art", "chart", and such) and bonus if the new name is a fitting acronym.
+The acronym was a fortuitous accident from the non-abbreviated words that the letters represent. 
 
-In the case of PHART, the acronym made from the first letters of the obvious first words to come to mind was discovered to spell PHART after the non abbreviated words were suggested. Fortuitous; so it had to be. Also, as I am beginning to update the usage instructions and the examples and their output in the README to more accurately reflect current capabilities, it occurs to me that the name may not be as fitting anymore. At first release PHART only handled DAGs and fairly strictly rendered a heirarchical layout. 
+Also, as I am beginning to update the usage instructions and the examples and their output in the README to more accurately reflect current capabilities, it occurs to me that the name may not be as fitting anymore. At first release PHART only handled DAGs and fairly strictly rendered a heirarchical layout. 
 
-As it's capabilities have increased (by user request if you can believe that!) faster than my knowledge of Graphs and the layout thereof, and my lack of deep understanding of exactly what NetworkX's focus and strengths are (to be fair, their dev lists and Roadmap would seem to align quite well with me not fully understanding their focus and direction, and I mean no disrespect; it's way beyond me.) Anyway, as such at times I struggle with having to remind myself "that information is already known - to the graph - you don't need to calculate or keep track of that, similarly with certain layout decisions that really don't need to be pondered by PHART at all I have spent too many hours working on. 
+As it's capabilities have increased (by user request) faster than my knowledge of Graphs and the layout thereof, and my lack of deep understanding of exactly what NetworkX's focus and strengths are (to be fair, their dev lists and Roadmap directly contribute to me not fully understanding their focus and direction, and I mean no disrespect.) Anyway, as such - at times I struggle with having to remind myself "but that information is already known - to the graph - you don't need to calculate or keep track of that", and similarly with certain layout decisions that really don't need to be pondered by PHART at all I have spent too many hours working on.  But I digress...
 
-So it might be more properly named something that indicates that it sometimes adheres mostly to a Hierarchical Layout strategy, but other times it might be more accurately branded an Orthogonal Layout. Either way, I'm not sure I knew either of those were terms for some known thing at the time I started implementing. Nevertheless, perhaps its name needs to expand along with its function. Something incorporating Orthogonal Layout. Hmm.. "**OL-PHART**" perhaps. Maybe it has become **B**oundary **I**nvariant **G**eodesic **O**rthogonal **L**ayout **PHART** - that is...
+It might be more properly named something that indicates that it sometimes adheres *mostly* to a **Hierarchical Layout** strategy, but other times it might be more accurately branded an **Orthogonal Layout**. Nevertheless, perhaps its name needs to expand along with its function. Something incorporating **Orthogonal Layout**. Hmm.. "**OL-PHART**" perhaps? Maybe  **B**oundary **I**nvariant **G**eodesic **O**rthogonal **L**ayout **PHART** - that is...
 
 **BIGOL-PHART**
 
-Regardless, you may pronounce it the obvious monosyllabic way, or as "eff art", or perhaps "pee heart", or any way that you like, so long as the audience you are speaking it to knows it is PHART you are referring to.
+Regardless, you may pronounce it the obvious monosyllabic way, or as "eff art", or perhaps "pee heart", or any way that you like.
 
 ## Really, why?
 
-The mention of not being Perl or a PHP webapp may appear to be throwing shade at the existing solutions, but it is meant in a good-hearted way. Wrapping the OG Graph::Easy is a straightforeard way to go about it, and a web interface to the same is a project I might create as well, but Perl being installed is not the sure ubiquitous thing it once was, and spinning up a Docker container in order to add ascii art graph output to a python tool seemed a bit excessive.
+The mention of not being Perl or a PHP webapp may appear to be me throwing shade at the existing solutions, but it is meant in a good-hearted way. Wrapping the OG perl Graph::Easy is a straightforeard way to go about it, and a web interface to the same is a project I might create as well, but Perl being installed is not the sure ubiquitous thing it once was, and spinning up a Docker container in order to add ascii art graph output to a python tool seemed a bit excessive.
 
-Additionally, I'm not sure how I didn't find pydot2ascii - which is native python - when I first looked for a solution, but even if I had seen it I may not have realized that I could have exported my NX DAG to DOT, and then used pydot2ascii to go from DOT to ascii art.
+Additionally, I'm not sure how I didn't find *pydot2ascii* - which is native python - when I first looked for a solution, but even if I had seen it I may not have realized that I could have exported my NX DAG to DOT, and then used pydot2ascii to go from DOT to ascii art.
 
-So now we have PHART, and the ability to render a NX digraph in ASCII/Unicode, read a DOT file, read GraphML, and a few other things in a well-tested Python module published to PyPi. I hope you find it useful.
+So, now we have PHART, and the ability to render a NX digraph in ASCII/Unicode, read a DOT file, read GraphML, and a few other things in a well-tested Python module published to PyPi. I hope you find it useful.
 
 ## Installation
 
@@ -244,12 +242,12 @@ pip install phart
 
 ## The CLI
 
-These docs are pretty out of date now, which I will try to remedy soon.
+These docs are a little out of date now, which I will try to remedy soon.
 In the mean time, I should mention that the primary focus lately has been
 use from the CLI command `phart` which is installed when you install via pip.
 This repor is well ahead of the release in PyPi as I work on some specific
-graphlet features for a user. I will update the docs to match when the package is released.
-But to fill in some of the info garp here is the CLI usage info, which should be
+graphlet features for a user Issue. I will update the docs to match when the package is released.
+But to fill in some of the info gap here is the CLI usage info, which should be
 self-explanatory to many of you.
 
 ```bash
