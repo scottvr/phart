@@ -446,10 +446,9 @@ phart graph.py --function demonstrate_graph
 phart graph.py --charset ascii --style round
 ```
 
-### Option Handling
+### Option handling when passed a .py file
 
-When executing Python files, PHART intelligently merges command-line options with any
-options specified in your code:
+Again, something that may only be relevant to me during dev/testing but when a Python file is used as input to phart, command-line options are merged with any options specified in your code:
 
 - Options set in your Python code (like custom_decorators or specific node styles) are preserved
 - Command-line options will override general settings (like --charset or --style)
