@@ -24,7 +24,7 @@
 
 ## PHART Graph Visualization Examples
 
-=================================
+=====================
 
 ### In preparation for a 1.0 PyPi release
 
