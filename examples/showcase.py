@@ -131,4 +131,4 @@ if __name__ == "__main__":
             node_style=style,
             custom_decorators={"0": ("<<", ">>"), "6": ("[[", "]]")},
         )
-        renderer.draw()
+        print(renderer.render())
