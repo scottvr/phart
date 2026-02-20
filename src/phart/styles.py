@@ -94,6 +94,7 @@ class LayoutOptions:
     min_edge_space: int = field(default=2)
     preserve_triangle_shape: bool = field(default=True)
     triangle_height_ratio: float = field(default=0.866)  # sqrt(3)/2 for equilateral
+    binary_tree_layout: bool = field(default=False)  # Use binary tree positioning
 
     # Instance-specific ID (unchanged)
     instance_id: int = field(init=False)

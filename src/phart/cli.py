@@ -1,5 +1,5 @@
 """Command line interface for PHART."""
-# src path: src\phart\cli.py
+# src path: src/phart/cli.py
 
 import sys
 import argparse
@@ -41,8 +41,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--layer-spacing",
         type=int,
-        default=2,
-        help="Vertical space between layers (default: 2)",
+        default=3,
+        help="Vertical space between layers (default: 3)",
     )
     parser.add_argument(
         "--charset",

@@ -1,4 +1,4 @@
-# src path: src\phart\charset.py
+# src path: src/phart/charset.py
 # for adding new charsets and new cli charset features
 
 from enum import Enum

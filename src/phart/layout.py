@@ -4,7 +4,7 @@ This module handles the calculation of node positions and edge routing
 for ASCII graph visualization.
 """
 
-from typing import Dict, Tuple, Any, Set
+from typing import Dict, Tuple, Any, Set, List
 import networkx as nx
 from .styles import LayoutOptions
 
@@ -32,6 +32,120 @@ class LayoutManager:
         """
         prefix, suffix = self.options.get_node_decorators(node)
         return len(str(node)) + len(str(prefix)) + len(str(suffix))
+
+    def _binary_tree_node_sorter(
+        self,
+        graph: nx.DiGraph,
+        layer: int,
+        nodes: Set[str],
+        positions: Dict[str, Tuple[int, int]]
+    ) -> List[str]:
+        """Sort nodes in a layer according to binary tree structure.
+        
+        Uses edge attributes to determine left/right placement:
+        - 'side': 'left' or 'right'
+        - 'position': 'left', 'right', 'l', 'r', '0', '1'
+        - 'dir': same as position
+        - 'child': same as position
+        
+        Parameters
+        ----------
+        graph : nx.DiGraph
+            The graph being laid out
+        layer : int
+            Current layer number
+        nodes : Set[str]
+            Nodes in this layer to sort
+        positions : Dict[str, Tuple[int, int]]
+            Already-computed positions for previous layers
+            
+        Returns
+        -------
+        List[str]
+            Sorted list of nodes (left to right)
+            
+        Examples
+        --------
+        >>> G = nx.DiGraph()
+        >>> G.add_edge('A', 'B', side='left')
+        >>> G.add_edge('A', 'C', side='right')
+        # B will be positioned left of C under A
+        """
+        # Group nodes by their parent
+        parent_children: Dict[str, Dict[str, Any]] = {}
+        orphans = []
+        
+        for node in nodes:
+            # Find parents (predecessors that are already positioned)
+            parents = [p for p in graph.predecessors(node) if p in positions]
+            
+            if not parents:
+                orphans.append(node)
+                continue
+            
+            # For binary tree, should have exactly one parent
+            # If multiple parents exist, use the first one
+            parent = parents[0]
+            
+            if parent not in parent_children:
+                parent_children[parent] = {'left': None, 'right': None, 'other': []}
+            
+            # Check edge attributes for side information
+            edge_data = graph.get_edge_data(parent, node)
+            side = None
+            
+            if edge_data:
+                # Check common attribute names for left/right designation
+                side = (edge_data.get('side') or 
+                       edge_data.get('position') or 
+                       edge_data.get('dir') or
+                       edge_data.get('child'))
+            
+            if side:
+                side_str = str(side).lower()
+                if side_str in ['left', 'l', '0']:
+                    if parent_children[parent]['left'] is not None:
+                        # Already have a left child, add to other
+                        parent_children[parent]['other'].append(node)
+                    else:
+                        parent_children[parent]['left'] = node
+                elif side_str in ['right', 'r', '1']:
+                    if parent_children[parent]['right'] is not None:
+                        # Already have a right child, add to other
+                        parent_children[parent]['other'].append(node)
+                    else:
+                        parent_children[parent]['right'] = node
+                else:
+                    parent_children[parent]['other'].append(node)
+            else:
+                # No side specified - add to other list
+                parent_children[parent]['other'].append(node)
+        
+        # Build result by processing parents left to right
+        result = []
+        
+        # Sort parents by their x position (left to right)
+        sorted_parents = sorted(parent_children.keys(), 
+                               key=lambda p: positions[p][0])
+        
+        for parent in sorted_parents:
+            group = parent_children[parent]
+            
+            # Add left child first
+            if group['left'] is not None:
+                result.append(group['left'])
+            
+            # Add unspecified children in middle (alphabetically sorted)
+            result.extend(sorted(group['other']))
+            
+            # Add right child last
+            if group['right'] is not None:
+                result.append(group['right'])
+        
+        # Add orphan nodes at the end (alphabetically sorted)
+        result.extend(sorted(orphans))
+        
+        return result
 
     def _calculate_node_importance(self, graph: nx.DiGraph, node: Any) -> float:
         """
@@ -237,7 +351,13 @@ class LayoutManager:
             start_x = (max_width - total_width) // 2
             current_x = start_x
 
-            for node in sorted(nodes):
+            # Sort nodes - use binary tree sorter if enabled, otherwise alphabetical
+            if self.options.binary_tree_layout and isinstance(graph, nx.DiGraph):
+                sorted_nodes = self._binary_tree_node_sorter(graph, layer, nodes, positions)
+            else:
+                sorted_nodes = sorted(nodes)
+
+            for node in sorted_nodes:
                 positions[node] = (current_x, y)
                 current_x += self._get_node_width(str(node)) + spacing
 
