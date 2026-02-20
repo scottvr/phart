@@ -2,7 +2,6 @@
 
 import networkx as nx
 from phart import ASCIIRenderer, LayoutOptions
-from dataclasses import asdict, fields
 
 def main():
     print("=" * 70)
