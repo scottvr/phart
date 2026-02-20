@@ -8,7 +8,6 @@ from typing import Dict, Tuple, Any, Set, List
 import networkx as nx
 from .styles import LayoutOptions
 
-
 class LayoutManager:
     def __init__(self, graph: nx.Graph, options: LayoutOptions):
         self.graph = graph

@@ -6,6 +6,39 @@ Simple test demonstrating binary tree layout control.
 import networkx as nx
 from phart import ASCIIRenderer, LayoutOptions
 
+
+def get_options(**kwargs):
+    """Get options, merging with CLI defaults if present."""
+    user_options = LayoutOptions(**kwargs)
+    
+    if hasattr(ASCIIRenderer, 'default_options') and ASCIIRenderer.default_options is not None:
+        from dataclasses import asdict, fields
+        
+        cli_dict = asdict(ASCIIRenderer.default_options)
+        user_dict = asdict(user_options)
+        merged_dict = {}
+        
+        for field in fields(LayoutOptions):
+            field_name = field.name
+            if field_name == 'instance_id':
+                continue
+            
+            # CLI takes precedence for rendering options
+            if field_name in ['use_ascii', 'node_style', 'node_spacing', 'layer_spacing']:
+                cli_val = cli_dict.get(field_name)
+                user_val = user_dict.get(field_name)
+                merged_dict[field_name] = cli_val if cli_val is not None else user_val
+            else:
+                # User code controls semantic options
+                user_val = user_dict.get(field_name)
+                cli_val = cli_dict.get(field_name)
+                merged_dict[field_name] = user_val if user_val is not None else cli_val
+        
+        return LayoutOptions(**merged_dict)
+    else:
+        return user_options
+
+
 print("DEMONSTRATION: Controlling Binary Tree Node Positioning")
 print("=" * 70)
 
@@ -29,7 +62,7 @@ print(renderer.render())
 print("\n" + "─" * 70)
 print("WITH binary_tree_layout=True (respects edge 'side' attributes):")
 print("─" * 70)
-options = LayoutOptions(binary_tree_layout=True)
+options = get_options(binary_tree_layout=True)
 renderer = ASCIIRenderer(G, options=options)
 print(renderer.render())
 

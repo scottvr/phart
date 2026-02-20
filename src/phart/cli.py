@@ -65,6 +65,12 @@ def parse_args() -> argparse.Namespace:
         help="Function to call in Python file (default: main)",
         default="main",
     )
+    parser.add_argument(
+        "--binary-tree",
+        action="store_true",
+        default=False,
+        help="Enable binary tree layout (respects edge 'side' attributes)",
+    )
 
     return parser.parse_args()
 
@@ -92,34 +98,47 @@ def load_python_module(file_path: Path) -> Any:
 def merge_layout_options(
     base: LayoutOptions, overrides: LayoutOptions
 ) -> LayoutOptions:
-    """Merge two LayoutOptions, preserving custom decorators and other explicit settings."""
-    # Start with the base options
-    merged = LayoutOptions(
-        node_style=base.node_style,
-        node_spacing=base.node_spacing,
-        layer_spacing=base.layer_spacing,
-        use_ascii=base.use_ascii,
-        custom_decorators=base.custom_decorators.copy()
-        if base.custom_decorators
-        else None,
-    )
-
-    # Override only non-None values from overrides
-    if overrides.node_style is not None:
-        merged.node_style = overrides.node_style
-    if overrides.node_spacing is not None:
-        merged.node_spacing = overrides.node_spacing
-    if overrides.layer_spacing is not None:
-        merged.layer_spacing = overrides.layer_spacing
-    if overrides.use_ascii is not None:
-        merged.use_ascii = overrides.use_ascii
-    if overrides.custom_decorators is not None:
-        # Merge custom decorators rather than replace
-        if merged.custom_decorators is None:
-            merged.custom_decorators = {}
-        merged.custom_decorators.update(overrides.custom_decorators)
-
-    return merged
+    """Merge two LayoutOptions, with CLI options taking precedence.
+    
+    Args:
+        base: Options from user code (may have None values)
+        overrides: Options from CLI (take precedence when not None)
+        
+    Returns:
+        Merged options with CLI overrides applied
+    """
+    # Start with base options as a dict to preserve all fields
+    from dataclasses import asdict, fields
+    
+    base_dict = asdict(base)
+    override_dict = asdict(overrides)
+    
+    # Merge: CLI overrides take precedence, but only if not None
+    merged_dict = {}
+    for field in fields(LayoutOptions):
+        field_name = field.name
+        if field_name == 'instance_id':
+            # Skip instance_id, will be auto-generated
+            continue
+            
+        override_val = override_dict.get(field_name)
+        base_val = base_dict.get(field_name)
+        
+        # Use override if it's not None, otherwise use base
+        if override_val is not None:
+            merged_dict[field_name] = override_val
+        else:
+            merged_dict[field_name] = base_val
+    
+    # Special handling for custom_decorators - merge dicts
+    if base.custom_decorators and overrides.custom_decorators:
+        merged_dict['custom_decorators'] = {**base.custom_decorators, **overrides.custom_decorators}
+    elif base.custom_decorators:
+        merged_dict['custom_decorators'] = base.custom_decorators.copy()
+    elif overrides.custom_decorators:
+        merged_dict['custom_decorators'] = overrides.custom_decorators.copy()
+    
+    return LayoutOptions(**merged_dict)
 
 
 def create_layout_options(args: argparse.Namespace) -> LayoutOptions:
@@ -129,6 +148,7 @@ def create_layout_options(args: argparse.Namespace) -> LayoutOptions:
         node_spacing=args.node_spacing,
         layer_spacing=args.layer_spacing,
         use_ascii=(args.charset == CharSet.ASCII or args.use_legacy_ascii),
+        binary_tree_layout=args.binary_tree,
     )
 
 

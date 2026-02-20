@@ -8,7 +8,6 @@ Data source: https://chessproblem.my-free-games.com/chess/games/Download-PGN.php
 Original example adapted from NetworkX gallery:
 https://networkx.org/documentation/latest/auto_examples/drawing/plot_chess_masters.html
 """
-# src path: examples\chess_masters.py
 
 import bz2
 from pathlib import Path
@@ -64,7 +63,7 @@ def main():
         return
 
     # Load and analyze the data
-    G = load_chess_games(data_file)
+    G = load_chess_games(str(data_file))
     print(
         f"Loaded {G.number_of_edges()} chess games between {G.number_of_nodes()} players\n"
     )

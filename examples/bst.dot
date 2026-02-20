@@ -1,0 +1,10 @@
+ 
+graph {
+    node [shape=circle];  
+    a--b;
+    b--d;
+    d--g [side=R];
+    b--e [side=R];
+    a--c [side=R];
+    c--f [side=R]  //  flipped to the right side
+}
