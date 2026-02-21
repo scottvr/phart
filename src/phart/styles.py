@@ -26,6 +26,27 @@ class NodeStyle(Enum):
     CUSTOM = "custom"
 
 
+class FlowDirection(Enum):
+    """Layout flow direction for graph rendering.
+    
+    Attributes
+    ----------
+    DOWN : str
+        Root at top, children below (arrows point up to parents)
+    UP : str
+        Root at bottom, children above (arrows point down to parents)
+    RIGHT : str
+        Root at left, children to right (arrows point right to parents)
+    LEFT : str
+        Root at right, children to left (arrows point left to parents)
+    """
+    
+    DOWN = "down"
+    UP = "up"
+    RIGHT = "right"
+    LEFT = "left"
+
+
 class EdgeChar:
     """
     Descriptor for ASCII/Unicode character pairs.
@@ -95,6 +116,7 @@ class LayoutOptions:
     preserve_triangle_shape: bool = field(default=True)
     triangle_height_ratio: float = field(default=0.866)  # sqrt(3)/2 for equilateral
     binary_tree_layout: bool = field(default=False)  # Use binary tree positioning
+    flow_direction: Union[FlowDirection, str] = field(default=FlowDirection.DOWN)
 
     # Instance-specific ID (unchanged)
     instance_id: int = field(init=False)
@@ -122,6 +144,15 @@ class LayoutOptions:
                 valid_styles = ", ".join([style.name.lower() for style in NodeStyle])
                 raise ValueError(
                     f"Invalid node style '{self.node_style}'. Valid options are: {valid_styles}"
+                )
+
+        if isinstance(self.flow_direction, str):
+            try:
+                self.flow_direction = FlowDirection[self.flow_direction.upper()]
+            except KeyError:
+                valid_directions = ", ".join([d.name.lower() for d in FlowDirection])
+                raise ValueError(
+                    f"Invalid flow direction '{self.flow_direction}'. Valid options are: {valid_directions}"
                 )
 
         if self.node_style == NodeStyle.CUSTOM and not self.custom_decorators:
@@ -167,6 +198,45 @@ class LayoutOptions:
             Tuple of (left_padding, right_padding)
         """
         return self.left_padding, self.right_padding
+
+    def get_arrow_for_direction(self, base_direction: str) -> str:
+        """Get the appropriate arrow character based on flow direction.
+        
+        Args:
+            base_direction: The arrow direction in DOWN flow ('up', 'down', 'left', 'right')
+            
+        Returns:
+            The appropriate arrow character for the current flow direction
+        """
+        # Map base directions to rotated directions based on flow
+        rotation_map = {
+            FlowDirection.DOWN: {
+                'up': self.edge_arrow_up,
+                'down': self.edge_arrow_down,
+                'left': self.edge_arrow_l,
+                'right': self.edge_arrow_r,
+            },
+            FlowDirection.UP: {
+                'up': self.edge_arrow_down,      # Flip vertical
+                'down': self.edge_arrow_up,      # Flip vertical
+                'left': self.edge_arrow_l,        # Keep horizontal
+                'right': self.edge_arrow_r,       # Keep horizontal
+            },
+            FlowDirection.RIGHT: {
+                'up': self.edge_arrow_l,          # Rotate 90° CW
+                'down': self.edge_arrow_r,        # Rotate 90° CW
+                'left': self.edge_arrow_down,     # Rotate 90° CW
+                'right': self.edge_arrow_up,      # Rotate 90° CW
+            },
+            FlowDirection.LEFT: {
+                'up': self.edge_arrow_r,          # Rotate 90° CCW
+                'down': self.edge_arrow_l,        # Rotate 90° CCW
+                'left': self.edge_arrow_up,       # Rotate 90° CCW
+                'right': self.edge_arrow_down,    # Rotate 90° CCW
+            },
+        }
+        
+        return rotation_map[self.flow_direction][base_direction]
 
     def __str__(self) -> str:
         # Get all dataclass fields and their current values from this instance

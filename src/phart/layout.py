@@ -8,6 +8,7 @@ from typing import Dict, Tuple, Any, Set, List
 import networkx as nx
 from .styles import LayoutOptions
 
+
 class LayoutManager:
     def __init__(self, graph: nx.Graph, options: LayoutOptions):
         self.graph = graph
@@ -282,6 +283,9 @@ class LayoutManager:
             # Fallback to standard hierarchical layout
             positions = self._layout_hierarchical(self.graph, effective_spacing)
 
+        # Apply flow direction transformation
+        positions = self._transform_positions(positions)
+
         # Calculate base dimensions from positions
         # Ensure minimum width for node display
         node_widths = [self._get_node_width(str(node)) for node in self.graph.nodes()]
@@ -295,6 +299,54 @@ class LayoutManager:
             base_height = self.options.layer_spacing  # Use at least one layer of height
 
         return positions, base_width, base_height
+
+    def _transform_positions(
+        self, positions: Dict[str, Tuple[int, int]]
+    ) -> Dict[str, Tuple[int, int]]:
+        """Transform positions based on flow direction.
+        
+        Transforms coordinates from the default DOWN orientation to the
+        requested flow direction.
+        
+        Args:
+            positions: Node positions in DOWN orientation
+            
+        Returns:
+            Transformed positions for the desired flow direction
+        """
+        from .styles import FlowDirection
+        
+        if not positions:
+            return positions
+        
+        # DOWN is the default - no transformation needed
+        if self.options.flow_direction == FlowDirection.DOWN:
+            return positions
+        
+        # Find bounding box
+        max_x = max(x for x, _ in positions.values())
+        max_y = max(y for _, y in positions.values())
+        
+        transformed = {}
+        
+        if self.options.flow_direction == FlowDirection.UP:
+            # Flip Y-axis: put root at bottom instead of top
+            for node, (x, y) in positions.items():
+                transformed[node] = (x, max_y - y)
+                
+        elif self.options.flow_direction == FlowDirection.RIGHT:
+            # Rotate 90° clockwise: (x, y) -> (y, x)
+            # Root moves from top to left
+            for node, (x, y) in positions.items():
+                transformed[node] = (y, x)
+                
+        elif self.options.flow_direction == FlowDirection.LEFT:
+            # Rotate 90 deg counter-clockwise: (x, y) -> (max_y - y, x)
+            # Root moves from top to right
+            for node, (x, y) in positions.items():
+                transformed[node] = (max_y - y, x)
+        
+        return transformed
 
     def _layout_hierarchical(
         self, graph: nx.Graph, spacing: int

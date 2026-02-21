@@ -420,13 +420,13 @@ class ASCIIRenderer:
                 for x in range(min_x + 1, max_x):
                     self.canvas[start_y][x] = self.options.edge_horizontal
                 if is_bidirectional:
-                    self.canvas[start_y][min_x + 1] = self.options.edge_arrow_r
-                    self.canvas[start_y][max_x - 1] = self.options.edge_arrow_l
+                    self.canvas[start_y][min_x + 1] = self.options.get_arrow_for_direction('right')
+                    self.canvas[start_y][max_x - 1] = self.options.get_arrow_for_direction('left')
                 else:
                     if start_center < end_center:
-                        self.canvas[start_y][max_x - 1] = self.options.edge_arrow_r
+                        self.canvas[start_y][max_x - 1] = self.options.get_arrow_for_direction('right')
                     else:
-                        self.canvas[start_y][min_x + 1] = self.options.edge_arrow_l
+                        self.canvas[start_y][min_x + 1] = self.options.get_arrow_for_direction('left')
 
             # Case 2: Top to bottom connection
             elif start_y < end_y or end_y < start_y:
@@ -459,20 +459,14 @@ class ASCIIRenderer:
                 # Add direction indicators
                 if is_bidirectional:
                     # Place arrows at both ends
-                    self.canvas[top_y + 1][bottom_center] = self.options.edge_arrow_up
-                    self.canvas[bottom_y - 1][bottom_center] = (
-                        self.options.edge_arrow_down
-                    )
+                    self.canvas[top_y + 1][bottom_center] = self.options.get_arrow_for_direction('up')
+                    self.canvas[bottom_y - 1][bottom_center] = self.options.get_arrow_for_direction('down')
                 else:
                     # Add arrow based on direction
                     if start_y < end_y:  # Top to bottom
-                        self.canvas[top_y + 1][bottom_center] = (
-                            self.options.edge_arrow_up
-                        )
+                        self.canvas[top_y + 1][bottom_center] = self.options.get_arrow_for_direction('up')
                     else:  # Bottom to top
-                        self.canvas[bottom_y - 1][bottom_center] = (
-                            self.options.edge_arrow_down
-                        )
+                        self.canvas[bottom_y - 1][bottom_center] = self.options.get_arrow_for_direction('down')
 
         except IndexError as e:
             raise IndexError(f"Edge drawing exceeded canvas boundaries: {e}")
