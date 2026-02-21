@@ -68,7 +68,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--binary-tree",
         action="store_true",
-        default=False,
         help="Enable binary tree layout (respects edge 'side' attributes)",
     )
 
@@ -76,15 +75,6 @@ def parse_args() -> argparse.Namespace:
 
 
 def load_python_module(file_path: Path) -> Any:
-    """
-    Dynamically load a Python file as a module.
-
-    Args:
-        file_path: Path to Python file
-
-    Returns:
-        Loaded module object
-    """
     spec = importlib.util.spec_from_file_location("dynamic_module", file_path)
     if spec is None or spec.loader is None:
         raise ImportError(f"Could not load {file_path}")
@@ -98,37 +88,30 @@ def load_python_module(file_path: Path) -> Any:
 def merge_layout_options(
     base: LayoutOptions, overrides: LayoutOptions
 ) -> LayoutOptions:
-    """Merge two LayoutOptions, with CLI options taking precedence.
-    
-    Args:
-        base: Options from user code (may have None values)
-        overrides: Options from CLI (take precedence when not None)
-        
-    Returns:
-        Merged options with CLI overrides applied
-    """
-    # Start with base options as a dict to preserve all fields
     from dataclasses import asdict, fields
     
     base_dict = asdict(base)
     override_dict = asdict(overrides)
-    
-    # Merge: CLI overrides take precedence, but only if not None
     merged_dict = {}
+    
+    # Define which fields are "rendering" vs "semantic"
+    rendering_fields = {'use_ascii', 'node_style', 'node_spacing', 'layer_spacing', 
+                       'left_padding', 'right_padding', 'margin'}
+    
     for field in fields(LayoutOptions):
         field_name = field.name
         if field_name == 'instance_id':
-            # Skip instance_id, will be auto-generated
             continue
-            
+        
         override_val = override_dict.get(field_name)
         base_val = base_dict.get(field_name)
         
-        # Use override if it's not None, otherwise use base
-        if override_val is not None:
-            merged_dict[field_name] = override_val
+        # For rendering fields: CLI (override) takes precedence if not None
+        if field_name in rendering_fields:
+            merged_dict[field_name] = override_val if override_val is not None else base_val
+        # For semantic fields: User (base) takes precedence if not None
         else:
-            merged_dict[field_name] = base_val
+            merged_dict[field_name] = base_val if base_val is not None else override_val
     
     # Special handling for custom_decorators - merge dicts
     if base.custom_decorators and overrides.custom_decorators:
@@ -153,29 +136,33 @@ def create_layout_options(args: argparse.Namespace) -> LayoutOptions:
 
 
 def main() -> Optional[int]:
-    """CLI entry point for PHART."""
     args = parse_args()
 
     try:
         if args.input.suffix == ".py":
-            # Handle Python file
             module = load_python_module(args.input)
 
-            # Create default layout options from CLI args
             cli_options = create_layout_options(args)
 
-            # Instead of directly setting default_options
-            # ASCIIRenderer.default_options = options
-
-            # Set up a merger that will preserve custom settings
-            def option_merger(
-                instance_options: Optional[LayoutOptions] = None,
-            ) -> LayoutOptions:
-                if instance_options is None:
-                    return cli_options
-                return merge_layout_options(instance_options, cli_options)
-
-            ASCIIRenderer.default_options = option_merger()
+            # Monkey-patch ASCIIRenderer.__init__ to automatically merge CLI options
+            original_init = ASCIIRenderer.__init__
+            
+            def merged_init(self, graph, **kwargs):
+                """Wrapper that automatically merges explicit options with CLI options."""
+                if 'options' in kwargs and kwargs['options'] is not None:
+                    user_options = kwargs['options']
+                    kwargs['options'] = merge_layout_options(user_options, cli_options)
+                else:
+                    # No explicit options - set default_options so it gets used
+                    if not hasattr(ASCIIRenderer, 'default_options') or ASCIIRenderer.default_options is None:
+                        ASCIIRenderer.default_options = cli_options
+                
+                # Call original __init__ with potentially merged options
+                original_init(self, graph, **kwargs)
+            
+            # Replace __init__ method for the duration of script execution
+            ASCIIRenderer.__init__ = merged_init
+            ASCIIRenderer.default_options = cli_options
 
             try:
                 if args.function != "main":
@@ -185,10 +172,8 @@ def main() -> Optional[int]:
                     if hasattr(module, "main"):
                         module.main()
                     else:
-                        # Simulate __main__ execution
                         original_name = module.__name__
                         module.__name__ = "__main__"
-                        # Re-execute the module with __name__ == "__main__"
 
                         spec = importlib.util.spec_from_file_location(
                             "__main__", args.input
@@ -212,19 +197,15 @@ def main() -> Optional[int]:
                 return 1
 
         else:
-            # Read input file content
             with open(args.input, "r", encoding="utf-8") as f:
                 content = f.read()
 
-            # Try to determine format from content
             try:
-                # Try GraphML first (XML format)
                 if content.strip().startswith("<?xml") or content.strip().startswith(
                     "<graphml"
                 ):
                     renderer = ASCIIRenderer.from_graphml(str(args.input))
                 else:
-                    # Assume DOT format if not GraphML
                     renderer = ASCIIRenderer.from_dot(content)
             except Exception as format_error:
                 print(
@@ -235,13 +216,11 @@ def main() -> Optional[int]:
 
             renderer.options.node_style = NodeStyle[args.style.upper()]
             renderer.options.use_ascii = args.ascii
-            # Prefer explicit charset if specified, fall back to legacy flag if used
             use_ascii = args.charset == CharSet.ASCII or args.use_legacy_ascii
             renderer.options.use_ascii = use_ascii
             renderer.options.node_spacing = args.node_spacing
             renderer.options.layer_spacing = args.layer_spacing
 
-            # Handle output
             if args.output:
                 renderer.write_to_file(str(args.output))
             else:
