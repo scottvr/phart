@@ -420,13 +420,13 @@ class ASCIIRenderer:
                 for x in range(min_x + 1, max_x):
                     self.canvas[start_y][x] = self.options.edge_horizontal
                 if is_bidirectional:
-                    self.canvas[start_y][min_x + 1] = self.options.get_arrow_for_direction('right')
-                    self.canvas[start_y][max_x - 1] = self.options.get_arrow_for_direction('left')
+                    self.canvas[start_y][min_x + 1] = self.options.edge_arrow_r
+                    self.canvas[start_y][max_x - 1] = self.options.edge_arrow_l
                 else:
                     if start_center < end_center:
-                        self.canvas[start_y][max_x - 1] = self.options.get_arrow_for_direction('right')
+                        self.canvas[start_y][max_x - 1] = self.options.edge_arrow_r
                     else:
-                        self.canvas[start_y][min_x + 1] = self.options.get_arrow_for_direction('left')
+                        self.canvas[start_y][min_x + 1] = self.options.edge_arrow_l
 
             # Case 2: Top to bottom connection
             elif start_y < end_y or end_y < start_y:
@@ -442,31 +442,62 @@ class ASCIIRenderer:
                     bottom_x + (len(str(bottom_node)) + len(str(prefix))) // 2
                 )
 
-                # Draw horizontal segment from top node to vertical drop point
-                min_x = min(top_center, bottom_center)
-                max_x = max(top_center, bottom_center)
-                y = top_y
-                for x in range(min_x + 1, max_x):
-                    self.canvas[y][x] = self.options.edge_horizontal
+                # Route the horizontal jog in the inter-layer space BELOW the parent
+                # row rather than ON it. This prevents the horizontal segment from
+                # visually appearing to connect sibling nodes at the parent's row level.
+                #
+                # Layout of rows between parent (top_y) and child (bottom_y):
+                #
+                #   top_y      [Parent]        <- node row, draw vertical stub down from parent center
+                #   jog_y      +-----+         <- horizontal jog row (top_y + 1)
+                #   ...        |               <- additional vertical segment rows if layer_spacing > 3
+                #   bottom_y-1 ^               <- arrow row, just above child
+                #   bottom_y   [Child]         <- node row
+                #
+                # This requires layer_spacing >= 3 to have room for jog + arrow.
+                # We always draw the vertical stub from top_y down to jog_y first.
 
-                # Add crossing point
-                self.canvas[y][bottom_center] = self.options.edge_cross
+                jog_y = top_y + 1  # First row below parent — the horizontal routing row
 
-                # Draw vertical segment
-                for y in range(top_y + 1, bottom_y):
+                # Draw vertical stub from parent down to the jog row (at parent's center)
+                self.canvas[jog_y][top_center] = self.options.edge_vertical
+
+                if top_center != bottom_center:
+                    # Draw corner at the top of the jog
+                    self.canvas[jog_y][top_center] = self.options.edge_cross
+
+                    # Draw horizontal segment along the jog row
+                    min_x = min(top_center, bottom_center)
+                    max_x = max(top_center, bottom_center)
+                    for x in range(min_x + 1, max_x):
+                        self.canvas[jog_y][x] = self.options.edge_horizontal
+
+                    # Draw corner where horizontal meets the vertical drop
+                    self.canvas[jog_y][bottom_center] = self.options.edge_cross
+
+                # Draw vertical segment from jog row down to child
+                for y in range(jog_y + 1, bottom_y):
                     self.canvas[y][bottom_center] = self.options.edge_vertical
 
                 # Add direction indicators
                 if is_bidirectional:
-                    # Place arrows at both ends
-                    self.canvas[top_y + 1][bottom_center] = self.options.get_arrow_for_direction('up')
-                    self.canvas[bottom_y - 1][bottom_center] = self.options.get_arrow_for_direction('down')
+                    # Arrows just below jog row (up) and just above child (down)
+                    if bottom_y > jog_y + 1:
+                        self.canvas[jog_y + 1][bottom_center] = self.options.edge_arrow_up
+                    self.canvas[bottom_y - 1][bottom_center] = (
+                        self.options.edge_arrow_down
+                    )
                 else:
-                    # Add arrow based on direction
-                    if start_y < end_y:  # Top to bottom
-                        self.canvas[top_y + 1][bottom_center] = self.options.get_arrow_for_direction('up')
-                    else:  # Bottom to top
-                        self.canvas[bottom_y - 1][bottom_center] = self.options.get_arrow_for_direction('down')
+                    if start_y < end_y:  # Top to bottom — arrow points toward child
+                        if bottom_y > jog_y + 1:
+                            self.canvas[bottom_y - 1][bottom_center] = (
+                                self.options.edge_arrow_down
+                            )
+                    else:  # Bottom to top — arrow points toward parent
+                        if bottom_y > jog_y + 1:
+                            self.canvas[jog_y + 1][bottom_center] = (
+                                self.options.edge_arrow_up
+                            )
 
         except IndexError as e:
             raise IndexError(f"Edge drawing exceeded canvas boundaries: {e}")
