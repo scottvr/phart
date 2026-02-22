@@ -420,13 +420,13 @@ class ASCIIRenderer:
                 for x in range(min_x + 1, max_x):
                     self.canvas[start_y][x] = self.options.edge_horizontal
                 if is_bidirectional:
-                    self.canvas[start_y][min_x + 1] = self.options.edge_arrow_r
-                    self.canvas[start_y][max_x - 1] = self.options.edge_arrow_l
+                    self.canvas[start_y][min_x + 1] = self.options.get_arrow_for_direction('right') 
+                    self.canvas[start_y][max_x - 1] = self.options.get_arrow_for_direction('left')
                 else:
                     if start_center < end_center:
-                        self.canvas[start_y][max_x - 1] = self.options.edge_arrow_r
+                        self.canvas[start_y][max_x - 1] = self.options.get_arrow_for_direction('right') 
                     else:
-                        self.canvas[start_y][min_x + 1] = self.options.edge_arrow_l
+                        self.canvas[start_y][min_x + 1] = self.options.get_arrow_for_direction('left')  
 
             # Case 2: Top to bottom connection
             elif start_y < end_y or end_y < start_y:
@@ -483,20 +483,20 @@ class ASCIIRenderer:
                 if is_bidirectional:
                     # Arrows just below jog row (up) and just above child (down)
                     if bottom_y > jog_y + 1:
-                        self.canvas[jog_y + 1][bottom_center] = self.options.edge_arrow_up
+                        self.canvas[jog_y + 1][bottom_center] = self.options.get_arrow_for_direction('up')
                     self.canvas[bottom_y - 1][bottom_center] = (
-                        self.options.edge_arrow_down
+                        self.options.get_arrow_for_direction('down')
                     )
                 else:
                     if start_y < end_y:  # Top to bottom — arrow points toward child
                         if bottom_y > jog_y + 1:
                             self.canvas[bottom_y - 1][bottom_center] = (
-                                self.options.edge_arrow_down
+                                self.options.get_arrow_for_direction('down')
                             )
                     else:  # Bottom to top — arrow points toward parent
                         if bottom_y > jog_y + 1:
                             self.canvas[jog_y + 1][bottom_center] = (
-                                self.options.edge_arrow_up
+                                self.options.get_arrow_for_direction('up')
                             )
 
         except IndexError as e:

@@ -83,15 +83,6 @@ def parse_args() -> argparse.Namespace:
 
 
 def load_python_module(file_path: Path) -> Any:
-    """
-    Dynamically load a Python file as a module.
-
-    Args:
-        file_path: Path to Python file
-
-    Returns:
-        Loaded module object
-    """
     spec = importlib.util.spec_from_file_location("dynamic_module", file_path)
     if spec is None or spec.loader is None:
         raise ImportError(f"Could not load {file_path}")
@@ -105,17 +96,6 @@ def load_python_module(file_path: Path) -> Any:
 def merge_layout_options(
     base: LayoutOptions, overrides: LayoutOptions
 ) -> LayoutOptions:
-    """Merge two LayoutOptions with intelligent prioritization.
-    
-    Args:
-        base: Options from user code
-        overrides: Options from CLI
-        
-    Returns:
-        Merged options where:
-        - CLI takes precedence for rendering options (use_ascii, node_style, spacing)
-        - User code takes precedence for semantic options (binary_tree_layout, decorators)
-    """
     from dataclasses import asdict, fields
     
     base_dict = asdict(base)
@@ -170,35 +150,25 @@ def main() -> Optional[int]:
 
     try:
         if args.input.suffix == ".py":
-            # Handle Python file
             module = load_python_module(args.input)
 
-            # Create default layout options from CLI args
             cli_options = create_layout_options(args)
 
-            # Monkey-patch ASCIIRenderer.__init__ to automatically merge CLI options
-            # This makes CLI options transparent to user code - no get_options() needed!
             original_init = ASCIIRenderer.__init__
             
             def merged_init(self, graph, **kwargs):
                 """Wrapper that automatically merges explicit options with CLI options."""
-                # If user provides explicit options, merge with CLI options
                 if 'options' in kwargs and kwargs['options'] is not None:
                     user_options = kwargs['options']
-                    # CLI options take precedence for rendering, user for semantics
                     kwargs['options'] = merge_layout_options(user_options, cli_options)
                 else:
-                    # No explicit options - set default_options so it gets used
                     if not hasattr(ASCIIRenderer, 'default_options') or ASCIIRenderer.default_options is None:
                         ASCIIRenderer.default_options = cli_options
                 
-                # Call original __init__ with potentially merged options
                 original_init(self, graph, **kwargs)
             
             # Replace __init__ method for the duration of script execution
             ASCIIRenderer.__init__ = merged_init
-            
-            # Also set default_options for renderers that don't specify any options
             ASCIIRenderer.default_options = cli_options
 
             try:
@@ -209,11 +179,9 @@ def main() -> Optional[int]:
                     if hasattr(module, "main"):
                         module.main()
                     else:
-                        # Simulate __main__ execution
                         original_name = module.__name__
                         module.__name__ = "__main__"
                         # Re-execute the module with __name__ == "__main__"
-
                         spec = importlib.util.spec_from_file_location(
                             "__main__", args.input
                         )
@@ -236,19 +204,15 @@ def main() -> Optional[int]:
                 return 1
 
         else:
-            # Read input file content
             with open(args.input, "r", encoding="utf-8") as f:
                 content = f.read()
 
-            # Try to determine format from content
             try:
-                # Try GraphML first (XML format)
                 if content.strip().startswith("<?xml") or content.strip().startswith(
                     "<graphml"
                 ):
                     renderer = ASCIIRenderer.from_graphml(str(args.input))
                 else:
-                    # Assume DOT format if not GraphML
                     renderer = ASCIIRenderer.from_dot(content)
             except Exception as format_error:
                 print(
@@ -265,7 +229,6 @@ def main() -> Optional[int]:
             renderer.options.node_spacing = args.node_spacing
             renderer.options.layer_spacing = args.layer_spacing
 
-            # Handle output
             if args.output:
                 renderer.write_to_file(str(args.output))
             else:

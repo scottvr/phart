@@ -335,7 +335,7 @@ class LayoutManager:
                 transformed[node] = (x, max_y - y)
                 
         elif self.options.flow_direction == FlowDirection.RIGHT:
-            # Rotate 90° clockwise: (x, y) -> (y, x)
+            # Rotate 90 deg clockwise: (x, y) -> (y, x)
             # Root moves from top to left
             for node, (x, y) in positions.items():
                 transformed[node] = (y, x)

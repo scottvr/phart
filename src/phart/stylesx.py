@@ -26,6 +26,27 @@ class NodeStyle(Enum):
     CUSTOM = "custom"
 
 
+class FlowDirection(Enum):
+    """Layout flow direction for graph rendering.
+    
+    Attributes
+    ----------
+    DOWN : str
+        Root at top, children below (arrows point up to parents)
+    UP : str
+        Root at bottom, children above (arrows point down to parents)
+    RIGHT : str
+        Root at left, children to right (arrows point right to parents)
+    LEFT : str
+        Root at right, children to left (arrows point left to parents)
+    """
+    
+    DOWN = "down"
+    UP = "up"
+    RIGHT = "right"
+    LEFT = "left"
+
+
 class EdgeChar:
     """
     Descriptor for ASCII/Unicode character pairs.
@@ -50,26 +71,8 @@ class EdgeChar:
         self.unicode_char = value
 
 
+# In styles.py
 
-class FlowDirection(Enum):
-    """Layout flow direction for graph rendering.
-    
-    Attributes
-    ----------
-    DOWN : str
-        Root at top, children below (arrows point up to parents)
-    UP : str
-        Root at bottom, children above (arrows point down to parents)
-    RIGHT : str
-        Root at left, children to right (arrows point right to parents)
-    LEFT : str
-        Root at right, children to left (arrows point left to parents)
-    """
-    
-    DOWN = "down"
-    UP = "up"
-    RIGHT = "right"
-    LEFT = "left"
 
 @dataclass
 class LayoutOptions:
@@ -98,7 +101,7 @@ class LayoutOptions:
     # Core parameters (existing)
     node_spacing: int = field(default=4)
     margin: int = field(default=1)
-    layer_spacing: int = field(default=3)
+    layer_spacing: int = field(default=2)
     node_style: Union[NodeStyle, str] = NodeStyle.SQUARE
     show_arrows: bool = True
     use_ascii: Optional[bool] = None
@@ -113,7 +116,7 @@ class LayoutOptions:
     preserve_triangle_shape: bool = field(default=True)
     triangle_height_ratio: float = field(default=0.866)  # sqrt(3)/2 for equilateral
     binary_tree_layout: bool = field(default=False)  # Use binary tree positioning
-    flow_direction: FlowDirection = field(default=FlowDirection.DOWN)
+    flow_direction: Union[FlowDirection, str] = field(default=FlowDirection.DOWN)
 
     # Instance-specific ID (unchanged)
     instance_id: int = field(init=False)
@@ -142,21 +145,16 @@ class LayoutOptions:
                 raise ValueError(
                     f"Invalid node style '{self.node_style}'. Valid options are: {valid_styles}"
                 )
-        
-        val = self.flow_direction
-        
-        if isinstance(val, str):
-            val = val.strip().lower()
-        
-        if not isinstance(val, FlowDirection):
+
+        if isinstance(self.flow_direction, str):
             try:
-                val = FlowDirection(val)
-            except ValueError as e:
-                valid = ", ".join(d.value for d in FlowDirection)
-                raise ValueError(f"Invalid flow_direction: {self.flow_direction}. Valid: {valid}") from e
-        
-        self.flow_direction = val
-                
+                self.flow_direction = FlowDirection[self.flow_direction.upper()]
+            except KeyError:
+                valid_directions = ", ".join([d.name.lower() for d in FlowDirection])
+                raise ValueError(
+                    f"Invalid flow direction '{self.flow_direction}'. Valid options are: {valid_directions}"
+                )
+
         if self.node_style == NodeStyle.CUSTOM and not self.custom_decorators:
             raise ValueError(
                 "Custom decorators must be provided when using NodeStyle.CUSTOM"
@@ -165,8 +163,8 @@ class LayoutOptions:
         # Validate core spacing parameters
         if self.node_spacing < 1:
             raise ValueError("node_spacing must be at least 1")
-        if self.layer_spacing < 3:
-            self.layer_spacing = 3 
+        if self.layer_spacing < 0:
+            raise ValueError("layer_spacing must be non-negative")
         if self.margin < 1:
             raise ValueError("margin must be >= 1")
 
