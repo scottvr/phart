@@ -5,14 +5,13 @@ import sys
 import argparse
 import importlib.util
 from pathlib import Path
-from typing import Optional, Any
+from typing import Optional, Any, Callable
 
 from .renderer import ASCIIRenderer
 from .styles import NodeStyle, LayoutOptions
 from .charset import CharSet
 
-
-def parse_args() -> argparse.Namespace:
+def parse_args() -> tuple[argparse.Namespace, list[str]]:
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
         description="PHART: Python Hierarchical ASCII Rendering Tool"
@@ -78,11 +77,12 @@ def parse_args() -> argparse.Namespace:
         help="Layout flow direction: down (default, root at top), up (root at bottom), "
              "left (root at right), right (root at left)",
     )
+    parser.add_argument("module_argv", nargs=argparse.REMAINDER)
+    args, unknown = parser.parse_known_args()
+    return args, unknown
 
-    return parser.parse_args()
 
-
-def load_python_module(file_path: Path) -> Any:
+def _load_python_module(file_path: Path) -> Any:
     spec = importlib.util.spec_from_file_location("dynamic_module", file_path)
     if spec is None or spec.loader is None:
         raise ImportError(f"Could not load {file_path}")
@@ -91,45 +91,6 @@ def load_python_module(file_path: Path) -> Any:
     sys.modules["dynamic_module"] = module
     spec.loader.exec_module(module)
     return module
-
-
-def merge_layout_options(
-    base: LayoutOptions, overrides: LayoutOptions
-) -> LayoutOptions:
-    from dataclasses import asdict, fields
-    
-    base_dict = asdict(base)
-    override_dict = asdict(overrides)
-    merged_dict = {}
-    
-    # Define which fields are "rendering" vs "semantic"
-    rendering_fields = {'use_ascii', 'node_style', 'node_spacing', 'layer_spacing', 
-                       'left_padding', 'right_padding', 'margin', 'flow_direction'}
-    
-    for field in fields(LayoutOptions):
-        field_name = field.name
-        if field_name == 'instance_id':
-            continue
-        
-        override_val = override_dict.get(field_name)
-        base_val = base_dict.get(field_name)
-        
-        # For rendering fields: CLI (override) takes precedence if not None
-        if field_name in rendering_fields:
-            merged_dict[field_name] = override_val if override_val is not None else base_val
-        # For semantic fields: User (base) takes precedence if not None
-        else:
-            merged_dict[field_name] = base_val if base_val is not None else override_val
-    
-    # Special handling for custom_decorators - merge dicts
-    if base.custom_decorators and overrides.custom_decorators:
-        merged_dict['custom_decorators'] = {**base.custom_decorators, **overrides.custom_decorators}
-    elif base.custom_decorators:
-        merged_dict['custom_decorators'] = base.custom_decorators.copy()
-    elif overrides.custom_decorators:
-        merged_dict['custom_decorators'] = overrides.custom_decorators.copy()
-    
-    return LayoutOptions(**merged_dict)
 
 
 def create_layout_options(args: argparse.Namespace) -> LayoutOptions:
@@ -143,65 +104,58 @@ def create_layout_options(args: argparse.Namespace) -> LayoutOptions:
         flow_direction=args.flow_direction,
     )
 
+def _run_python_as_main(file_path: Path) -> Any:
+    spec = importlib.util.spec_from_file_location("__main__", file_path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Could not load {file_path}")
+
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["__main__"] = module  # match python's behavior more closely
+    spec.loader.exec_module(module)   # executes exactly once
+    return module
 
 def main() -> Optional[int]:
     """CLI entry point for PHART."""
-    args = parse_args()
+    args, unknown = parse_args()
+    module_argv = args.module_argv
+    if module_argv and module_argv[0] == "--":
+        module_argv = module_argv[1:]
 
     try:
         if args.input.suffix == ".py":
-            module = load_python_module(args.input)
-
-            cli_options = create_layout_options(args)
-
-            original_init = ASCIIRenderer.__init__
-            
-            def merged_init(self, graph, **kwargs):
-                """Wrapper that automatically merges explicit options with CLI options."""
-                if 'options' in kwargs and kwargs['options'] is not None:
-                    user_options = kwargs['options']
-                    kwargs['options'] = merge_layout_options(user_options, cli_options)
-                else:
-                    if not hasattr(ASCIIRenderer, 'default_options') or ASCIIRenderer.default_options is None:
-                        ASCIIRenderer.default_options = cli_options
-                
-                original_init(self, graph, **kwargs)
-            
-            # Replace __init__ method for the duration of script execution
-            ASCIIRenderer.__init__ = merged_init
-            ASCIIRenderer.default_options = cli_options
-
-            try:
-                if args.function != "main":
-                    func = getattr(module, args.function)
-                    func()
-                else:
-                    if hasattr(module, "main"):
-                        module.main()
-                    else:
-                        original_name = module.__name__
-                        module.__name__ = "__main__"
-                        # Re-execute the module with __name__ == "__main__"
-                        spec = importlib.util.spec_from_file_location(
-                            "__main__", args.input
-                        )
-                        if spec is None or spec.loader is None:
-                            raise ImportError(f"Could not load {args.input}")
-
-                        spec.loader.exec_module(module)
-                        module.__name__ = original_name
-
-            except AttributeError:
-                if args.function != "main":
+            if unknown:
+                if "--" not in (sys.argv):
                     print(
-                        f"Error: Function '{args.function}' not found in {args.input}",
+                        "It looks like you passed arguments intended for the script.\n"
+                        "Use '--' to separate phart options from script options.\n\n"
+                        f"Example:\n  phart {args.input} -- {' '.join(unknown)}",
                         file=sys.stderr,
                     )
-                print(
-                    f"Error: No main() function or __main__ block found in {args.input}",
-                    file=sys.stderr,
-                )
-                return 1
+                return 2
+            
+            old_argv = sys.argv
+            sys.argv = [str(args.input)] + module_argv
+
+
+            try:
+                cli_options = create_layout_options(args)
+                ASCIIRenderer.default_options = cli_options
+
+                if args.function != "main":
+                    module = _load_python_module(args.input)
+                    try:
+                        func = getattr(module, args.function)
+                    except AttributeError:
+                        print( f"Error: Function '{args.function}' not found in {args.input}", file=sys.stderr)
+                        return 1
+                    func()
+                    return 0
+
+                module = _run_python_as_main(args.input)
+                return 0 
+       
+            finally:
+                sys.argv = old_argv
 
         else:
             with open(args.input, "r", encoding="utf-8") as f:
@@ -239,6 +193,7 @@ def main() -> Optional[int]:
         print(f"Error: {e}", file=sys.stderr)
         return 1
 
+    return None
 
 if __name__ == "__main__":
     sys.exit(main())

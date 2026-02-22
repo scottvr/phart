@@ -129,6 +129,14 @@ class LayoutOptions:
     edge_arrow_up = EdgeChar("^", "↑")
     edge_arrow_down = EdgeChar("v", "↓")
 
+    def __init__(self, **kwargs: Any) -> None:
+        # Set attributes from kwargs, using defaults for any missing values
+        for field in fields(self):
+            if field.name in kwargs:
+                setattr(self, field.name, kwargs[field.name])
+            else:
+                setattr(self, field.name, field.default)
+
     def __post_init__(self) -> None:
         """Validate and normalize configuration values."""
         self.instance_id = LayoutOptions._instance_counter
@@ -146,7 +154,7 @@ class LayoutOptions:
         val = self.flow_direction
         
         if isinstance(val, str):
-            val = val.strip().lower()
+            val = FlowDirection(val.strip().lower())
         
         if not isinstance(val, FlowDirection):
             try:
@@ -179,6 +187,8 @@ class LayoutOptions:
             raise ValueError("min_edge_space must be at least 1")
         if self.triangle_height_ratio <= 0:
             raise ValueError("triangle_height_ratio must be positive")
+
+        return None
 
     def get_effective_node_spacing(self, has_edges: bool = True) -> int:
         """Calculate effective node spacing considering edge requirements.

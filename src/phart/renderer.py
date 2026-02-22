@@ -1,64 +1,4 @@
-"""
-*****
-PHART
-*****
-
-Python Hierarchical ASCII Rendering Tool for graphs.
-
-This module provides functionality for rendering graphs as ASCII art, with particular
-emphasis on dependency visualization and hierarchical structures.
-
-The PHART renderer can visualize:
-* NetworkX graphs
-* DOT format graphs
-* GraphML files
-* Dependency structures
-
-Examples
---------
->>> import networkx as nx
->>> from phart import ASCIIRenderer
->>>
->>> # Simple path graph
->>> G = nx.path_graph(3)
->>> renderer = ASCIIRenderer(G)
->>> print(renderer.render())
-1
-|
-2
-|
-3
-
->>> # Directed graph with custom node style
->>> G = nx.DiGraph([('A', 'B'), ('A', 'C'), ('B', 'D'), ('C', 'D')])
->>> renderer = ASCIIRenderer(G, node_style=NodeStyle.SQUARE)
->>> print(renderer.render())
-    [A]
-     |
-  ---|---
-  |     |
-[B]    [C]
-  |     |
-  |     |
-   --[D]--
-
-Notes
------
-While this module can work with any NetworkX graph, it is optimized for:
-* Directed acyclic graphs (DAGs)
-* Dependency trees
-* Hierarchical structures
-
-For dense or highly connected graphs, the ASCII representation may become
-cluttered. Consider using dedicated visualization tools for such cases.
-
-See Also
---------
-* NetworkX: https://networkx.org/
-* Graphviz: https://graphviz.org/
-"""
-# src path: src\phart\renderer.py
-
+from __future__ import annotations
 from typing import Any, Dict, List, Optional, TextIO, Tuple
 
 import networkx as nx  # type: ignore
@@ -68,7 +8,6 @@ from .styles import LayoutOptions, NodeStyle
 
 import sys
 import io
-
 
 class ASCIIRenderer:
     """
@@ -94,18 +33,6 @@ class ASCIIRenderer:
         The graph being rendered
     options : LayoutOptions
         Layout and style configuration
-
-    Examples
-    --------
-    >>> import networkx as nx
-    >>> G = nx.DiGraph([('A', 'B'), ('B', 'C')])
-    >>> renderer = ASCIIRenderer(G)
-    >>> print(renderer.render())
-    A
-    |
-    B
-    |
-    C
 
     See Also
     --------
@@ -143,7 +70,7 @@ class ASCIIRenderer:
                 return False
         return True
 
-    default_options: Optional[LayoutOptions] = None
+    default_options: ClassVar[Optional[LayoutOptions]] = None
 
     def __init__(
         self,
@@ -155,6 +82,7 @@ class ASCIIRenderer:
         use_ascii: Optional[bool] = None,
         custom_decorators: Optional[Dict[str, Tuple[str, str]]] = None,
         options: Optional[LayoutOptions] = None,
+        **kwargs,
     ) -> None:
         """Initialize the ASCII renderer.
 
@@ -167,6 +95,9 @@ class ASCIIRenderer:
             custom_decorators: Custom node decorations (must be passed as keyword arg)
             options: LayoutOptions instance (must be passed as keyword arg)
         """
+        options = self._resolve_options(options=options)
+        self.options = options
+
         self.graph = graph
 
         if options is not None and options.use_ascii is not None:
@@ -194,6 +125,18 @@ class ASCIIRenderer:
             )
         self.layout_manager = LayoutManager(graph, self.options)
         self.canvas: List[List[str]] = []
+    
+    
+    def _resolve_options(cls, options: Optional[LayoutOptions]) -> LayoutOptions:
+        if cls.default_options is None:
+            # no CLI overrides; if no options passed, create defaults however you do it
+            return options if options is not None else LayoutOptions()
+
+        if options is None:
+            return cls.default_options
+
+        # precedence: CLI overrides user script options
+        return merge_layout_options(options, cls.default_options)
 
     def _ensure_encoding(self, text: str) -> str:
         """Internal method to handle encoding safely."""
@@ -639,3 +582,42 @@ class ASCIIRenderer:
             return cls(G, **kwargs)
         except Exception as e:
             raise ValueError(f"Failed to read GraphML file: {e}")
+
+
+def merge_layout_options(
+    base: LayoutOptions, overrides: LayoutOptions
+    ) -> LayoutOptions:
+    from dataclasses import asdict, fields
+        
+    base_dict = asdict(base)
+    override_dict = asdict(overrides)
+    merged_dict = {}
+        
+    # Define which fields are "rendering" vs "semantic"
+    rendering_fields = {'use_ascii', 'node_style', 'node_spacing', 'layer_spacing', 
+                           'left_padding', 'right_padding', 'margin', 'flow_direction'}
+       
+    for field in fields(LayoutOptions):
+        field_name = field.name
+        if field_name == 'instance_id':
+            continue
+          
+        override_val = override_dict.get(field_name)
+        base_val = base_dict.get(field_name)
+         
+        # For rendering fields: CLI (override) takes precedence if not None
+        if field_name in rendering_fields:
+            merged_dict[field_name] = override_val if override_val is not None else base_val
+        # For semantic fields: User (base) takes precedence if not None
+        else:
+            merged_dict[field_name] = base_val if base_val is not None else override_val
+        
+    # Special handling for custom_decorators - merge dicts
+    if base.custom_decorators and overrides.custom_decorators:
+        merged_dict['custom_decorators'] = {**base.custom_decorators, **overrides.custom_decorators}
+    elif base.custom_decorators:
+        merged_dict['custom_decorators'] = base.custom_decorators.copy()
+    elif overrides.custom_decorators:
+        merged_dict['custom_decorators'] = overrides.custom_decorators.copy()
+        
+    return LayoutOptions(**merged_dict)
