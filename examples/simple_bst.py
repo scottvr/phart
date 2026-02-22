@@ -43,6 +43,9 @@ print("DEMONSTRATION: Controlling Binary Tree Node Positioning")
 print("=" * 70)
 
 # Create a binary tree
+# this one has issues due to A  being in the path of B-> C so it looks like B is connected to A and A is connected to C.
+# need to fix tthis by checking for collisions and adjusting positions accordingly. This is what the binary_tree_layout option does.
+
 G = nx.DiGraph()
 G.add_edge('Root', 'B', side='left')
 G.add_edge('Root', 'A', side='right')
