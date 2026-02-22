@@ -348,6 +348,75 @@ class LayoutManager:
         
         return transformed
 
+    def _get_subtree_width(
+        self,
+        graph: nx.DiGraph,
+        node: Any,
+        spacing: int,
+        cache: Dict,
+    ) -> int:
+        """Recursively compute the minimum x-width a subtree needs.
+
+        A leaf node needs exactly its own display width.
+        An internal node needs the sum of its children's subtree widths plus
+        the spacing gaps between them, with a minimum of its own display width
+        so the parent label is never wider than its allocated slot.
+        """
+        if node in cache:
+            return cache[node]
+
+        children = list(graph.successors(node))
+        if not children:
+            w = self._get_node_width(str(node))
+        else:
+            total = sum(self._get_subtree_width(graph, c, spacing, cache) for c in children)
+            total += spacing * (len(children) - 1)
+            w = max(total, self._get_node_width(str(node)))
+
+        cache[node] = w
+        return w
+
+    def _layout_subtree(
+        self,
+        graph: nx.DiGraph,
+        node: Any,
+        x_left: int,
+        y: int,
+        spacing: int,
+        subtree_widths: Dict,
+        positions: Dict,
+        layer_height: int,
+    ) -> None:
+        """Recursively assign positions so each node is centred over its subtree."""
+        my_width = self._get_node_width(str(node))
+        slot_width = subtree_widths[node]
+
+        # Centre the node label within its allocated slot
+        node_x = x_left + (slot_width - my_width) // 2
+        positions[node] = (node_x, y)
+
+        children = list(graph.successors(node))
+        if not children:
+            return
+
+        # Sort children: respect left/right attributes when binary_tree_layout
+        # is enabled, otherwise sort alphabetically.
+        if self.options.binary_tree_layout:
+            children_sorted = self._binary_tree_node_sorter(
+                graph, y // layer_height, set(children), positions
+            )
+        else:
+            children_sorted = sorted(children, key=lambda n: str(n))
+
+        # Assign each child its slice of the horizontal space
+        cx = x_left
+        for child in children_sorted:
+            child_slot = subtree_widths[child]
+            self._layout_subtree(
+                graph, child, cx, y + layer_height, spacing, subtree_widths, positions, layer_height
+            )
+            cx += child_slot + spacing
+
     def _layout_hierarchical(
         self, graph: nx.Graph, spacing: int
     ) -> Dict[str, Tuple[int, int]]:
@@ -355,66 +424,57 @@ class LayoutManager:
 
         This is the standard layout for non-triad cases, organizing nodes into
         clear hierarchical layers based on graph structure.
+
+        When binary_tree_layout=True and the graph is a directed tree, uses a
+        subtree-aware (Reingold-Tilford-style) layout so that each node's
+        children are placed within that node's exclusive horizontal territory.
+        This prevents edge routing for one subtree from visually passing through
+        a sibling subtree.
         """
         if graph.is_directed():
             roots = [n for n, d in graph.in_degree() if d == 0]
             if not roots:
-                # If no clear root, use node with highest out-degree
                 root = max(graph.nodes(), key=lambda n: graph.out_degree(n))
                 roots = [root]
         else:
-            # For undirected, use degree centrality
             root = max(graph.nodes(), key=lambda n: graph.degree(n))
             roots = [root]
 
-        # Calculate distances from roots to organize layers
-        distances: Dict[str, int] = {}
+        layer_height = max(1, self.options.layer_spacing)
+
+        # Subtree-aware (Reingold-Tilford-style) layout.
+        #
+        # Every node is centred over its own subtree's horizontal territory,
+        # guaranteeing that sibling subtrees never share x-space and edge
+        # routing between layers cannot be confused with sibling connections.
+        #
+        # For directed graphs with a single root this is exact.
+        # For multi-root directed graphs or undirected graphs each root gets
+        # its own subtree block laid out left-to-right.
+        # For DAGs where a node has multiple parents the node's subtree width
+        # may be over-counted (once per parent path), resulting in extra
+        # horizontal whitespace — a harmless trade-off for unambiguous routing.
+        #
+        # binary_tree_layout controls only child *sort order*:
+        #   True  → respect 'side'/'position'/'dir'/'child' edge attributes
+        #   False → alphabetical
+
+        subtree_widths: Dict = {}
         for root in roots:
-            lengths = nx.single_source_shortest_path_length(graph, root)
-            for node, dist in lengths.items():
-                distances[node] = min(distances.get(node, dist), dist)
+            self._get_subtree_width(graph, root, spacing, subtree_widths)
 
-        # Group nodes by layer
-        layers: Dict[int, Set[str]] = {}
-        for node, layer in distances.items():
-            if layer not in layers:
-                layers[layer] = set()
-            layers[layer].add(node)
-
-        # Calculate positions preserving layer structure
-        positions = {}
-        layer_widths = {}
-
-        # Calculate width needed for each layer
-        for layer, nodes in layers.items():
-            total_width = sum(self._get_node_width(str(n)) for n in nodes)
-            total_spacing = (len(nodes) - 1) * spacing
-            layer_widths[layer] = total_width + total_spacing
-
-        max_width = max(layer_widths.values()) if layer_widths else 0
-
-        # Position nodes within their layers
-        for layer, nodes in layers.items():
-            y = layer * (
-                1 if self.options.layer_spacing == 0 else self.options.layer_spacing
+        positions: Dict[str, Tuple[int, int]] = {}
+        cx = 0
+        for root in roots:
+            self._layout_subtree(
+                graph, root, cx, 0, spacing, subtree_widths, positions, layer_height
             )
-            total_width = layer_widths[layer]
-            start_x = (max_width - total_width) // 2
-            current_x = start_x
+            cx += subtree_widths[root] + spacing
 
-            # Sort nodes - use binary tree sorter if enabled, otherwise alphabetical
-            if self.options.binary_tree_layout and isinstance(graph, nx.DiGraph):
-                sorted_nodes = self._binary_tree_node_sorter(graph, layer, nodes, positions)
-            else:
-                sorted_nodes = sorted(nodes)
+        return positions
 
-            for node in sorted_nodes:
-                positions[node] = (current_x, y)
-                current_x += self._get_node_width(str(node)) + spacing
-
-        return (
-            positions  # Just return positions, let calculate_layout handle dimensions
-        )
+        # (The old centred-layer layout has been superseded by the subtree-aware
+        #  layout above and is intentionally removed.)
 
     def calculate_canvas_dimensions(
         self, positions: Dict[str, Tuple[int, int]]
