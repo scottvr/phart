@@ -23,7 +23,6 @@ jobs:
           pip install types-networkx
           pip install -e ".[test]"
           pip install mypy
-          mypy --install-types
           
       - name: Type check with mypy
         run: |
