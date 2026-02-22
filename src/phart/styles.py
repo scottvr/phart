@@ -166,7 +166,7 @@ class LayoutOptions:
         if self.node_spacing < 1:
             raise ValueError("node_spacing must be at least 1")
         if self.layer_spacing < 3:
-            self.layer_spacing = 3 
+            self.layer_spacing = 4 
         if self.margin < 1:
             raise ValueError("margin must be >= 1")
 
