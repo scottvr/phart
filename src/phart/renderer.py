@@ -387,6 +387,45 @@ class ASCIIRenderer:
             # Only draw direction on non-terminals if there isn't already a direction
             self.canvas[y][x] = direction
 
+    def _get_jog_row(
+        self,
+        top_center: int,
+        bottom_center: int,
+        top_y: int,
+        bottom_y: int,
+    ) -> int:
+        """Choose a jog row for a parent→child edge that doesn't conflict with
+        content already on the canvas.
+
+        Scans downward from top_y+1 and returns the first row where the full
+        horizontal span [min_x, max_x] is clear, treating an existing vertical
+        bar at either endpoint as acceptable (it will become a corner).
+
+        Requires at least 2 rows below jog_y before bottom_y (one vertical
+        segment row + one arrow row), so the latest usable row is bottom_y - 2.
+        Falls back to that row if no clean row is found.
+        """
+        min_x = min(top_center, bottom_center)
+        max_x = max(top_center, bottom_center)
+        latest_jog = bottom_y - 2
+
+        for jog_y in range(top_y + 1, latest_jog + 1):
+            conflict = False
+            for x in range(min_x, max_x + 1):
+                cell = self.canvas[jog_y][x]
+                if cell == " ":
+                    continue
+                # A vertical bar at one of our own columns is fine — we'll place
+                # a corner there.
+                if cell == self.options.edge_vertical and x in (top_center, bottom_center):
+                    continue
+                conflict = True
+                break
+            if not conflict:
+                return jog_y
+
+        return latest_jog
+
     def _draw_edge(
         self, start: str, end: str, positions: Dict[str, Tuple[int, int]]
     ) -> None:
@@ -420,80 +459,89 @@ class ASCIIRenderer:
                 for x in range(min_x + 1, max_x):
                     self.canvas[start_y][x] = self.options.edge_horizontal
                 if is_bidirectional:
-                    self.canvas[start_y][min_x + 1] = self.options.get_arrow_for_direction('right') 
+                    self.canvas[start_y][min_x + 1] = self.options.get_arrow_for_direction('right')
                     self.canvas[start_y][max_x - 1] = self.options.get_arrow_for_direction('left')
                 else:
                     if start_center < end_center:
-                        self.canvas[start_y][max_x - 1] = self.options.get_arrow_for_direction('right') 
+                        self.canvas[start_y][max_x - 1] = self.options.get_arrow_for_direction('right')
                     else:
-                        self.canvas[start_y][min_x + 1] = self.options.get_arrow_for_direction('left')  
+                        self.canvas[start_y][min_x + 1] = self.options.get_arrow_for_direction('left')
 
-            # Case 2: Top to bottom connection
-            elif start_y < end_y or end_y < start_y:
+            # Case 2: Top to bottom (or bottom to top) connection
+            elif start_y != end_y:
                 # Identify top and bottom nodes
                 top_node = start if start_y < end_y else end
                 bottom_node = end if start_y < end_y else start
                 top_x, top_y = positions[top_node]
                 bottom_x, bottom_y = positions[bottom_node]
 
-                # Calculate centers
+                # Calculate centres
                 top_center = top_x + (len(str(top_node)) + len(str(prefix))) // 2
                 bottom_center = (
                     bottom_x + (len(str(bottom_node)) + len(str(prefix))) // 2
                 )
 
-                # Route the horizontal jog in the inter-layer space BELOW the parent
-                # row rather than ON it. This prevents the horizontal segment from
-                # visually appearing to connect sibling nodes at the parent's row level.
+                # --- Jog row selection ---
                 #
-                # Layout of rows between parent (top_y) and child (bottom_y):
+                # Each edge gets its own horizontal routing row chosen to avoid
+                # conflicts with lines already on the canvas.  Straight-down
+                # edges always use top_y+1 since they need no horizontal span.
                 #
-                #   top_y      [Parent]        <- node row, draw vertical stub down from parent center
-                #   jog_y      +-----+         <- horizontal jog row (top_y + 1)
-                #   ...        |               <- additional vertical segment rows if layer_spacing > 3
-                #   bottom_y-1 ^               <- arrow row, just above child
-                #   bottom_y   [Child]         <- node row
-                #
-                # This requires layer_spacing >= 3 to have room for jog + arrow.
-                # We always draw the vertical stub from top_y down to jog_y first.
+                #   top_y      Parent          <- node row
+                #   top_y+1    |  (or +--+)    <- vertical stub / jog row
+                #   ...        |
+                #   jog_y      +-------+       <- horizontal jog (chosen dynamically)
+                #   jog_y+1    |               <- vertical drop begins
+                #   ...        |
+                #   bottom_y-1 v               <- arrow just above child
+                #   bottom_y   Child           <- node row
 
-                jog_y = top_y + 1  # First row below parent — the horizontal routing row
+                if top_center == bottom_center:
+                    jog_y = top_y + 1
+                else:
+                    jog_y = self._get_jog_row(
+                        top_center, bottom_center, top_y, bottom_y
+                    )
 
-                # Draw vertical stub from parent down to the jog row (at parent's center)
-                self.canvas[jog_y][top_center] = self.options.edge_vertical
+                # Draw vertical stub from parent down to (but not including) the
+                # jog row.  Skip cells that already hold a corner so we don't
+                # clobber a previously drawn edge.
+                for y in range(top_y + 1, jog_y):
+                    if self.canvas[y][top_center] != self.options.edge_cross:
+                        self.canvas[y][top_center] = self.options.edge_vertical
 
                 if top_center != bottom_center:
-                    # Draw corner at the top of the jog
+                    # Corners at both ends of the horizontal jog
                     self.canvas[jog_y][top_center] = self.options.edge_cross
+                    self.canvas[jog_y][bottom_center] = self.options.edge_cross
 
-                    # Draw horizontal segment along the jog row
+                    # Horizontal segment between the corners
                     min_x = min(top_center, bottom_center)
                     max_x = max(top_center, bottom_center)
                     for x in range(min_x + 1, max_x):
                         self.canvas[jog_y][x] = self.options.edge_horizontal
-
-                    # Draw corner where horizontal meets the vertical drop
-                    self.canvas[jog_y][bottom_center] = self.options.edge_cross
+                else:
+                    # Straight down: vertical bar at jog_y too
+                    self.canvas[jog_y][top_center] = self.options.edge_vertical
 
                 # Draw vertical segment from jog row down to child
                 for y in range(jog_y + 1, bottom_y):
                     self.canvas[y][bottom_center] = self.options.edge_vertical
 
-                # Add direction indicators
+                # Direction indicators
                 if is_bidirectional:
-                    # Arrows just below jog row (up) and just above child (down)
                     if bottom_y > jog_y + 1:
                         self.canvas[jog_y + 1][bottom_center] = self.options.get_arrow_for_direction('up')
                     self.canvas[bottom_y - 1][bottom_center] = (
                         self.options.get_arrow_for_direction('down')
                     )
                 else:
-                    if start_y < end_y:  # Top to bottom — arrow points toward child
+                    if start_y < end_y:  # top-to-bottom: arrow points down toward child
                         if bottom_y > jog_y + 1:
                             self.canvas[bottom_y - 1][bottom_center] = (
                                 self.options.get_arrow_for_direction('down')
                             )
-                    else:  # Bottom to top — arrow points toward parent
+                    else:  # bottom-to-top: arrow points up toward parent
                         if bottom_y > jog_y + 1:
                             self.canvas[jog_y + 1][bottom_center] = (
                                 self.options.get_arrow_for_direction('up')
