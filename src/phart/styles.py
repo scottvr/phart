@@ -50,9 +50,6 @@ class EdgeChar:
         self.unicode_char = value
 
 
-# In styles.py
-
-
 @dataclass
 class LayoutOptions:
     """Configuration options for graph layout and appearance.
@@ -80,7 +77,7 @@ class LayoutOptions:
     # Core parameters (existing)
     node_spacing: int = field(default=4)
     margin: int = field(default=1)
-    layer_spacing: int = field(default=3)  # Minimum 3: jog row + vertical + arrow row
+    layer_spacing: int = field(default=2)
     node_style: Union[NodeStyle, str] = NodeStyle.SQUARE
     show_arrows: bool = True
     use_ascii: Optional[bool] = None
@@ -94,6 +91,7 @@ class LayoutOptions:
     min_edge_space: int = field(default=2)
     preserve_triangle_shape: bool = field(default=True)
     triangle_height_ratio: float = field(default=0.866)  # sqrt(3)/2 for equilateral
+    binary_tree_layout: bool = field(default=False)  # Use binary tree positioning
 
     # Instance-specific ID (unchanged)
     instance_id: int = field(init=False)
@@ -131,8 +129,8 @@ class LayoutOptions:
         # Validate core spacing parameters
         if self.node_spacing < 1:
             raise ValueError("node_spacing must be at least 1")
-        if self.layer_spacing < 3:
-            self.layer_spacing = 3  # Clamp to minimum needed for jog row + vertical segment + arrow row
+        if self.layer_spacing < 0:
+            raise ValueError("layer_spacing must be non-negative")
         if self.margin < 1:
             raise ValueError("margin must be >= 1")
 
