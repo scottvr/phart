@@ -50,6 +50,9 @@ class EdgeChar:
         self.unicode_char = value
 
 
+# In styles.py
+
+
 @dataclass
 class LayoutOptions:
     """Configuration options for graph layout and appearance.
@@ -77,7 +80,7 @@ class LayoutOptions:
     # Core parameters (existing)
     node_spacing: int = field(default=4)
     margin: int = field(default=1)
-    layer_spacing: int = field(default=2)
+    layer_spacing: int = field(default=3)
     node_style: Union[NodeStyle, str] = NodeStyle.SQUARE
     show_arrows: bool = True
     use_ascii: Optional[bool] = None
@@ -130,7 +133,7 @@ class LayoutOptions:
         if self.node_spacing < 1:
             raise ValueError("node_spacing must be at least 1")
         if self.layer_spacing < 3:
-        
+            self.layer_spacing = 3 
         if self.margin < 1:
             raise ValueError("margin must be >= 1")
 
