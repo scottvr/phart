@@ -28,14 +28,14 @@ Same with bounding-box mode, which is demonstrated below on a couple of differen
 ### Labelling with label properties
 
 The label support can make an interesting but uninformative diagram suddenly more meaningful, and beautiful IMHO. 
-Take a look at this Unix Family Tree (also from a .dot file); I think it's gorgeous.
+Take a look at this **Unix Family Tree** (also from a .dot file); I think it's gorgeous.
 
 <img width="700" height="600" alt="unix-family-tree" src="https://github.com/user-attachments/assets/1475614f-0f6b-425e-b088-7f121bef27d9" />
 
 
 ### ANSI color edge paths
 
-ANSI color support turned out more interesting than I expected. Not completely satisfied with it, I ended up enabling three modes to the feature: color by source, color by target, and color by path. Here's an example of edge_anchors=ports, color_mode=true, and edge_color_mode=source, using a graph of Golang package dependencies. 
+ANSI color support turned out more interesting than I expected. Not completely satisfied with it, I ended up enabling three modes to the feature: color by source, color by target, and color by path. Here's an example of `edge_anchors=ports`, `color_mode=true`, and `edge_color_mode=source`, using a graph of Golang package dependencies. 
 
 <img width="700" height="600" alt="go-package-dependencies" src="https://github.com/user-attachments/assets/932ce0db-cc4e-42ce-b77e-895ecf80fb56" />
 
