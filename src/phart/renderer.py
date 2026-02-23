@@ -147,21 +147,44 @@ class ASCIIRenderer:
         except UnicodeEncodeError:
             return text.encode("ascii", errors="replace").decode("ascii")
 
+    @staticmethod
+    def _normalize_label_value(label: Any) -> str:
+        """Normalize node labels for single-line display."""
+        text = str(label).strip()
+        if len(text) >= 2 and text[0] == text[-1] and text[0] in {"'", '"'}:
+            text = text[1:-1]
+        text = text.replace("\r\n", " ").replace("\n", " ")
+        return text.strip()
+
+    def _get_display_node_text(self, node: Any) -> str:
+        """Resolve display text for a node key."""
+        if self.options.use_labels:
+            label = self.graph.nodes[node].get("label") if node in self.graph else None
+            if label is not None:
+                normalized = self._normalize_label_value(label)
+                if normalized:
+                    return normalized
+        return str(node)
+
     def _get_widest_node_text_width(self) -> Optional[int]:
         if not self.options.uniform:
             return None
         return max(
-            (len(self.options.get_node_text(str(node))) for node in self.graph.nodes()),
+            (
+                len(self.options.get_node_text(self._get_display_node_text(node)))
+                for node in self.graph.nodes()
+            ),
             default=0,
         )
 
-    def _get_node_dimensions(self, node: str) -> Tuple[int, int]:
+    def _get_node_dimensions(self, node: Any) -> Tuple[int, int]:
         return self.options.get_node_dimensions(
-            str(node), widest_text_width=self._get_widest_node_text_width()
+            self._get_display_node_text(node),
+            widest_text_width=self._get_widest_node_text_width(),
         )
 
     def _get_node_bounds(
-        self, node: str, positions: Dict[str, Tuple[int, int]]
+        self, node: Any, positions: Dict[Any, Tuple[int, int]]
     ) -> Dict[str, int]:
         x, y = positions[node]
         width, height = self._get_node_dimensions(node)
@@ -224,7 +247,7 @@ class ASCIIRenderer:
         return bounds["right"], value
 
     def _compute_edge_anchor_map(
-        self, positions: Dict[str, Tuple[int, int]]
+        self, positions: Dict[Any, Tuple[int, int]]
     ) -> Dict[Tuple[Any, Any], Dict[str, Tuple[int, int]]]:
         """Precompute deterministic per-edge anchors for ports mode."""
         if self.options.edge_anchor_mode != "ports" or not self.options.bboxes:
@@ -292,7 +315,7 @@ class ASCIIRenderer:
         return edge_anchor_map
 
     def _get_edge_anchor_points(
-        self, start: Any, end: Any, positions: Dict[str, Tuple[int, int]]
+        self, start: Any, end: Any, positions: Dict[Any, Tuple[int, int]]
     ) -> Tuple[Tuple[int, int], Tuple[int, int]]:
         start_bounds = self._get_node_bounds(start, positions)
         end_bounds = self._get_node_bounds(end, positions)
@@ -310,8 +333,8 @@ class ASCIIRenderer:
             self._get_center_anchor_for_side(end_bounds, end_side),
         )
 
-    def _draw_node(self, node: str, x: int, y: int) -> None:
-        label = self.options.get_node_text(str(node))
+    def _draw_node(self, node: Any, x: int, y: int) -> None:
+        label = self.options.get_node_text(self._get_display_node_text(node))
         node_width, node_height = self._get_node_dimensions(node)
 
         if not self.options.bboxes:
@@ -371,7 +394,7 @@ class ASCIIRenderer:
         # Draw nodes
         for node, (x, y) in positions.items():
             try:
-                self._draw_node(str(node), x, y)
+                self._draw_node(node, x, y)
             except IndexError as e:
                 pos_info = f"pos=({x},{y}), node={node}"
                 canvas_info = f"canvas={len(self.canvas)}x{len(self.canvas[0])}"
@@ -425,7 +448,7 @@ class ASCIIRenderer:
             f.write(self.render())
 
     def _init_canvas(
-        self, width: int, height: int, positions: Dict[str, Tuple[int, int]]
+        self, width: int, height: int, positions: Dict[Any, Tuple[int, int]]
     ) -> None:
         """
         Initialize blank canvas with given dimensions.
@@ -441,14 +464,14 @@ class ASCIIRenderer:
         # Calculate minimum dimensions needed
         max_right = max(
             (
-                x + self._get_node_dimensions(str(node))[0]
+                x + self._get_node_dimensions(node)[0]
                 for node, (x, _) in positions.items()
             ),
             default=1,
         )
         max_bottom = max(
             (
-                y + self._get_node_dimensions(str(node))[1]
+                y + self._get_node_dimensions(node)[1]
                 for node, (_, y) in positions.items()
             ),
             default=1,
@@ -565,7 +588,7 @@ class ASCIIRenderer:
         self.canvas[y][x] = self._glyph_for_line_dirs(merged_dirs)
 
     def _is_terminal(
-        self, positions: Dict[str, Tuple[int, int]], node: str, x: int, y: int
+        self, positions: Dict[Any, Tuple[int, int]], node: Any, x: int, y: int
     ) -> bool:
         """
         Check if a position represents a node connection point.
@@ -646,7 +669,7 @@ class ASCIIRenderer:
         return latest_jog
 
     def _draw_edge(
-        self, start: str, end: str, positions: Dict[str, Tuple[int, int]]
+        self, start: Any, end: Any, positions: Dict[Any, Tuple[int, int]]
     ) -> None:
         """Draw an edge between two nodes on the canvas."""
         if start not in positions or end not in positions:
@@ -913,6 +936,7 @@ def merge_layout_options(
         "vpad",
         "uniform",
         "edge_anchor_mode",
+        "use_labels",
     }
 
     for field in fields(LayoutOptions):

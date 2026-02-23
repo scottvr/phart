@@ -78,6 +78,26 @@ class TestLayoutManager(unittest.TestCase):
         self.assertEqual(height, max(1, expected_height))
         self.assertEqual(manager.calculate_canvas_dimensions({}), (0, 0))
 
+    def test_layout_width_uses_labels_when_enabled(self):
+        graph = nx.DiGraph()
+        graph.add_node("n1", label="A much longer label")
+        graph.add_node("n2")
+        graph.add_edge("n1", "n2")
+
+        without_labels = LayoutManager(
+            graph,
+            LayoutOptions(node_style=NodeStyle.MINIMAL, use_labels=False, use_ascii=True),
+        )
+        with_labels = LayoutManager(
+            graph,
+            LayoutOptions(node_style=NodeStyle.MINIMAL, use_labels=True, use_ascii=True),
+        )
+
+        self.assertGreater(
+            with_labels._get_node_width("n1"),  # noqa: SLF001
+            without_labels._get_node_width("n1"),  # noqa: SLF001
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

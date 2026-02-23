@@ -109,6 +109,11 @@ def parse_args() -> tuple[argparse.Namespace, list[str]]:
         default="center",
         help="Edge anchor strategy: center (default) or ports (distributed on box edges)",
     )
+    parser.add_argument(
+        "--labels",
+        action="store_true",
+        help="Use node labels (if present) for displayed node text",
+    )
     args, unknown = parser.parse_known_args()
     return args, unknown
 
@@ -139,6 +144,7 @@ def create_layout_options(args: argparse.Namespace) -> LayoutOptions:
         vpad=args.vpad,
         uniform=args.uniform,
         edge_anchor_mode=args.edge_anchors,
+        use_labels=args.labels,
     )
 
 

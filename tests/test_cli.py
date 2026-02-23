@@ -25,6 +25,15 @@ class TestCLI(unittest.TestCase):
         }
         """
         self.test_text_file.write_text(self.dot_content, encoding="utf-8")
+        self.labeled_dot_file = Path(self.temp_dir) / "labeled.dot"
+        labeled_dot = """
+        digraph {
+            n1 [label="Alpha Node"];
+            n2 [label="Beta Node"];
+            n1 -> n2;
+        }
+        """
+        self.labeled_dot_file.write_text(labeled_dot, encoding="utf-8")
         # Create test Python file with main() function
         self.py_main_file = Path(self.temp_dir) / "test_main.py"
         main_content = """
@@ -246,3 +255,12 @@ def demonstrate_graph():
         exit_code = main()
         self.assertEqual(exit_code, 0)
         self.assertNotIn("Error", self.stderr.getvalue())
+
+    def test_labels_flag_uses_node_labels(self):
+        sys.argv = ["phart", "--labels", str(self.labeled_dot_file)]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertIn("Alpha Node", output)
+        self.assertIn("Beta Node", output)
+        self.assertNotIn("n1", output)

@@ -19,7 +19,7 @@ class LayoutManager:
         self._widest_node_text_width = (
             max(
                 (
-                    len(self.options.get_node_text(str(node)))
+                    len(self.options.get_node_text(self._get_node_display_text(node)))
                     for node in self.graph.nodes()
                 ),
                 default=0,
@@ -27,6 +27,25 @@ class LayoutManager:
             if self.options.uniform
             else None
         )
+
+    @staticmethod
+    def _normalize_label_value(label: Any) -> str:
+        """Normalize node labels for single-line display."""
+        text = str(label).strip()
+        if len(text) >= 2 and text[0] == text[-1] and text[0] in {"'", '"'}:
+            text = text[1:-1]
+        text = text.replace("\r\n", " ").replace("\n", " ")
+        return text.strip()
+
+    def _get_node_display_text(self, node: Any) -> str:
+        """Resolve display text for a node key."""
+        if self.options.use_labels:
+            label = self.graph.nodes[node].get("label") if node in self.graph else None
+            if label is not None:
+                normalized = self._normalize_label_value(label)
+                if normalized:
+                    return normalized
+        return str(node)
 
     def _get_node_height(self) -> int:
         """Get rendered node height for current options."""
@@ -37,7 +56,7 @@ class LayoutManager:
         # Preserve prior semantics for 1-line nodes while expanding for boxed nodes.
         return max(1, self.options.layer_spacing) + self._get_node_height() - 1
 
-    def _get_node_width(self, node: str) -> int:
+    def _get_node_width(self, node: Any) -> int:
         """Calculate display width of a node including decorators.
 
         Parameters
@@ -51,7 +70,8 @@ class LayoutManager:
             Total width of node when rendered
         """
         width, _ = self.options.get_node_dimensions(
-            node, widest_text_width=self._widest_node_text_width
+            self._get_node_display_text(node),
+            widest_text_width=self._widest_node_text_width,
         )
         return width
 
@@ -264,7 +284,7 @@ class LayoutManager:
         )
 
         # Calculate node widths
-        widths = {node: self._get_node_width(str(node)) for node in nodes}
+        widths = {node: self._get_node_width(node) for node in nodes}
 
         # Calculate total width needed
         bottom_width = widths[bottom_nodes[0]] + widths[bottom_nodes[1]] + spacing
@@ -310,7 +330,7 @@ class LayoutManager:
         # Calculate base dimensions from full node bounds.
         base_width = max(
             (
-                x + self._get_node_width(str(node)) - 1
+                x + self._get_node_width(node) - 1
                 for node, (x, _) in positions.items()
             ),
             default=0,
@@ -388,13 +408,13 @@ class LayoutManager:
 
         children = list(graph.successors(node))
         if not children:
-            w = self._get_node_width(str(node))
+            w = self._get_node_width(node)
         else:
             total = sum(
                 self._get_subtree_width(graph, c, spacing, cache) for c in children
             )
             total += spacing * (len(children) - 1)
-            w = max(total, self._get_node_width(str(node)))
+            w = max(total, self._get_node_width(node))
 
         cache[node] = w
         return w
@@ -411,7 +431,7 @@ class LayoutManager:
         layer_height: int,
     ) -> None:
         """Recursively assign positions so each node is centred over its subtree."""
-        my_width = self._get_node_width(str(node))
+        my_width = self._get_node_width(node)
         slot_width = subtree_widths[node]
 
         # Centre the node label within its allocated slot
@@ -598,9 +618,7 @@ class LayoutManager:
 
         for component in components:
             layers = _build_layers(nx.DiGraph(component))
-            widths = {
-                node: self._get_node_width(str(node)) for node in component.nodes()
-            }
+            widths = {node: self._get_node_width(node) for node in component.nodes()}
             ordered_layers = [
                 sorted(layer, key=lambda n: str(n)) for layer in layers if layer
             ]
@@ -635,7 +653,7 @@ class LayoutManager:
         # Calculate width needed for full node bounds.
         max_node_end = 0
         for node, (x, _) in positions.items():
-            node_end = x + self._get_node_width(str(node))
+            node_end = x + self._get_node_width(node)
             max_node_end = max(max_node_end, node_end)
 
         # Add configured padding plus extra space for edge decorators

@@ -120,6 +120,7 @@ class LayoutOptions:
     vpad: int = field(default=0)  # Vertical inner padding for boxed nodes
     uniform: bool = field(default=False)  # Use widest node text width for all boxes
     edge_anchor_mode: str = field(default="center")  # center or ports
+    use_labels: bool = field(default=False)  # Prefer node labels for display text
 
     # Instance-specific ID (unchanged)
     instance_id: int = field(init=False)

@@ -133,6 +133,40 @@ class TestASCIIRenderer(unittest.TestCase):
                     self.assertIn("A", result)
                     self.assertIn("B", result)
 
+    def test_use_labels_prefers_node_labels(self):
+        graph = nx.DiGraph()
+        graph.add_node("n1", label="Alpha")
+        graph.add_node("n2")
+        graph.add_edge("n1", "n2")
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_labels=True,
+                use_ascii=True,
+            ),
+        )
+        result = renderer.render()
+        self.assertIn("Alpha", result)
+        self.assertIn("n2", result)
+        self.assertNotIn("n1", result)
+
+    def test_use_labels_normalizes_quoted_and_multiline_labels(self):
+        graph = nx.DiGraph()
+        graph.add_node("n1", label='"Alpha\nBeta"')
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_labels=True,
+                use_ascii=True,
+            ),
+        )
+        result = renderer.render()
+        self.assertIn("Alpha Beta", result)
+
     def test_cycle_handling(self):
         """Test proper handling of cycles in graphs."""
         renderer = ASCIIRenderer(self.cycle)
