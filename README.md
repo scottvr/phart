@@ -148,7 +148,7 @@ arguments for the script you've given it as an input file.  We will just separat
 switches meant for phart from any switches meant for the script it is loading by an extra
  `--`, like so:
 
-`phart --charset unicode  --style bbox --style minimal  --hpad 1 --binary-tree 
+`phart --charset unicode --style minimal  --hpad 1 --binary-tree 
   --node-spacing 1 --layer-spacing 4  --vpad 0  --edge-anchors ports --bboxes 
   deostroll/collatz.py -- 3`
 
