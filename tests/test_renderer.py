@@ -494,6 +494,47 @@ class TestASCIIRenderer(unittest.TestCase):
         stripped = re.sub(r"\x1b\[[0-9;]*m", "", colored)
         self.assertEqual(stripped, plain)
 
+    def test_edge_colors_follow_target_node_colors(self):
+        graph = nx.DiGraph([("A", "B"), ("A", "C")])
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=False,
+                ansi_colors=True,
+                bboxes=True,
+                layer_spacing=4,
+            ),
+        )
+        renderer.render()
+        self.assertEqual(
+            renderer._edge_color_map[("A", "B")],  # noqa: SLF001
+            renderer._node_color_map["B"],  # noqa: SLF001
+        )
+        self.assertEqual(
+            renderer._edge_color_map[("A", "C")],  # noqa: SLF001
+            renderer._node_color_map["C"],  # noqa: SLF001
+        )
+
+    def test_shared_edge_segments_become_uncolored_on_conflict(self):
+        graph = nx.DiGraph([("A", "B"), ("A", "C"), ("A", "D")])
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=False,
+                ansi_colors=True,
+                bboxes=True,
+                hpad=1,
+                vpad=0,
+                layer_spacing=4,
+            ),
+        )
+        renderer.render()
+        self.assertGreater(len(renderer._edge_conflict_cells), 0)  # noqa: SLF001
+        for x, y in renderer._edge_conflict_cells:  # noqa: SLF001
+            self.assertIsNone(renderer._color_canvas[y][x])  # noqa: SLF001
+
     def test_file_writing(self):
         """Test writing to file with proper encoding."""
 
