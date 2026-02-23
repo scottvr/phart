@@ -374,7 +374,7 @@ or using requirements file
 pip install -r requirements\extra.txt
 ```
 
-### Example
+### DOT Example
 ```bash
 $ python
 >>> from phart import ASCIIRenderer
