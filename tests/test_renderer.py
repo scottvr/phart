@@ -535,6 +535,46 @@ class TestASCIIRenderer(unittest.TestCase):
         for x, y in renderer._edge_conflict_cells:  # noqa: SLF001
             self.assertIsNone(renderer._color_canvas[y][x])  # noqa: SLF001
 
+    def test_edge_color_mode_source(self):
+        graph = nx.DiGraph([("A", "B"), ("C", "D")])
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=False,
+                ansi_colors=True,
+                edge_color_mode="source",
+                bboxes=True,
+                layer_spacing=4,
+            ),
+        )
+        renderer.render()
+        self.assertEqual(
+            renderer._edge_color_map[("A", "B")],  # noqa: SLF001
+            renderer._node_color_map["A"],  # noqa: SLF001
+        )
+        self.assertEqual(
+            renderer._edge_color_map[("C", "D")],  # noqa: SLF001
+            renderer._node_color_map["C"],  # noqa: SLF001
+        )
+
+    def test_edge_color_mode_path(self):
+        graph = nx.DiGraph([("A", "B"), ("A", "C"), ("B", "D")])
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=False,
+                ansi_colors=True,
+                edge_color_mode="path",
+                bboxes=True,
+                layer_spacing=4,
+            ),
+        )
+        renderer.render()
+        colors = set(renderer._edge_color_map.values())  # noqa: SLF001
+        self.assertGreaterEqual(len(colors), 2)
+
     def test_file_writing(self):
         """Test writing to file with proper encoding."""
 
@@ -622,6 +662,10 @@ class TestLayoutOptions(unittest.TestCase):
     def test_invalid_edge_anchor_mode(self):
         with self.assertRaises(ValueError):
             LayoutOptions(edge_anchor_mode="invalid")
+
+    def test_invalid_edge_color_mode(self):
+        with self.assertRaises(ValueError):
+            LayoutOptions(edge_color_mode="invalid")
 
     def test_merge_layout_options_cli_overrides_binary_tree_layout(self):
         script_options = LayoutOptions(binary_tree_layout=False, use_ascii=True)

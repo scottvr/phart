@@ -193,12 +193,19 @@ class ASCIIRenderer:
                 str(edge[1]),
             ),
         )
+
+        edge_mode = self.options.edge_color_mode
         for idx, edge in enumerate(sorted_edges):
-            target_color = self._node_color_map.get(edge[1])
-            if target_color is not None:
-                self._edge_color_map[edge] = target_color
-            else:
-                self._edge_color_map[edge] = ANSI_SUBWAY_PALETTE[idx % len(ANSI_SUBWAY_PALETTE)]
+            if edge_mode == "target":
+                color = self._node_color_map.get(edge[1])
+            elif edge_mode == "source":
+                color = self._node_color_map.get(edge[0])
+            else:  # path
+                color = ANSI_SUBWAY_PALETTE[idx % len(ANSI_SUBWAY_PALETTE)]
+
+            if color is None:
+                color = ANSI_SUBWAY_PALETTE[idx % len(ANSI_SUBWAY_PALETTE)]
+            self._edge_color_map[edge] = color
 
     def _paint_cell(self, x: int, y: int, char: str, color: Optional[str] = None) -> None:
         self.canvas[y][x] = char
@@ -1101,6 +1108,7 @@ def merge_layout_options(
         "edge_anchor_mode",
         "use_labels",
         "ansi_colors",
+        "edge_color_mode",
     }
 
     for field in fields(LayoutOptions):

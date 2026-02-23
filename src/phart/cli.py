@@ -119,6 +119,12 @@ def parse_args() -> tuple[argparse.Namespace, list[str]]:
         action="store_true",
         help="Enable ANSI color output (unicode mode only)",
     )
+    parser.add_argument(
+        "--edge-color-mode",
+        choices=["target", "source", "path"],
+        default="target",
+        help="Edge coloring model when --colors is enabled (default: target)",
+    )
     args, unknown = parser.parse_known_args()
     return args, unknown
 
@@ -151,6 +157,7 @@ def create_layout_options(args: argparse.Namespace) -> LayoutOptions:
         edge_anchor_mode=args.edge_anchors,
         use_labels=args.labels,
         ansi_colors=args.colors,
+        edge_color_mode=args.edge_color_mode,
     )
 
 
