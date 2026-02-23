@@ -98,6 +98,78 @@ class TestLayoutManager(unittest.TestCase):
             without_labels._get_node_width("n1"),  # noqa: SLF001
         )
 
+    def test_bfs_layout_strategy_layers_by_distance(self):
+        graph = nx.DiGraph(
+            [("A", "B"), ("A", "C"), ("B", "D"), ("C", "E"), ("E", "F")]
+        )
+        manager = LayoutManager(
+            graph,
+            LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="bfs",
+                layer_spacing=4,
+                use_ascii=True,
+            ),
+        )
+        positions, _, _ = manager.calculate_layout()
+
+        self.assertEqual(positions["B"][1], positions["C"][1])
+        self.assertGreater(positions["D"][1], positions["B"][1])
+        self.assertEqual(positions["D"][1], positions["E"][1])
+        self.assertGreater(positions["F"][1], positions["E"][1])
+
+    def test_bipartite_layout_strategy_respects_side_hints(self):
+        graph = nx.DiGraph()
+        graph.add_edge("ROOT", "LEFT_CHILD", side="left")
+        graph.add_edge("ROOT", "RIGHT_CHILD", side="right")
+
+        manager = LayoutManager(
+            graph,
+            LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="bipartite",
+                layer_spacing=4,
+                use_ascii=True,
+            ),
+        )
+        positions, _, _ = manager.calculate_layout()
+
+        self.assertLess(positions["LEFT_CHILD"][0], positions["RIGHT_CHILD"][0])
+
+    def test_circular_layout_strategy_spreads_nodes_without_overlap(self):
+        graph = nx.DiGraph(
+            [
+                ("A", "B"),
+                ("B", "C"),
+                ("C", "D"),
+                ("D", "E"),
+                ("E", "F"),
+                ("F", "A"),
+            ]
+        )
+        manager = LayoutManager(
+            graph,
+            LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="circular",
+                layer_spacing=4,
+                use_ascii=True,
+            ),
+        )
+        positions, _, _ = manager.calculate_layout()
+
+        self.assertGreaterEqual(len({x for x, _ in positions.values()}), 3)
+        self.assertGreaterEqual(len({y for _, y in positions.values()}), 3)
+
+        nodes = list(graph.nodes())
+        for idx, node_a in enumerate(nodes):
+            rect_a = manager._node_rect(node_a, *positions[node_a])  # noqa: SLF001
+            for node_b in nodes[idx + 1 :]:
+                rect_b = manager._node_rect(node_b, *positions[node_b])  # noqa: SLF001
+                self.assertFalse(
+                    manager._rectangles_overlap(rect_a, rect_b)  # noqa: SLF001
+                )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -113,6 +113,14 @@ def parse_args() -> tuple[argparse.Namespace, list[str]]:
         help="Enable binary tree layout (respects edge 'side' attributes)",
     )
     parser.add_argument(
+        "--layout",
+        "--layout-strategy",
+        choices=["auto", "bfs", "bipartite", "circular"],
+        dest="layout_strategy",
+        default="auto",
+        help="Node positioning strategy (default: auto)",
+    )
+    parser.add_argument(
         "--flow-direction",
         "--flow",
         choices=["down", "up", "left", "right"],
@@ -186,6 +194,7 @@ def create_layout_options(args: argparse.Namespace) -> LayoutOptions:
         layer_spacing=args.layer_spacing,
         use_ascii=(args.charset == CharSet.ASCII or args.use_legacy_ascii),
         binary_tree_layout=args.binary_tree,
+        layout_strategy=args.layout_strategy,
         flow_direction=args.flow_direction,
         bboxes=args.bboxes,
         hpad=args.hpad,

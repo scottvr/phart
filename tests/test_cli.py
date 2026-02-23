@@ -308,3 +308,20 @@ def demonstrate_graph():
 
         self.assertEqual(without_colors, with_none)
         self.assertNotIn("\x1b[", with_none)
+
+    def test_layout_strategy_flag(self):
+        sys.argv = ["phart", "--layout", "bfs", str(self.test_text_file)]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        self.assertNotIn("Error", self.stderr.getvalue())
+
+    def test_layout_strategy_alias_flag(self):
+        sys.argv = [
+            "phart",
+            "--layout-strategy",
+            "circular",
+            str(self.test_text_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        self.assertNotIn("Error", self.stderr.getvalue())

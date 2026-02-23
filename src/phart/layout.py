@@ -4,7 +4,9 @@ This module handles the calculation of node positions and edge routing
 for ASCII graph visualization.
 """
 
-from typing import Dict, Tuple, Any, Set, List
+from typing import Dict, Tuple, Any, Set, List, Optional
+import math
+from collections import deque
 import networkx as nx
 from .styles import LayoutOptions
 
@@ -74,6 +76,38 @@ class LayoutManager:
             widest_text_width=self._widest_node_text_width,
         )
         return width
+
+    def _node_rect(
+        self, node: Any, x: int, y: int, node_height: Optional[int] = None
+    ) -> Tuple[int, int, int, int]:
+        """Get node rectangle as (left, top, right, bottom)."""
+        width = self._get_node_width(node)
+        h = node_height if node_height is not None else self._get_node_height()
+        return (x, y, x + width - 1, y + h - 1)
+
+    @staticmethod
+    def _rectangles_overlap(
+        a: Tuple[int, int, int, int], b: Tuple[int, int, int, int]
+    ) -> bool:
+        """Return True if two axis-aligned rectangles overlap."""
+        return not (a[2] < b[0] or b[2] < a[0] or a[3] < b[1] or b[3] < a[1])
+
+    def _normalize_positions_to_origin(
+        self, positions: Dict[Any, Tuple[int, int]]
+    ) -> Dict[str, Tuple[int, int]]:
+        """Shift positions so minimum x/y start at zero."""
+        if not positions:
+            return {}
+
+        min_x = min(x for x, _ in positions.values())
+        min_y = min(y for _, y in positions.values())
+        if min_x >= 0 and min_y >= 0:
+            return {node: (int(x), int(y)) for node, (x, y) in positions.items()}
+
+        return {
+            node: (int(x - min_x), int(y - min_y))
+            for node, (x, y) in positions.items()
+        }
 
     def _binary_tree_node_sorter(
         self,
@@ -311,18 +345,24 @@ class LayoutManager:
             return {}, 0, 0
 
         effective_spacing = self.options.get_effective_node_spacing(has_edges=True)
+        strategy = self.options.layout_strategy
 
-        # For directed graphs with 3 nodes, check if we should use vertical layout
-        # Get positions using appropriate layout method
-        if (
-            isinstance(self.graph, nx.DiGraph)
-            and len(self.graph) == 3
-            and self._should_use_vertical_layout(self.graph)
-        ):
-            positions = self._layout_vertical(self.graph, effective_spacing)
+        if strategy == "bfs":
+            positions = self._layout_bfs(self.graph, effective_spacing)
+        elif strategy == "bipartite":
+            positions = self._layout_bipartite(self.graph, effective_spacing)
+        elif strategy == "circular":
+            positions = self._layout_circular(self.graph, effective_spacing)
         else:
-            # Fallback to standard hierarchical layout
-            positions = self._layout_hierarchical(self.graph, effective_spacing)
+            # Auto mode preserves the original heuristics.
+            if (
+                isinstance(self.graph, nx.DiGraph)
+                and len(self.graph) == 3
+                and self._should_use_vertical_layout(self.graph)
+            ):
+                positions = self._layout_vertical(self.graph, effective_spacing)
+            else:
+                positions = self._layout_hierarchical(self.graph, effective_spacing)
 
         # Apply flow direction transformation
         positions = self._transform_positions(positions)
@@ -508,7 +548,9 @@ class LayoutManager:
             and component_count == 1
         )
         if not is_parent_unique:
-            return self._layout_layered_fallback(graph, spacing, layer_height)
+            return self._layout_layered_fallback(
+                graph, spacing, layer_height, layer_mode="auto"
+            )
 
         # Subtree-aware (Reingold-Tilford-style) layout.
         #
@@ -544,59 +586,174 @@ class LayoutManager:
         # (The old centred-layer layout has been superseded by the subtree-aware
         #  layout above and is intentionally removed.)
 
+    def _layout_bfs(self, graph: nx.DiGraph, spacing: int) -> Dict[str, Tuple[int, int]]:
+        """Layer nodes by BFS depth regardless of DAG status."""
+        layer_height = self._get_layer_step()
+        return self._layout_layered_fallback(
+            graph, spacing, layer_height, layer_mode="bfs"
+        )
+
+    @staticmethod
+    def _classify_side_value(value: Any) -> Optional[int]:
+        """Map edge side hints to bipartite partition index (0=left, 1=right)."""
+        if value is None:
+            return None
+        side_str = str(value).strip().lower()
+        if side_str in {"left", "l", "0"}:
+            return 0
+        if side_str in {"right", "r", "1"}:
+            return 1
+        return None
+
+    def _layout_bipartite(
+        self, graph: nx.DiGraph, spacing: int
+    ) -> Dict[str, Tuple[int, int]]:
+        """Two-column layout using side hints first, then bipartite inference."""
+        if not graph.nodes():
+            return {}
+
+        side_scores: Dict[Any, int] = {node: 0 for node in graph.nodes()}
+        for u, v, data in graph.edges(data=True):
+            side_hint = (
+                data.get("side")
+                or data.get("position")
+                or data.get("dir")
+                or data.get("child")
+            )
+            cls = self._classify_side_value(side_hint)
+            if cls is None:
+                continue
+            if cls == 0:
+                side_scores[v] -= 2
+                side_scores[u] += 1
+            else:
+                side_scores[v] += 2
+                side_scores[u] -= 1
+
+        left_nodes: Set[Any] = {n for n, s in side_scores.items() if s < 0}
+        right_nodes: Set[Any] = {n for n, s in side_scores.items() if s > 0}
+        unresolved = set(graph.nodes()) - left_nodes - right_nodes
+
+        if unresolved:
+            try:
+                colors = nx.algorithms.bipartite.color(nx.Graph(graph))
+            except nx.NetworkXError:
+                colors = {}
+            for node in list(unresolved):
+                if node not in colors:
+                    continue
+                if colors[node] == 0:
+                    left_nodes.add(node)
+                else:
+                    right_nodes.add(node)
+                unresolved.discard(node)
+
+        if unresolved:
+            bfs_layers = self._build_layers_bfs(nx.DiGraph(graph))
+            depth_map: Dict[Any, int] = {}
+            for depth, layer in enumerate(bfs_layers):
+                for node in layer:
+                    depth_map[node] = depth
+            for node in list(unresolved):
+                depth = depth_map.get(node, 0)
+                if depth % 2 == 0:
+                    left_nodes.add(node)
+                else:
+                    right_nodes.add(node)
+                unresolved.discard(node)
+
+        if not left_nodes or not right_nodes:
+            all_nodes = sorted(graph.nodes(), key=lambda n: str(n))
+            midpoint = max(1, len(all_nodes) // 2)
+            left_nodes = set(all_nodes[:midpoint])
+            right_nodes = set(all_nodes[midpoint:])
+
+        left_ordered = sorted(left_nodes, key=lambda n: str(n))
+        right_ordered = sorted(right_nodes, key=lambda n: str(n))
+
+        left_col_width = max((self._get_node_width(n) for n in left_ordered), default=1)
+        right_col_width = max(
+            (self._get_node_width(n) for n in right_ordered), default=1
+        )
+        column_gap = max(spacing, self.options.get_effective_node_spacing(True))
+        x_left = 0
+        x_right = left_col_width + column_gap
+        layer_height = self._get_layer_step()
+
+        max_rows = max(len(left_ordered), len(right_ordered), 1)
+        left_start_y = ((max_rows - len(left_ordered)) * layer_height) // 2
+        right_start_y = ((max_rows - len(right_ordered)) * layer_height) // 2
+
+        positions: Dict[Any, Tuple[int, int]] = {}
+        for idx, node in enumerate(left_ordered):
+            x = x_left + (left_col_width - self._get_node_width(node)) // 2
+            positions[node] = (x, left_start_y + (idx * layer_height))
+
+        for idx, node in enumerate(right_ordered):
+            x = x_right + (right_col_width - self._get_node_width(node)) // 2
+            positions[node] = (x, right_start_y + (idx * layer_height))
+
+        return self._normalize_positions_to_origin(positions)
+
+    def _layout_circular(
+        self, graph: nx.DiGraph, spacing: int
+    ) -> Dict[str, Tuple[int, int]]:
+        """Place nodes around a circle and nudge to avoid node overlaps."""
+        nodes = sorted(graph.nodes(), key=lambda n: str(n))
+        if not nodes:
+            return {}
+
+        node_height = self._get_node_height()
+        layer_height = self._get_layer_step()
+        max_node_width = max((self._get_node_width(n) for n in nodes), default=1)
+
+        node_count = len(nodes)
+        circumference_hint = node_count * (max_node_width + spacing + 1)
+        radius_x = max(int(math.ceil(circumference_hint / (2 * math.pi))), max_node_width)
+        radius_y = max(layer_height, int(radius_x * 0.7))
+        center_x = radius_x + max_node_width
+        center_y = radius_y + node_height
+
+        positions: Dict[Any, Tuple[int, int]] = {}
+        placed_rects: List[Tuple[int, int, int, int]] = []
+
+        for idx, node in enumerate(nodes):
+            theta = (-math.pi / 2) + ((2 * math.pi * idx) / max(node_count, 1))
+            node_width = self._get_node_width(node)
+            proposed_x = int(round(center_x + (radius_x * math.cos(theta)))) - (
+                node_width // 2
+            )
+            proposed_y = int(round(center_y + (radius_y * math.sin(theta))))
+
+            candidate_x = proposed_x
+            candidate_y = proposed_y
+            candidate_rect = self._node_rect(node, candidate_x, candidate_y, node_height)
+            while any(
+                self._rectangles_overlap(candidate_rect, existing)
+                for existing in placed_rects
+            ):
+                candidate_y += layer_height
+                candidate_rect = self._node_rect(
+                    node, candidate_x, candidate_y, node_height
+                )
+
+            positions[node] = (candidate_x, candidate_y)
+            placed_rects.append(candidate_rect)
+
+        return self._normalize_positions_to_origin(positions)
+
     def _layout_layered_fallback(
         self,
         graph: nx.DiGraph,
         spacing: int,
         layer_height: int,
+        layer_mode: str = "auto",
     ) -> Dict[str, Tuple[int, int]]:
         """Fallback layered layout for general DAGs and non-tree graphs.
 
         Nodes are assigned to topological layers (for DAGs) or BFS-like depth
         layers (for cyclic/non-DAG directed graphs), then centered per layer.
         """
-
-        def _build_layers(subgraph: nx.DiGraph) -> List[List[Any]]:
-            if subgraph.is_directed() and nx.is_directed_acyclic_graph(subgraph):
-                return [list(layer) for layer in nx.topological_generations(subgraph)]
-
-            roots: List[Any]
-            if subgraph.is_directed():
-                roots = [n for n, d in subgraph.in_degree() if d == 0]
-                if not roots:
-                    roots = [
-                        max(subgraph.nodes(), key=lambda n: subgraph.out_degree(n))
-                    ]
-            else:
-                roots = [max(subgraph.nodes(), key=lambda n: subgraph.degree(n))]
-
-            node_depth: Dict[Any, int] = {}
-            queue: List[Any] = list(roots)
-            for root in roots:
-                node_depth[root] = 0
-
-            while queue:
-                current = queue.pop(0)
-                current_depth = node_depth[current]
-                neighbors = (
-                    list(subgraph.successors(current))
-                    if subgraph.is_directed()
-                    else list(subgraph.neighbors(current))
-                )
-                for neighbor in neighbors:
-                    next_depth = current_depth + 1
-                    if neighbor not in node_depth or next_depth < node_depth[neighbor]:
-                        node_depth[neighbor] = next_depth
-                        queue.append(neighbor)
-
-            for node in subgraph.nodes():
-                node_depth.setdefault(node, 0)
-
-            max_depth = max(node_depth.values(), default=0)
-            layers: List[List[Any]] = [[] for _ in range(max_depth + 1)]
-            for node, depth in node_depth.items():
-                layers[depth].append(node)
-            return layers
 
         components = (
             [
@@ -617,7 +774,10 @@ class LayoutManager:
         component_gap = layer_height
 
         for component in components:
-            layers = _build_layers(nx.DiGraph(component))
+            if layer_mode == "bfs":
+                layers = self._build_layers_bfs(nx.DiGraph(component))
+            else:
+                layers = self._build_layers_auto(nx.DiGraph(component))
             widths = {node: self._get_node_width(node) for node in component.nodes()}
             ordered_layers = [
                 sorted(layer, key=lambda n: str(n)) for layer in layers if layer
@@ -642,6 +802,48 @@ class LayoutManager:
             y_offset += (len(ordered_layers) * layer_height) + component_gap
 
         return positions
+
+    def _build_layers_auto(self, subgraph: nx.DiGraph) -> List[List[Any]]:
+        if subgraph.is_directed() and nx.is_directed_acyclic_graph(subgraph):
+            return [list(layer) for layer in nx.topological_generations(subgraph)]
+        return self._build_layers_bfs(subgraph)
+
+    def _build_layers_bfs(self, subgraph: nx.DiGraph) -> List[List[Any]]:
+        roots: List[Any]
+        if subgraph.is_directed():
+            roots = [n for n, d in subgraph.in_degree() if d == 0]
+            if not roots:
+                roots = [max(subgraph.nodes(), key=lambda n: subgraph.out_degree(n))]
+        else:
+            roots = [max(subgraph.nodes(), key=lambda n: subgraph.degree(n))]
+
+        node_depth: Dict[Any, int] = {}
+        queue: deque[Any] = deque(roots)
+        for root in roots:
+            node_depth[root] = 0
+
+        while queue:
+            current = queue.popleft()
+            current_depth = node_depth[current]
+            neighbors = (
+                list(subgraph.successors(current))
+                if subgraph.is_directed()
+                else list(subgraph.neighbors(current))
+            )
+            for neighbor in neighbors:
+                next_depth = current_depth + 1
+                if neighbor not in node_depth or next_depth < node_depth[neighbor]:
+                    node_depth[neighbor] = next_depth
+                    queue.append(neighbor)
+
+        for node in subgraph.nodes():
+            node_depth.setdefault(node, 0)
+
+        max_depth = max(node_depth.values(), default=0)
+        layers: List[List[Any]] = [[] for _ in range(max_depth + 1)]
+        for node, depth in node_depth.items():
+            layers[depth].append(node)
+        return layers
 
     def calculate_canvas_dimensions(
         self, positions: Dict[str, Tuple[int, int]]

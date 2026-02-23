@@ -665,6 +665,10 @@ class TestLayoutOptions(unittest.TestCase):
         with self.assertRaises(ValueError):
             LayoutOptions(edge_anchor_mode="invalid")
 
+    def test_invalid_layout_strategy(self):
+        with self.assertRaises(ValueError):
+            LayoutOptions(layout_strategy="invalid")
+
     def test_invalid_edge_color_mode(self):
         with self.assertRaises(ValueError):
             LayoutOptions(edge_color_mode="invalid")
