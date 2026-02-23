@@ -222,7 +222,7 @@ The acronym was a fortuitous accident from the non-abbreviated words that the le
 
 ## Really, why?
 
-When I point out thata phart is not a Perl or a PHP webapp, it may appear that I am
+When I point out that phart is not a Perl or a PHP webapp, it may appear that I am
 *throwing shade* at the existing solutions, but it is meant in a good-hearted way. 
 Wrapping the OG perl Graph::Easy is a straightforeward way to go about it, and a web interface to the same is a project I might create have created as well, but it is no 
 longer a certainty that a system you are working on will have Perl installed these days, 
