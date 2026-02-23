@@ -837,9 +837,9 @@ class LayoutManager:
             return self._layout_hierarchical(graph, spacing)
     
     def _layout_spring(
-        self, graph: nx.DiGraph,
-        seed: int=42,
-    ): 
+        self, graph: nx.DiGraph, spacing: int, seed: int = 42
+    ) -> Dict[str, Tuple[int, int]]:
+        """Fruchterman-Reingold spring layout."""
         coord_map = nx.spring_layout(nx.Graph(graph), seed=seed)
         return self._layout_from_coordinate_map(coord_map, spacing)
 

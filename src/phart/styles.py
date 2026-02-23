@@ -116,7 +116,7 @@ class LayoutOptions:
     binary_tree_layout: bool = field(default=False)  # Use binary tree positioning
     layout_strategy: str = field(
         default="auto"
-    )  # auto, bfs, bipartite, circular, planar, kamada_kawai, random, multipartite
+    )  # auto, bfs, bipartite, circular, planar, kamada_kawai, spring, random, multipartite
     flow_direction: FlowDirection = field(default=FlowDirection.DOWN)
     bboxes: bool = field(default=False)  # Draw line-art boxes around nodes
     hpad: int = field(default=1)  # Horizontal inner padding for boxed nodes
@@ -229,12 +229,13 @@ class LayoutOptions:
             "circular",
             "planar",
             "kamada_kawai",
+            "spring",
             "random",
             "multipartite",
         }:
             raise ValueError(
                 "layout_strategy must be one of: auto, bfs, bipartite, circular, "
-                "planar, kamada_kawai, random, multipartite"
+                "planar, kamada_kawai, spring, random, multipartite"
             )
 
         if isinstance(self.edge_color_mode, str):

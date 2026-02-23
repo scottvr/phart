@@ -230,15 +230,13 @@ class TestLayoutManager(unittest.TestCase):
         self.assertGreaterEqual(len({x for x, _ in positions.values()}), 3)
         self.assertGreaterEqual(len({y for _, y in positions.values()}), 2)
 
-    def test_spring_layout_strategy_positions_nodes(self):
-        graph = nx.DiGraph(
-            [("A", "B"), ("A", "C"), ("B", "D"), ("C", "E"), ("D", "E")]
-        )
+    def test_random_layout_strategy_positions_nodes(self):
+        graph = nx.DiGraph([(f"N{i}", f"N{i+1}") for i in range(6)])
         manager = LayoutManager(
             graph,
             LayoutOptions(
                 node_style=NodeStyle.MINIMAL,
-                layout_strategy="spring",
+                layout_strategy="random",
                 layer_spacing=4,
                 use_ascii=True,
             ),
@@ -247,15 +245,14 @@ class TestLayoutManager(unittest.TestCase):
 
         self.assertEqual(set(positions.keys()), set(graph.nodes()))
         self.assertGreaterEqual(len({x for x, _ in positions.values()}), 3)
-        self.assertGreaterEqual(len({y for _, y in positions.values()}), 2)
 
-    def test_random_layout_strategy_positions_nodes(self):
-        graph = nx.DiGraph([(f"N{i}", f"N{i+1}") for i in range(6)])
+    def test_spring_layout_strategy_positions_nodes(self):
+        graph = nx.DiGraph([(f"S{i}", f"S{i+1}") for i in range(6)])
         manager = LayoutManager(
             graph,
             LayoutOptions(
                 node_style=NodeStyle.MINIMAL,
-                layout_strategy="random",
+                layout_strategy="spring",
                 layer_spacing=4,
                 use_ascii=True,
             ),

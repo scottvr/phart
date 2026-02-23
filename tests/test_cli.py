@@ -327,7 +327,13 @@ def demonstrate_graph():
         self.assertNotIn("Error", self.stderr.getvalue())
 
     def test_layout_strategy_phase2_values(self):
-        for strategy in ("planar", "kamada-kawai", "random", "multipartite"):
+        for strategy in (
+            "planar",
+            "kamada-kawai",
+            "spring",
+            "random",
+            "multipartite",
+        ):
             self.stdout.truncate(0)
             self.stdout.seek(0)
             self.stderr.truncate(0)
