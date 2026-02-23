@@ -359,6 +359,12 @@ class LayoutManager:
             positions = self._layout_kamada_kawai(self.graph, effective_spacing)
         elif strategy == "spring":
             positions = self._layout_spring(self.graph, effective_spacing)
+        elif strategy == "arf":
+            positions = self._layout_arf(self.graph, effective_spacing)
+        elif strategy == "spiral":
+            positions = self._layout_spiral(self.graph, effective_spacing)
+        elif strategy == "shell":
+            positions = self._layout_shell(self.graph, effective_spacing)
         elif strategy == "random":
             positions = self._layout_random(self.graph, effective_spacing)
         elif strategy == "multipartite":
@@ -753,6 +759,16 @@ class LayoutManager:
         return self._normalize_positions_to_origin(positions)
 
     @staticmethod
+    def _to_ordered_undirected_graph(graph: nx.DiGraph) -> nx.Graph:
+        """Create a deterministic undirected graph preserving stable node order."""
+        ordered_graph = nx.Graph()
+        ordered_graph.add_nodes_from(sorted(graph.nodes(), key=lambda n: str(n)))
+        ordered_graph.add_edges_from(
+            sorted(graph.edges(), key=lambda edge: (str(edge[0]), str(edge[1])))
+        )
+        return ordered_graph
+
+    @staticmethod
     def _as_float_xy(coord: Any) -> Tuple[float, float]:
         """Convert a coordinate-like value to a float pair."""
         try:
@@ -841,6 +857,39 @@ class LayoutManager:
     ) -> Dict[str, Tuple[int, int]]:
         """Fruchterman-Reingold spring layout."""
         coord_map = nx.spring_layout(nx.Graph(graph), seed=seed)
+        return self._layout_from_coordinate_map(coord_map, spacing)
+
+    def _layout_arf(
+        self, graph: nx.DiGraph, spacing: int, seed: int = 42
+    ) -> Dict[str, Tuple[int, int]]:
+        """Attractive-repulsive force-directed layout."""
+        arf_layout = getattr(nx, "arf_layout", None)
+        if arf_layout is None:
+            return self._layout_spring(graph, spacing, seed=seed)
+
+        ordered_graph = self._to_ordered_undirected_graph(graph)
+        try:
+            coord_map = arf_layout(ordered_graph, seed=seed)
+        except TypeError:
+            coord_map = arf_layout(ordered_graph)
+        return self._layout_from_coordinate_map(coord_map, spacing)
+
+    def _layout_spiral(
+        self, graph: nx.DiGraph, spacing: int
+    ) -> Dict[str, Tuple[int, int]]:
+        """Spiral layout for progressive radial sequencing."""
+        ordered_graph = self._to_ordered_undirected_graph(graph)
+        coord_map = nx.spiral_layout(ordered_graph)
+        return self._layout_from_coordinate_map(coord_map, spacing)
+
+    def _layout_shell(self, graph: nx.DiGraph, spacing: int) -> Dict[str, Tuple[int, int]]:
+        """Concentric shell layout using BFS-derived rings."""
+        ordered_graph = self._to_ordered_undirected_graph(graph)
+        layers = self._build_layers_bfs(nx.DiGraph(graph))
+        shells = [sorted(layer, key=lambda n: str(n)) for layer in layers if layer]
+        if not shells:
+            shells = [sorted(ordered_graph.nodes(), key=lambda n: str(n))]
+        coord_map = nx.shell_layout(ordered_graph, nlist=shells)
         return self._layout_from_coordinate_map(coord_map, spacing)
 
     def _layout_kamada_kawai(
