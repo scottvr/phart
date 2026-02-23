@@ -142,6 +142,7 @@ def main() -> Optional[int]:
                 return 2
 
             old_argv = sys.argv
+            old_default_options = ASCIIRenderer.default_options
             sys.argv = [str(args.input)] + module_argv
 
             try:
@@ -167,6 +168,7 @@ def main() -> Optional[int]:
        
             finally:
                 sys.argv = old_argv
+                ASCIIRenderer.default_options = old_default_options
 
         else:
             if unknown:

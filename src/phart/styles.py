@@ -165,6 +165,8 @@ class LayoutOptions:
         # Validate core spacing parameters
         if self.node_spacing < 1:
             raise ValueError("node_spacing must be at least 1")
+        if self.layer_spacing < 0:
+            raise ValueError("layer_spacing must be non-negative")
         if self.layer_spacing < 3:
             self.layer_spacing = 4 
         if self.margin < 1:

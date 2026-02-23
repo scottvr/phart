@@ -442,6 +442,24 @@ class LayoutManager:
 
         layer_height = max(1, self.options.layer_spacing)
 
+        # Subtree-aware layout is great for trees, but expands badly on DAGs
+        # with shared descendants (multi-parent nodes). Use it only for
+        # directed acyclic graphs where each node has at most one parent and
+        # the graph is a single connected component.
+        is_acyclic = graph.is_directed() and nx.is_directed_acyclic_graph(graph)
+        component_count = (
+            nx.number_weakly_connected_components(graph)
+            if graph.is_directed()
+            else nx.number_connected_components(graph)
+        )
+        is_parent_unique = (
+            is_acyclic
+            and all(deg <= 1 for _, deg in graph.in_degree())
+            and component_count == 1
+        )
+        if not is_parent_unique:
+            return self._layout_layered_fallback(graph, spacing, layer_height)
+
         # Subtree-aware (Reingold-Tilford-style) layout.
         #
         # Every node is centred over its own subtree's horizontal territory,
@@ -475,6 +493,100 @@ class LayoutManager:
 
         # (The old centred-layer layout has been superseded by the subtree-aware
         #  layout above and is intentionally removed.)
+
+    def _layout_layered_fallback(
+        self,
+        graph: nx.DiGraph,
+        spacing: int,
+        layer_height: int,
+    ) -> Dict[str, Tuple[int, int]]:
+        """Fallback layered layout for general DAGs and non-tree graphs.
+
+        Nodes are assigned to topological layers (for DAGs) or BFS-like depth
+        layers (for cyclic/non-DAG directed graphs), then centered per layer.
+        """
+        def _build_layers(subgraph: nx.DiGraph) -> List[List[Any]]:
+            if subgraph.is_directed() and nx.is_directed_acyclic_graph(subgraph):
+                return [list(layer) for layer in nx.topological_generations(subgraph)]
+
+            roots: List[Any]
+            if subgraph.is_directed():
+                roots = [n for n, d in subgraph.in_degree() if d == 0]
+                if not roots:
+                    roots = [max(subgraph.nodes(), key=lambda n: subgraph.out_degree(n))]
+            else:
+                roots = [max(subgraph.nodes(), key=lambda n: subgraph.degree(n))]
+
+            node_depth: Dict[Any, int] = {}
+            queue: List[Any] = list(roots)
+            for root in roots:
+                node_depth[root] = 0
+
+            while queue:
+                current = queue.pop(0)
+                current_depth = node_depth[current]
+                neighbors = (
+                    list(subgraph.successors(current))
+                    if subgraph.is_directed()
+                    else list(subgraph.neighbors(current))
+                )
+                for neighbor in neighbors:
+                    next_depth = current_depth + 1
+                    if neighbor not in node_depth or next_depth < node_depth[neighbor]:
+                        node_depth[neighbor] = next_depth
+                        queue.append(neighbor)
+
+            for node in subgraph.nodes():
+                node_depth.setdefault(node, 0)
+
+            max_depth = max(node_depth.values(), default=0)
+            layers = [[] for _ in range(max_depth + 1)]
+            for node, depth in node_depth.items():
+                layers[depth].append(node)
+            return layers
+
+        components = (
+            [
+                graph.subgraph(nodes).copy()
+                for nodes in nx.weakly_connected_components(graph)
+            ]
+            if graph.is_directed()
+            else [graph.subgraph(nodes).copy() for nodes in nx.connected_components(graph)]
+        )
+        components.sort(key=lambda comp: min(str(n) for n in comp.nodes()), reverse=False)
+
+        positions: Dict[str, Tuple[int, int]] = {}
+        y_offset = 0
+        component_gap = layer_height
+
+        for component in components:
+            layers = _build_layers(component)
+            widths = {
+                node: self._get_node_width(str(node)) for node in component.nodes()
+            }
+            ordered_layers = [
+                sorted(layer, key=lambda n: str(n)) for layer in layers if layer
+            ]
+            if not ordered_layers:
+                continue
+
+            layer_widths: List[int] = []
+            for layer in ordered_layers:
+                total = sum(widths[node] for node in layer)
+                total += spacing * max(0, len(layer) - 1)
+                layer_widths.append(total)
+            max_layer_width = max(layer_widths, default=0)
+
+            for layer_idx, layer in enumerate(ordered_layers):
+                current_x = (max_layer_width - layer_widths[layer_idx]) // 2
+                y = y_offset + (layer_idx * layer_height)
+                for node in layer:
+                    positions[node] = (current_x, y)
+                    current_x += widths[node] + spacing
+
+            y_offset += (len(ordered_layers) * layer_height) + component_gap
+
+        return positions
 
     def calculate_canvas_dimensions(
         self, positions: Dict[str, Tuple[int, int]]
