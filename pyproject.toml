@@ -41,6 +41,7 @@ example = [
 ]
 extra = [
     'pygraphviz>=1.14',
+    'scipy',
 ]
 test = [
     'pytest>=7.2',
