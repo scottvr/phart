@@ -318,7 +318,9 @@ class TestASCIIRenderer(unittest.TestCase):
         )
         positions, _, _ = renderer.layout_manager.calculate_layout()
         anchor_map = renderer._compute_edge_anchor_map(positions)
-        starts = [anchor_map[("Root", child)]["start"] for child in ("Left", "Mid", "Right")]
+        starts = [
+            anchor_map[("Root", child)]["start"] for child in ("Left", "Mid", "Right")
+        ]
 
         self.assertGreater(len({x for x, _ in starts}), 1)
 

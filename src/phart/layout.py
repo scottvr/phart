@@ -60,16 +60,16 @@ class LayoutManager:
         graph: nx.DiGraph,
         layer: int,
         nodes: Set[str],
-        positions: Dict[str, Tuple[int, int]]
+        positions: Dict[str, Tuple[int, int]],
     ) -> List[str]:
         """Sort nodes in a layer according to binary tree structure.
-        
+
         Uses edge attributes to determine left/right placement:
         - 'side': 'left' or 'right'
         - 'position': 'left', 'right', 'l', 'r', '0', '1'
         - 'dir': same as position
         - 'child': same as position
-        
+
         Parameters
         ----------
         graph : nx.DiGraph
@@ -80,12 +80,12 @@ class LayoutManager:
             Nodes in this layer to sort
         positions : Dict[str, Tuple[int, int]]
             Already-computed positions for previous layers
-            
+
         Returns
         -------
         List[str]
             Sorted list of nodes (left to right)
-            
+
         Examples
         --------
         >>> G = nx.DiGraph()
@@ -96,77 +96,78 @@ class LayoutManager:
         # Group nodes by their parent
         parent_children: Dict[str, Dict[str, Any]] = {}
         orphans = []
-        
+
         for node in nodes:
             # Find parents (predecessors that are already positioned)
             parents = [p for p in graph.predecessors(node) if p in positions]
-            
+
             if not parents:
                 orphans.append(node)
                 continue
-            
+
             # For binary tree, should have exactly one parent
             # If multiple parents exist, use the first one
             parent = parents[0]
-            
+
             if parent not in parent_children:
-                parent_children[parent] = {'left': None, 'right': None, 'other': []}
-            
+                parent_children[parent] = {"left": None, "right": None, "other": []}
+
             # Check edge attributes for side information
             edge_data = graph.get_edge_data(parent, node)
             side = None
-            
+
             if edge_data:
                 # Check common attribute names for left/right designation
-                side = (edge_data.get('side') or 
-                       edge_data.get('position') or 
-                       edge_data.get('dir') or
-                       edge_data.get('child'))
-            
+                side = (
+                    edge_data.get("side")
+                    or edge_data.get("position")
+                    or edge_data.get("dir")
+                    or edge_data.get("child")
+                )
+
             if side:
                 side_str = str(side).lower()
-                if side_str in ['left', 'l', '0']:
-                    if parent_children[parent]['left'] is not None:
+                if side_str in ["left", "l", "0"]:
+                    if parent_children[parent]["left"] is not None:
                         # Already have a left child, add to other
-                        parent_children[parent]['other'].append(node)
+                        parent_children[parent]["other"].append(node)
                     else:
-                        parent_children[parent]['left'] = node
-                elif side_str in ['right', 'r', '1']:
-                    if parent_children[parent]['right'] is not None:
+                        parent_children[parent]["left"] = node
+                elif side_str in ["right", "r", "1"]:
+                    if parent_children[parent]["right"] is not None:
                         # Already have a right child, add to other
-                        parent_children[parent]['other'].append(node)
+                        parent_children[parent]["other"].append(node)
                     else:
-                        parent_children[parent]['right'] = node
+                        parent_children[parent]["right"] = node
                 else:
-                    parent_children[parent]['other'].append(node)
+                    parent_children[parent]["other"].append(node)
             else:
                 # No side specified - add to other list
-                parent_children[parent]['other'].append(node)
-        
+                parent_children[parent]["other"].append(node)
+
         # Build result by processing parents left to right
         result = []
-        
+
         # Sort parents by their x position (left to right)
-        sorted_parents = sorted(parent_children.keys(), 
-                               key=lambda p: positions[p][0])
-        
+        sorted_parents = sorted(parent_children.keys(), key=lambda p: positions[p][0])
+
         for parent in sorted_parents:
             group = parent_children[parent]
-            
+
             # Add left child first
-            if group['left'] is not None:
-                result.append(group['left'])
-            
+            if group["left"] is not None:
+                result.append(group["left"])
+
             # Add unspecified children in middle (alphabetically sorted)
-            result.extend(sorted(group['other']))
-            
+            result.extend(sorted(group["other"]))
+
             # Add right child last
-            if group['right'] is not None:
-                result.append(group['right'])
-        
+            if group["right"] is not None:
+                result.append(group["right"])
+
         # Add orphan nodes at the end (alphabetically sorted)
         result.extend(sorted(orphans))
-        
+
         return result
 
     def _calculate_node_importance(self, graph: nx.DiGraph, node: Any) -> float:
@@ -315,7 +316,9 @@ class LayoutManager:
             default=0,
         )
         node_height = self._get_node_height()
-        base_height = max((y + node_height - 1 for _, y in positions.values()), default=0)
+        base_height = max(
+            (y + node_height - 1 for _, y in positions.values()), default=0
+        )
 
         return positions, base_width, base_height
 
@@ -323,48 +326,48 @@ class LayoutManager:
         self, positions: Dict[str, Tuple[int, int]]
     ) -> Dict[str, Tuple[int, int]]:
         """Transform positions based on flow direction.
-        
+
         Transforms coordinates from the default DOWN orientation to the
         requested flow direction.
-        
+
         Args:
             positions: Node positions in DOWN orientation
-            
+
         Returns:
             Transformed positions for the desired flow direction
         """
         from .styles import FlowDirection
-        
+
         if not positions:
             return positions
-        
+
         # DOWN is the default - no transformation needed
         if self.options.flow_direction == FlowDirection.DOWN:
             return positions
-        
+
         # Find bounding box
         max_x = max(x for x, _ in positions.values())
         max_y = max(y for _, y in positions.values())
-        
+
         transformed = {}
-        
+
         if self.options.flow_direction == FlowDirection.UP:
             # Flip Y-axis: put root at bottom instead of top
             for node, (x, y) in positions.items():
                 transformed[node] = (x, max_y - y)
-                
+
         elif self.options.flow_direction == FlowDirection.RIGHT:
             # Rotate 90 deg clockwise: (x, y) -> (y, x)
             # Root moves from top to left
             for node, (x, y) in positions.items():
                 transformed[node] = (y, x)
-                
+
         elif self.options.flow_direction == FlowDirection.LEFT:
             # Rotate 90 deg counter-clockwise: (x, y) -> (max_y - y, x)
             # Root moves from top to right
             for node, (x, y) in positions.items():
                 transformed[node] = (max_y - y, x)
-        
+
         return transformed
 
     def _get_subtree_width(
@@ -388,7 +391,9 @@ class LayoutManager:
         if not children:
             w = self._get_node_width(str(node))
         else:
-            total = sum(self._get_subtree_width(graph, c, spacing, cache) for c in children)
+            total = sum(
+                self._get_subtree_width(graph, c, spacing, cache) for c in children
+            )
             total += spacing * (len(children) - 1)
             w = max(total, self._get_node_width(str(node)))
 
@@ -432,7 +437,14 @@ class LayoutManager:
         for child in children_sorted:
             child_slot = subtree_widths[child]
             self._layout_subtree(
-                graph, child, cx, y + layer_height, spacing, subtree_widths, positions, layer_height
+                graph,
+                child,
+                cx,
+                y + layer_height,
+                spacing,
+                subtree_widths,
+                positions,
+                layer_height,
             )
             cx += child_slot + spacing
 
@@ -524,6 +536,7 @@ class LayoutManager:
         Nodes are assigned to topological layers (for DAGs) or BFS-like depth
         layers (for cyclic/non-DAG directed graphs), then centered per layer.
         """
+
         def _build_layers(subgraph: nx.DiGraph) -> List[List[Any]]:
             if subgraph.is_directed() and nx.is_directed_acyclic_graph(subgraph):
                 return [list(layer) for layer in nx.topological_generations(subgraph)]
@@ -532,7 +545,9 @@ class LayoutManager:
             if subgraph.is_directed():
                 roots = [n for n, d in subgraph.in_degree() if d == 0]
                 if not roots:
-                    roots = [max(subgraph.nodes(), key=lambda n: subgraph.out_degree(n))]
+                    roots = [
+                        max(subgraph.nodes(), key=lambda n: subgraph.out_degree(n))
+                    ]
             else:
                 roots = [max(subgraph.nodes(), key=lambda n: subgraph.degree(n))]
 
@@ -570,9 +585,13 @@ class LayoutManager:
                 for nodes in nx.weakly_connected_components(graph)
             ]
             if graph.is_directed()
-            else [graph.subgraph(nodes).copy() for nodes in nx.connected_components(graph)]
+            else [
+                graph.subgraph(nodes).copy() for nodes in nx.connected_components(graph)
+            ]
         )
-        components.sort(key=lambda comp: min(str(n) for n in comp.nodes()), reverse=False)
+        components.sort(
+            key=lambda comp: min(str(n) for n in comp.nodes()), reverse=False
+        )
 
         positions: Dict[str, Tuple[int, int]] = {}
         y_offset = 0

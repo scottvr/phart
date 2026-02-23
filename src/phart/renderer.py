@@ -10,6 +10,7 @@ from .styles import LayoutOptions, NodeStyle
 import sys
 import io
 
+
 class ASCIIRenderer:
     """
     ASCII art renderer for graphs.
@@ -127,8 +128,7 @@ class ASCIIRenderer:
         self.layout_manager = LayoutManager(graph, self.options)
         self.canvas: List[List[str]] = []
         self._edge_anchor_map: Dict[Tuple[Any, Any], Dict[str, Tuple[int, int]]] = {}
-    
-    
+
     def _resolve_options(cls, options: Optional[LayoutOptions]) -> LayoutOptions:
         if cls.default_options is None:
             # no CLI overrides; if no options passed, create defaults however you do it
@@ -230,7 +230,9 @@ class ASCIIRenderer:
         if self.options.edge_anchor_mode != "ports" or not self.options.bboxes:
             return {}
 
-        requirements: Dict[Any, Dict[str, List[Tuple[Tuple[Any, Any], str, int, str]]]] = {}
+        requirements: Dict[
+            Any, Dict[str, List[Tuple[Tuple[Any, Any], str, int, str]]]
+        ] = {}
 
         for start, end in self.graph.edges():
             if start not in positions or end not in positions:
@@ -282,7 +284,9 @@ class ASCIIRenderer:
                         candidate_idx = round((idx * max_index) / (item_count - 1))
 
                     candidate_value = candidates[candidate_idx]
-                    anchor_xy = self._port_value_to_xy(node_bounds, side, candidate_value)
+                    anchor_xy = self._port_value_to_xy(
+                        node_bounds, side, candidate_value
+                    )
                     edge_anchor_map.setdefault(edge_key, {})[role] = anchor_xy
 
         return edge_anchor_map
@@ -484,7 +488,7 @@ class ASCIIRenderer:
             self.canvas[y][mid_x] = marker
         return None
 
-    def _safe_draw(self, x: int, y: int,  char: str) -> None:
+    def _safe_draw(self, x: int, y: int, char: str) -> None:
         try:
             self.canvas[y][x] = char
         except IndexError:
@@ -503,10 +507,11 @@ class ASCIIRenderer:
         if node not in positions:
             return False
         bounds = self._get_node_bounds(node, positions)
-        return (
-            y == bounds["center_y"]
-            and x in {bounds["left"], bounds["right"], bounds["center_x"]}
-        )
+        return y == bounds["center_y"] and x in {
+            bounds["left"],
+            bounds["right"],
+            bounds["center_x"],
+        }
 
     def _draw_direction(
         self, y: int, x: int, direction: str, is_terminal: bool = False
@@ -559,7 +564,10 @@ class ASCIIRenderer:
                     continue
                 # A vertical bar at one of our own columns is fine — we'll place
                 # a corner there.
-                if cell == self.options.edge_vertical and x in (top_center, bottom_center):
+                if cell == self.options.edge_vertical and x in (
+                    top_center,
+                    bottom_center,
+                ):
                     continue
                 conflict = True
                 break
@@ -598,13 +606,21 @@ class ASCIIRenderer:
 
                 if is_bidirectional:
                     if min_x <= max_x:
-                        self.canvas[y][min_x] = self.options.get_arrow_for_direction("right")
-                        self.canvas[y][max_x] = self.options.get_arrow_for_direction("left")
+                        self.canvas[y][min_x] = self.options.get_arrow_for_direction(
+                            "right"
+                        )
+                        self.canvas[y][max_x] = self.options.get_arrow_for_direction(
+                            "left"
+                        )
                 elif min_x <= max_x:
                     if start_x < end_x:
-                        self.canvas[y][max_x] = self.options.get_arrow_for_direction("right")
+                        self.canvas[y][max_x] = self.options.get_arrow_for_direction(
+                            "right"
+                        )
                     else:
-                        self.canvas[y][min_x] = self.options.get_arrow_for_direction("left")
+                        self.canvas[y][min_x] = self.options.get_arrow_for_direction(
+                            "left"
+                        )
 
             # Case 2: Top to bottom (or bottom to top) connection
             else:
@@ -669,7 +685,9 @@ class ASCIIRenderer:
                 # Direction indicators
                 if is_bidirectional:
                     if bottom_y > jog_y + 1:
-                        self.canvas[jog_y + 1][bottom_center] = self.options.get_arrow_for_direction("up")
+                        self.canvas[jog_y + 1][bottom_center] = (
+                            self.options.get_arrow_for_direction("up")
+                        )
                     self.canvas[bottom_y - 1][bottom_center] = (
                         self.options.get_arrow_for_direction("down")
                     )
@@ -688,31 +706,30 @@ class ASCIIRenderer:
         except IndexError as e:
             raise IndexError(f"Edge drawing exceeded canvas boundaries: {e}")
 
-
     @classmethod
     def from_dot(cls, dot_string: str, **kwargs: Any) -> "ASCIIRenderer":
         """
         Create a renderer from a DOT format string.
-    
+
         Parameters
         ----------
         dot_string : str
             Graph description in DOT format
         **kwargs
             Additional arguments passed to the constructor
-    
+
         Returns
         -------
         ASCIIRenderer
             New renderer instance
-    
+
         Raises
         ------
         ImportError
             If pydot is not available
         ValueError
             If DOT string doesn't contain any valid graphs
-    
+
         Examples
         --------
         >>> dot = '''
@@ -729,12 +746,12 @@ class ASCIIRenderer:
         |
         C
         """
-    
+
         try:
             import pydot  # type: ignore
         except ImportError:
             raise ImportError("pydot is required for DOT format support")
-    
+
         with warnings.catch_warnings():
             # pyparsing emits deprecation warnings via pydot on newer versions.
             # Tests enforce warnings as errors, so suppress this third-party
@@ -747,39 +764,36 @@ class ASCIIRenderer:
             try:
                 from pyparsing import PyparsingDeprecationWarning  # type: ignore
 
-                warnings.filterwarnings(
-                    "ignore", category=PyparsingDeprecationWarning
-                )
+                warnings.filterwarnings("ignore", category=PyparsingDeprecationWarning)
             except Exception:
                 pass
             graphs = pydot.graph_from_dot_data(dot_string)
         if not graphs:
             raise ValueError("No valid graphs found in DOT string")
-    
+
         # Take first graph from the list
         G = nx.nx_pydot.from_pydot(graphs[0])
         if not isinstance(G, nx.DiGraph):
             G = nx.DiGraph(G)
         return cls(G, **kwargs)
-    
-    
+
     @classmethod
     def from_graphml(cls, graphml_file: str, **kwargs: Any) -> "ASCIIRenderer":
         """
         Create a renderer from a GraphML file.
-    
+
         Parameters
         ----------
         graphml_file : str
             Path to GraphML file
         **kwargs
             Additional arguments passed to the constructor
-    
+
         Returns
         -------
         ASCIIRenderer
             New renderer instance
-    
+
         Raises
         ------
         ImportError
@@ -798,13 +812,13 @@ class ASCIIRenderer:
 
 def merge_layout_options(
     base: LayoutOptions, overrides: LayoutOptions
-    ) -> LayoutOptions:
+) -> LayoutOptions:
     from dataclasses import asdict, fields
-        
+
     base_dict = asdict(base)
     override_dict = asdict(overrides)
     merged_dict: dict[str, Any] = {}
-        
+
     # Define which fields are "rendering" vs "semantic"
     rendering_fields = {
         "use_ascii",
@@ -821,28 +835,33 @@ def merge_layout_options(
         "uniform",
         "edge_anchor_mode",
     }
-       
+
     for field in fields(LayoutOptions):
         field_name = field.name
-        if field_name == 'instance_id':
+        if field_name == "instance_id":
             continue
-          
+
         override_val = override_dict.get(field_name)
         base_val = base_dict.get(field_name)
-         
+
         # For rendering fields: CLI (override) takes precedence if not None
         if field_name in rendering_fields:
-            merged_dict[field_name] = override_val if override_val is not None else base_val
+            merged_dict[field_name] = (
+                override_val if override_val is not None else base_val
+            )
         # For semantic fields: User (base) takes precedence if not None
         else:
             merged_dict[field_name] = base_val if base_val is not None else override_val
-        
+
     # Special handling for custom_decorators - merge dicts
     if base.custom_decorators and overrides.custom_decorators:
-        merged_dict['custom_decorators'] = {**base.custom_decorators, **overrides.custom_decorators}
+        merged_dict["custom_decorators"] = {
+            **base.custom_decorators,
+            **overrides.custom_decorators,
+        }
     elif base.custom_decorators:
-        merged_dict['custom_decorators'] = base.custom_decorators.copy()
+        merged_dict["custom_decorators"] = base.custom_decorators.copy()
     elif overrides.custom_decorators:
-        merged_dict['custom_decorators'] = overrides.custom_decorators.copy()
-        
+        merged_dict["custom_decorators"] = overrides.custom_decorators.copy()
+
     return LayoutOptions(**merged_dict)

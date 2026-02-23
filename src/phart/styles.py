@@ -51,10 +51,9 @@ class EdgeChar:
         self.unicode_char = value
 
 
-
 class FlowDirection(Enum):
     """Layout flow direction for graph rendering.
-    
+
     Attributes
     ----------
     DOWN : str
@@ -66,11 +65,12 @@ class FlowDirection(Enum):
     LEFT : str
         Root at right, children to left
     """
-    
+
     DOWN = "down"
     UP = "up"
     RIGHT = "right"
     LEFT = "left"
+
 
 @dataclass
 class LayoutOptions:
@@ -152,27 +152,29 @@ class LayoutOptions:
                 raise ValueError(
                     f"Invalid node style '{self.node_style}'. Valid options are: {valid_styles}"
                 )
-        
+
         val = self.flow_direction
-        
+
         if isinstance(val, str):
             val = FlowDirection(val.strip().lower())
-        
+
         if not isinstance(val, FlowDirection):
             try:
                 val = FlowDirection(val)
             except ValueError as e:
                 valid = ", ".join(d.value for d in FlowDirection)
-                raise ValueError(f"Invalid flow_direction: {self.flow_direction}. Valid: {valid}") from e
-        
+                raise ValueError(
+                    f"Invalid flow_direction: {self.flow_direction}. Valid: {valid}"
+                ) from e
+
         self.flow_direction = val
-                
+
         if self.node_style == NodeStyle.CUSTOM and not self.custom_decorators:
             raise ValueError(
                 "Custom decorators must be provided when using NodeStyle.CUSTOM"
             )
         if self.node_style == NodeStyle.BBOX:
-           self.bboxes = True
+            self.bboxes = True
 
         # Validate core spacing parameters
         if self.node_spacing < 1:
@@ -180,7 +182,7 @@ class LayoutOptions:
         if self.layer_spacing < 0:
             raise ValueError("layer_spacing must be non-negative")
         if self.layer_spacing < 3:
-            self.layer_spacing = 4 
+            self.layer_spacing = 4
         if self.margin < 1:
             raise ValueError("margin must be >= 1")
 
@@ -248,10 +250,11 @@ class LayoutOptions:
 
     def __str__(self) -> str:
         # Get all dataclass fields and their current values from this instance
-        return f"""LayoutOptions: {', '.join(
-            f"{field.name}={getattr(self, field.name)}"
-            for field in fields(self)
-        )}"""
+        return f"""LayoutOptions: {
+            ", ".join(
+                f"{field.name}={getattr(self, field.name)}" for field in fields(self)
+            )
+        }"""
 
     def get_node_decorators(self, node_str: str) -> Tuple[str, str]:
         """

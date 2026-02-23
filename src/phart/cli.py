@@ -12,6 +12,7 @@ from .renderer import ASCIIRenderer
 from .styles import NodeStyle, LayoutOptions
 from .charset import CharSet
 
+
 def parse_args() -> tuple[argparse.Namespace, list[str]]:
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
@@ -76,7 +77,7 @@ def parse_args() -> tuple[argparse.Namespace, list[str]]:
         choices=["down", "up", "left", "right"],
         default="down",
         help="Layout flow direction: down (default, root at top), up (root at bottom), "
-             "left (root at right), right (root at left)",
+        "left (root at right), right (root at left)",
     )
     parser.add_argument(
         "--bboxes",
@@ -139,6 +140,7 @@ def create_layout_options(args: argparse.Namespace) -> LayoutOptions:
         edge_anchor_mode=args.edge_anchors,
     )
 
+
 def _run_python_as_main(file_path: Path) -> Any:
     spec = importlib.util.spec_from_file_location("__main__", file_path)
     if spec is None or spec.loader is None:
@@ -146,7 +148,7 @@ def _run_python_as_main(file_path: Path) -> Any:
 
     module = importlib.util.module_from_spec(spec)
     sys.modules["__main__"] = module  # match python's behavior more closely
-    spec.loader.exec_module(module)   # executes exactly once
+    spec.loader.exec_module(module)  # executes exactly once
     return module
 
 
@@ -158,6 +160,7 @@ def _module_defines_function(file_path: Path, function_name: str) -> bool:
         isinstance(node, ast.FunctionDef) and node.name == function_name
         for node in tree.body
     )
+
 
 def main() -> Optional[int]:
     """CLI entry point for PHART."""
@@ -189,7 +192,10 @@ def main() -> Optional[int]:
                     try:
                         func = getattr(module, args.function)
                     except AttributeError:
-                        print( f"Error: Function '{args.function}' not found in {args.input}", file=sys.stderr)
+                        print(
+                            f"Error: Function '{args.function}' not found in {args.input}",
+                            file=sys.stderr,
+                        )
                         return 1
                     func()
                     return 0
@@ -200,7 +206,7 @@ def main() -> Optional[int]:
                 else:
                     _run_python_as_main(args.input)
                 return 0
-       
+
             finally:
                 sys.argv = old_argv
                 ASCIIRenderer.default_options = old_default_options
@@ -244,6 +250,7 @@ def main() -> Optional[int]:
         return 1
 
     return None
+
 
 if __name__ == "__main__":
     sys.exit(main())
