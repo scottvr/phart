@@ -143,6 +143,7 @@ class ASCIIRenderer:
         self._edge_anchor_map: Dict[Tuple[Any, Any], Dict[str, Tuple[int, int]]] = {}
         self._node_color_map: Dict[Any, str] = {}
         self._edge_color_map: Dict[Tuple[Any, Any], str] = {}
+        self._edge_conflict_cells: Set[Tuple[int, int]] = set()
 
     def _resolve_options(cls, options: Optional[LayoutOptions]) -> LayoutOptions:
         if cls.default_options is None:
@@ -193,13 +194,41 @@ class ASCIIRenderer:
             ),
         )
         for idx, edge in enumerate(sorted_edges):
-            self._edge_color_map[edge] = ANSI_SUBWAY_PALETTE[idx % len(ANSI_SUBWAY_PALETTE)]
+            target_color = self._node_color_map.get(edge[1])
+            if target_color is not None:
+                self._edge_color_map[edge] = target_color
+            else:
+                self._edge_color_map[edge] = ANSI_SUBWAY_PALETTE[idx % len(ANSI_SUBWAY_PALETTE)]
 
     def _paint_cell(self, x: int, y: int, char: str, color: Optional[str] = None) -> None:
         self.canvas[y][x] = char
         if not self._use_ansi_colors():
             return
         self._color_canvas[y][x] = color
+        self._edge_conflict_cells.discard((x, y))
+
+    def _paint_edge_cell(
+        self, x: int, y: int, char: str, color: Optional[str] = None
+    ) -> None:
+        self.canvas[y][x] = char
+        if not self._use_ansi_colors():
+            return
+
+        key = (x, y)
+        if key in self._edge_conflict_cells:
+            self._color_canvas[y][x] = None
+            return
+
+        existing = self._color_canvas[y][x]
+        if existing is None:
+            self._color_canvas[y][x] = color
+            return
+
+        if color is None or existing == color:
+            return
+
+        self._color_canvas[y][x] = None
+        self._edge_conflict_cells.add(key)
 
     def _render_row(self, row: List[str], colors: List[Optional[str]]) -> str:
         last = -1
@@ -579,6 +608,7 @@ class ASCIIRenderer:
         self._color_canvas = [
             [None for _ in range(final_width)] for _ in range(final_height)
         ]
+        self._edge_conflict_cells = set()
 
     def _draw_vertical_segment(
         self,
@@ -589,10 +619,10 @@ class ASCIIRenderer:
         color: Optional[str] = None,
     ) -> None:
         for y in range(start_y + 1, end_y):
-            self._paint_cell(x, y, self.options.edge_vertical, color)
+            self._paint_edge_cell(x, y, self.options.edge_vertical, color)
         if marker is not None:
             mid_y = (start_y + end_y) // 2
-            self._paint_cell(x, mid_y, marker, color)
+            self._paint_edge_cell(x, mid_y, marker, color)
         return None
 
     def _draw_horizontal_segment(
@@ -604,15 +634,15 @@ class ASCIIRenderer:
         color: Optional[str] = None,
     ) -> None:
         for x in range(start_x + 1, end_x):
-            self._paint_cell(x, y, self.options.edge_horizontal, color)
+            self._paint_edge_cell(x, y, self.options.edge_horizontal, color)
         if marker is not None:
             mid_x = (start_x + end_x) // 2
-            self._paint_cell(mid_x, y, marker, color)
+            self._paint_edge_cell(mid_x, y, marker, color)
         return None
 
     def _safe_draw(self, x: int, y: int, char: str, color: Optional[str] = None) -> None:
         try:
-            self._paint_cell(x, y, char, color)
+            self._paint_edge_cell(x, y, char, color)
         except IndexError:
             raise IndexError(f"Drawing exceeded canvas bounds at ({x}, {y})")
         return None
@@ -686,7 +716,7 @@ class ASCIIRenderer:
     ) -> None:
         current = self.canvas[y][x]
         merged_dirs = self._line_dirs_for_char(current) | add_dirs
-        self._paint_cell(x, y, self._glyph_for_line_dirs(merged_dirs), color)
+        self._paint_edge_cell(x, y, self._glyph_for_line_dirs(merged_dirs), color)
 
     def _is_terminal(
         self, positions: Dict[Any, Tuple[int, int]], node: Any, x: int, y: int
@@ -722,13 +752,13 @@ class ASCIIRenderer:
         """
         if is_terminal:
             # Always show direction at node connection points
-            self._paint_cell(x, y, direction, color)
+            self._paint_edge_cell(x, y, direction, color)
         elif self.canvas[y][x] not in (
             self.options.edge_arrow_up,
             self.options.edge_arrow_down,
         ):
             # Only draw direction on non-terminals if there isn't already a direction
-            self._paint_cell(x, y, direction, color)
+            self._paint_edge_cell(x, y, direction, color)
 
     def _get_jog_row(
         self,
@@ -805,13 +835,13 @@ class ASCIIRenderer:
 
                 if is_bidirectional:
                     if min_x <= max_x:
-                        self._paint_cell(
+                        self._paint_edge_cell(
                             min_x,
                             y,
                             self.options.get_arrow_for_direction("right"),
                             edge_color,
                         )
-                        self._paint_cell(
+                        self._paint_edge_cell(
                             max_x,
                             y,
                             self.options.get_arrow_for_direction("left"),
@@ -819,14 +849,14 @@ class ASCIIRenderer:
                         )
                 elif min_x <= max_x:
                     if start_x < end_x:
-                        self._paint_cell(
+                        self._paint_edge_cell(
                             max_x,
                             y,
                             self.options.get_arrow_for_direction("right"),
                             edge_color,
                         )
                     else:
-                        self._paint_cell(
+                        self._paint_edge_cell(
                             min_x,
                             y,
                             self.options.get_arrow_for_direction("left"),
@@ -907,13 +937,13 @@ class ASCIIRenderer:
                 # Direction indicators
                 if is_bidirectional:
                     if bottom_y > jog_y + 1:
-                        self._paint_cell(
+                        self._paint_edge_cell(
                             bottom_center,
                             jog_y + 1,
                             self.options.get_arrow_for_direction("up"),
                             edge_color,
                         )
-                    self._paint_cell(
+                    self._paint_edge_cell(
                         bottom_center,
                         bottom_y - 1,
                         self.options.get_arrow_for_direction("down"),
@@ -922,7 +952,7 @@ class ASCIIRenderer:
                 else:
                     if start_y < end_y:  # top-to-bottom: arrow points down toward child
                         if bottom_y > jog_y + 1:
-                            self._paint_cell(
+                            self._paint_edge_cell(
                                 bottom_center,
                                 bottom_y - 1,
                                 self.options.get_arrow_for_direction("down"),
@@ -930,7 +960,7 @@ class ASCIIRenderer:
                             )
                     else:  # bottom-to-top: arrow points up toward parent
                         if bottom_y > jog_y + 1:
-                            self._paint_cell(
+                            self._paint_edge_cell(
                                 bottom_center,
                                 jog_y + 1,
                                 self.options.get_arrow_for_direction("up"),
