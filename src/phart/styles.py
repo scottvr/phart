@@ -57,13 +57,13 @@ class FlowDirection(Enum):
     Attributes
     ----------
     DOWN : str
-        Root at top, children below (arrows point up to parents)
+        Root at top, children below
     UP : str
-        Root at bottom, children above (arrows point down to parents)
+        Root at bottom, children above
     RIGHT : str
-        Root at left, children to right (arrows point right to parents)
+        Root at left, children to right
     LEFT : str
-        Root at right, children to left (arrows point left to parents)
+        Root at right, children to left
     """
     
     DOWN = "down"
@@ -129,14 +129,6 @@ class LayoutOptions:
     edge_arrow_up = EdgeChar("^", "↑")
     edge_arrow_down = EdgeChar("v", "↓")
 
-    def __init__(self, **kwargs: Any) -> None:
-        # Set attributes from kwargs, using defaults for any missing values
-        for field in fields(self):
-            if field.name in kwargs:
-                setattr(self, field.name, kwargs[field.name])
-            else:
-                setattr(self, field.name, field.default)
-
     def __post_init__(self) -> None:
         """Validate and normalize configuration values."""
         self.instance_id = LayoutOptions._instance_counter
@@ -188,8 +180,6 @@ class LayoutOptions:
         if self.triangle_height_ratio <= 0:
             raise ValueError("triangle_height_ratio must be positive")
 
-        return None
-
     def get_effective_node_spacing(self, has_edges: bool = True) -> int:
         """Calculate effective node spacing considering edge requirements.
 
@@ -212,43 +202,26 @@ class LayoutOptions:
         return self.left_padding, self.right_padding
 
     def get_arrow_for_direction(self, base_direction: str) -> str:
-        """Get the appropriate arrow character based on flow direction.
-        
-        Args:
-            base_direction: The arrow direction in DOWN flow ('up', 'down', 'left', 'right')
-            
-        Returns:
-            The appropriate arrow character for the current flow direction
+        """Get the arrow glyph for a geometric direction.
+
+        Direction glyphs are selected from the rendered edge geometry only.
+        Layout flow has already been applied to node positions, so applying
+        another flow-based rotation here would incorrectly double-transform
+        arrow orientation.
         """
-        # Map base directions to rotated directions based on flow
-        rotation_map = {
-            FlowDirection.DOWN: {
-                'up': self.edge_arrow_up,
-                'down': self.edge_arrow_down,
-                'left': self.edge_arrow_l,
-                'right': self.edge_arrow_r,
-            },
-            FlowDirection.UP: {
-                'up': self.edge_arrow_down,      # Flip vertical
-                'down': self.edge_arrow_up,      # Flip vertical
-                'left': self.edge_arrow_l,        # Keep horizontal
-                'right': self.edge_arrow_r,       # Keep horizontal
-            },
-            FlowDirection.RIGHT: {
-                'up': self.edge_arrow_l,          # Rotate 90° CW
-                'down': self.edge_arrow_r,        # Rotate 90° CW
-                'left': self.edge_arrow_down,     # Rotate 90° CW
-                'right': self.edge_arrow_up,      # Rotate 90° CW
-            },
-            FlowDirection.LEFT: {
-                'up': self.edge_arrow_r,          # Rotate 90° CCW
-                'down': self.edge_arrow_l,        # Rotate 90° CCW
-                'left': self.edge_arrow_up,       # Rotate 90° CCW
-                'right': self.edge_arrow_down,    # Rotate 90° CCW
-            },
+        arrow_map = {
+            "up": self.edge_arrow_up,
+            "down": self.edge_arrow_down,
+            "left": self.edge_arrow_l,
+            "right": self.edge_arrow_r,
         }
-        
-        return rotation_map[self.flow_direction][base_direction]
+        try:
+            return arrow_map[base_direction]
+        except KeyError as e:
+            valid = ", ".join(sorted(arrow_map))
+            raise ValueError(
+                f"Invalid arrow direction '{base_direction}'. Valid: {valid}"
+            ) from e
 
     def __str__(self) -> str:
         # Get all dataclass fields and their current values from this instance

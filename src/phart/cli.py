@@ -2,10 +2,11 @@
 # src path: src/phart/cli.py
 
 import sys
+import ast
 import argparse
 import importlib.util
 from pathlib import Path
-from typing import Optional, Any, Callable
+from typing import Optional, Any
 
 from .renderer import ASCIIRenderer
 from .styles import NodeStyle, LayoutOptions
@@ -77,7 +78,6 @@ def parse_args() -> tuple[argparse.Namespace, list[str]]:
         help="Layout flow direction: down (default, root at top), up (root at bottom), "
              "left (root at right), right (root at left)",
     )
-    parser.add_argument("module_argv", nargs=argparse.REMAINDER)
     args, unknown = parser.parse_known_args()
     return args, unknown
 
@@ -114,28 +114,35 @@ def _run_python_as_main(file_path: Path) -> Any:
     spec.loader.exec_module(module)   # executes exactly once
     return module
 
+
+def _module_defines_function(file_path: Path, function_name: str) -> bool:
+    """Return True if file defines a top-level function with the given name."""
+    source = file_path.read_text(encoding="utf-8")
+    tree = ast.parse(source, filename=str(file_path))
+    return any(
+        isinstance(node, ast.FunctionDef) and node.name == function_name
+        for node in tree.body
+    )
+
 def main() -> Optional[int]:
     """CLI entry point for PHART."""
     args, unknown = parse_args()
-    module_argv = args.module_argv
-    if module_argv and module_argv[0] == "--":
-        module_argv = module_argv[1:]
+    has_script_separator = "--" in sys.argv[1:]
+    module_argv = unknown if has_script_separator else []
 
     try:
         if args.input.suffix == ".py":
-            if unknown:
-                if "--" not in (sys.argv):
-                    print(
-                        "It looks like you passed arguments intended for the script.\n"
-                        "Use '--' to separate phart options from script options.\n\n"
-                        f"Example:\n  phart {args.input} -- {' '.join(unknown)}",
-                        file=sys.stderr,
-                    )
+            if unknown and not has_script_separator:
+                print(
+                    "It looks like you passed arguments intended for the script.\n"
+                    "Use '--' to separate phart options from script options.\n\n"
+                    f"Example:\n  phart {args.input} -- {' '.join(unknown)}",
+                    file=sys.stderr,
+                )
                 return 2
-            
+
             old_argv = sys.argv
             sys.argv = [str(args.input)] + module_argv
-
 
             try:
                 cli_options = create_layout_options(args)
@@ -151,13 +158,24 @@ def main() -> Optional[int]:
                     func()
                     return 0
 
-                module = _run_python_as_main(args.input)
-                return 0 
+                if _module_defines_function(args.input, "main"):
+                    module = _load_python_module(args.input)
+                    module.main()
+                else:
+                    _run_python_as_main(args.input)
+                return 0
        
             finally:
                 sys.argv = old_argv
 
         else:
+            if unknown:
+                print(
+                    f"Error: unrecognized arguments: {' '.join(unknown)}",
+                    file=sys.stderr,
+                )
+                return 2
+
             with open(args.input, "r", encoding="utf-8") as f:
                 content = f.read()
 
@@ -176,7 +194,6 @@ def main() -> Optional[int]:
                 return 1
 
             renderer.options.node_style = NodeStyle[args.style.upper()]
-            renderer.options.use_ascii = args.ascii
             # Prefer explicit charset if specified, fall back to legacy flag if used
             use_ascii = args.charset == CharSet.ASCII or args.use_legacy_ascii
             renderer.options.use_ascii = use_ascii

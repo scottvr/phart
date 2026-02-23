@@ -10,7 +10,7 @@ from .styles import LayoutOptions
 
 
 class LayoutManager:
-    def __init__(self, graph: nx.Graph, options: LayoutOptions):
+    def __init__(self, graph: nx.DiGraph, options: LayoutOptions):
         self.graph = graph
         self.options = options
         self.node_positions: Dict[str, Tuple[int, int]] = {}
@@ -177,7 +177,7 @@ class LayoutManager:
             + -abs(in_degree - out_degree)
         )  # Penalize imbalanced in/out
 
-        return score
+        return float(score)
 
     def _should_use_vertical_layout(self, graph: nx.DiGraph) -> bool:
         """
@@ -363,7 +363,7 @@ class LayoutManager:
         so the parent label is never wider than its allocated slot.
         """
         if node in cache:
-            return cache[node]
+            return int(cache[node])
 
         children = list(graph.successors(node))
         if not children:
@@ -418,7 +418,7 @@ class LayoutManager:
             cx += child_slot + spacing
 
     def _layout_hierarchical(
-        self, graph: nx.Graph, spacing: int
+        self, graph: nx.DiGraph, spacing: int
     ) -> Dict[str, Tuple[int, int]]:
         """Position nodes in a hierarchical layout preserving layers.
 

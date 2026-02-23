@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Dict, List, Optional, TextIO, Tuple
+from typing import Any, Dict, List, Optional, TextIO, Tuple, ClassVar
 
 import networkx as nx  # type: ignore
 
@@ -74,7 +74,7 @@ class ASCIIRenderer:
 
     def __init__(
         self,
-        graph: nx.Graph,
+        graph: nx.DiGraph,
         *,  # Force keyword args after this
         node_style: NodeStyle = NodeStyle.SQUARE,
         node_spacing: int = 4,
@@ -82,7 +82,7 @@ class ASCIIRenderer:
         use_ascii: Optional[bool] = None,
         custom_decorators: Optional[Dict[str, Tuple[str, str]]] = None,
         options: Optional[LayoutOptions] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """Initialize the ASCII renderer.
 
@@ -273,25 +273,32 @@ class ASCIIRenderer:
 
         self.canvas = [[" " for _ in range(final_width)] for _ in range(final_height)]
 
-    def _draw_vertical_segment(self, x, start_y, end_y, marker=None):
+    def _draw_vertical_segment(
+        self, x: int, start_y: int, end_y: int, marker: Optional[str]
+    ) -> None:
         for y in range(start_y + 1, end_y):
             self.canvas[y][x] = self.options.edge_vertical
-        if marker:
+        if marker is not None:
             mid_y = (start_y + end_y) // 2
             self.canvas[mid_y][x] = marker
+        return None
 
-    def _draw_horizontal_segment(self, y, start_x, end_x, marker=None):
+    def _draw_horizontal_segment(
+        self, y: int, start_x: int, end_x: int, marker: Optional[str]
+    ) -> None:
         for x in range(start_x + 1, end_x):
             self.canvas[y][x] = self.options.edge_horizontal
-        if marker:
+        if marker is not None:
             mid_x = (start_x + end_x) // 2
             self.canvas[y][mid_x] = marker
+        return None
 
-    def _safe_draw(self, x, y, char):
+    def _safe_draw(self, x: int, y: int,  char: str) -> None:
         try:
             self.canvas[y][x] = char
         except IndexError:
             raise IndexError(f"Drawing exceeded canvas bounds at ({x}, {y})")
+        return None
 
     def _is_terminal(
         self, positions: Dict[str, Tuple[int, int]], node: str, x: int, y: int
@@ -591,7 +598,7 @@ def merge_layout_options(
         
     base_dict = asdict(base)
     override_dict = asdict(overrides)
-    merged_dict = {}
+    merged_dict: dict[str, Any] = {}
         
     # Define which fields are "rendering" vs "semantic"
     rendering_fields = {'use_ascii', 'node_style', 'node_spacing', 'layer_spacing', 

@@ -7,6 +7,7 @@ import sys
 import networkx as nx  # type: ignore
 
 from phart import ASCIIRenderer, LayoutOptions, NodeStyle
+from phart.styles import FlowDirection
 
 from pathlib import Path
 
@@ -225,6 +226,30 @@ class TestASCIIRenderer(unittest.TestCase):
         renderer = ASCIIRenderer(self.chain, use_ascii=False)
         result = renderer.render()
         self.assertTrue(any(ord(c) > 127 for c in result))
+
+    def test_flow_direction_changes_layout_not_arrow_mapping(self):
+        """Arrows should follow rendered geometry, not be rotated a second time by flow."""
+        edge = nx.DiGraph([("A", "B")])
+
+        down = ASCIIRenderer(
+            edge,
+            options=LayoutOptions(
+                use_ascii=True,
+                flow_direction=FlowDirection.DOWN,
+                layer_spacing=3,
+            ),
+        ).render()
+        up = ASCIIRenderer(
+            edge,
+            options=LayoutOptions(
+                use_ascii=True,
+                flow_direction=FlowDirection.UP,
+                layer_spacing=3,
+            ),
+        ).render()
+
+        self.assertIn("v", down)
+        self.assertIn("^", up)
 
     def test_file_writing(self):
         """Test writing to file with proper encoding."""
