@@ -23,7 +23,7 @@ def create_circular_deps():
 
 def main():
     # Circular dependencies
-    print("\nCircular Dependencies:")
+    print("\nCircular Dependencies:\n")
     G = create_circular_deps()
     renderer = ASCIIRenderer(G)
     print(renderer.render())
