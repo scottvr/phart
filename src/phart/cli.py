@@ -13,8 +13,49 @@ from .styles import NodeStyle, LayoutOptions
 from .charset import CharSet
 
 
+COLOR_MODES = {"none", "source", "target", "path"}
+
+
+def _normalize_color_args(argv: list[str]) -> list[str]:
+    """Normalize bare --colors usage to avoid optional-value positional ambiguity.
+
+    Converts:
+      --colors            -> --colors source
+      --colors <input>    -> --colors source <input>  (when <input> is not a mode)
+    Leaves explicit forms unchanged:
+      --colors source
+      --colors=target
+    """
+    normalized: list[str] = []
+    i = 0
+    while i < len(argv):
+        token = argv[i]
+
+        if token == "--":
+            normalized.extend(argv[i:])
+            break
+
+        if token == "--colors":
+            next_token = argv[i + 1] if i + 1 < len(argv) else None
+            if (
+                next_token is None
+                or next_token.startswith("-")
+                or next_token not in COLOR_MODES
+            ):
+                normalized.extend(["--colors", "source"])
+                i += 1
+                continue
+
+        normalized.append(token)
+        i += 1
+
+    return normalized
+
+
 def parse_args() -> tuple[argparse.Namespace, list[str]]:
     """Parse command line arguments."""
+    argv = _normalize_color_args(sys.argv[1:])
+
     parser = argparse.ArgumentParser(
         description="PHART: Python Hierarchical ASCII Rendering Tool"
     )
@@ -116,16 +157,11 @@ def parse_args() -> tuple[argparse.Namespace, list[str]]:
     )
     parser.add_argument(
         "--colors",
-        action="store_true",
-        help="Enable ANSI color output (unicode mode only)",
+        choices=sorted(COLOR_MODES),
+        default="none",
+        help="ANSI edge coloring mode: none (default), source, target, or path",
     )
-    parser.add_argument(
-        "--edge-color-mode",
-        choices=["target", "source", "path"],
-        default="source",
-        help="Edge coloring model when --colors is enabled (default: target)",
-    )
-    args, unknown = parser.parse_known_args()
+    args, unknown = parser.parse_known_args(argv)
     return args, unknown
 
 
@@ -143,6 +179,7 @@ def _load_python_module(file_path: Path) -> Any:
 def create_layout_options(args: argparse.Namespace) -> LayoutOptions:
     """Create LayoutOptions from CLI arguments."""
     node_style = NodeStyle[args.style.upper()] if args.style is not None else None
+    color_mode = args.colors
     return LayoutOptions(
         node_style=node_style,
         node_spacing=args.node_spacing,
@@ -156,8 +193,8 @@ def create_layout_options(args: argparse.Namespace) -> LayoutOptions:
         uniform=args.uniform,
         edge_anchor_mode=args.edge_anchors,
         use_labels=args.labels,
-        ansi_colors=args.colors,
-        edge_color_mode=args.edge_color_mode,
+        ansi_colors=(color_mode != "none"),
+        edge_color_mode="source" if color_mode == "none" else color_mode,
     )
 
 

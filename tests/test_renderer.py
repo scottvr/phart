@@ -502,6 +502,7 @@ class TestASCIIRenderer(unittest.TestCase):
                 node_style=NodeStyle.MINIMAL,
                 use_ascii=False,
                 ansi_colors=True,
+                edge_color_mode="target",
                 bboxes=True,
                 layer_spacing=4,
             ),
@@ -524,6 +525,7 @@ class TestASCIIRenderer(unittest.TestCase):
                 node_style=NodeStyle.MINIMAL,
                 use_ascii=False,
                 ansi_colors=True,
+                edge_color_mode="path",
                 bboxes=True,
                 hpad=1,
                 vpad=0,
@@ -666,6 +668,10 @@ class TestLayoutOptions(unittest.TestCase):
     def test_invalid_edge_color_mode(self):
         with self.assertRaises(ValueError):
             LayoutOptions(edge_color_mode="invalid")
+
+    def test_default_edge_color_mode_is_source(self):
+        options = LayoutOptions()
+        self.assertEqual(options.edge_color_mode, "source")
 
     def test_merge_layout_options_cli_overrides_binary_tree_layout(self):
         script_options = LayoutOptions(binary_tree_layout=False, use_ascii=True)

@@ -122,7 +122,7 @@ class LayoutOptions:
     edge_anchor_mode: str = field(default="center")  # center or ports
     use_labels: bool = field(default=False)  # Prefer node labels for display text
     ansi_colors: bool = field(default=False)  # ANSI colorized render output (unicode)
-    edge_color_mode: str = field(default="target")  # target, source, or path
+    edge_color_mode: str = field(default="source")  # target, source, or path
 
     # Instance-specific ID (unchanged)
     instance_id: int = field(init=False)

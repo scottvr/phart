@@ -279,14 +279,32 @@ def demonstrate_graph():
         output = self.stdout.getvalue()
         self.assertNotIn("\x1b[", output)
 
-    def test_edge_color_mode_flag(self):
+    def test_colors_mode_argument(self):
         sys.argv = [
             "phart",
             "--colors",
-            "--edge-color-mode",
-            "source",
+            "target",
             str(self.test_text_file),
         ]
         exit_code = main()
         self.assertEqual(exit_code, 0)
         self.assertNotIn("Error", self.stderr.getvalue())
+
+    def test_colors_none_matches_omitted_colors(self):
+        sys.argv = ["phart", str(self.test_text_file)]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        without_colors = self.stdout.getvalue()
+
+        self.stdout.truncate(0)
+        self.stdout.seek(0)
+        self.stderr.truncate(0)
+        self.stderr.seek(0)
+
+        sys.argv = ["phart", "--colors", "none", str(self.test_text_file)]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        with_none = self.stdout.getvalue()
+
+        self.assertEqual(without_colors, with_none)
+        self.assertNotIn("\x1b[", with_none)
