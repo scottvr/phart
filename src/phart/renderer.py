@@ -942,37 +942,36 @@ class ASCIIRenderer:
                     self._merge_line_cell(bottom_center, y, {"up", "down"}, edge_color)
 
                 # Direction indicators
+                top_terminal_y = top_y + 1
+                bottom_terminal_y = bottom_y - 1
                 if is_bidirectional:
-                    if bottom_y > jog_y + 1:
-                        self._paint_edge_cell(
-                            bottom_center,
-                            jog_y + 1,
-                            self.options.get_arrow_for_direction("up"),
-                            edge_color,
-                        )
+                    self._paint_edge_cell(
+                        top_center,
+                        top_terminal_y,
+                        self.options.get_arrow_for_direction("up"),
+                        edge_color,
+                    )
                     self._paint_edge_cell(
                         bottom_center,
-                        bottom_y - 1,
+                        bottom_terminal_y,
                         self.options.get_arrow_for_direction("down"),
                         edge_color,
                     )
                 else:
                     if start_y < end_y:  # top-to-bottom: arrow points down toward child
-                        if bottom_y > jog_y + 1:
-                            self._paint_edge_cell(
-                                bottom_center,
-                                bottom_y - 1,
-                                self.options.get_arrow_for_direction("down"),
-                                edge_color,
-                            )
+                        self._paint_edge_cell(
+                            bottom_center,
+                            bottom_terminal_y,
+                            self.options.get_arrow_for_direction("down"),
+                            edge_color,
+                        )
                     else:  # bottom-to-top: arrow points up toward parent
-                        if bottom_y > jog_y + 1:
-                            self._paint_edge_cell(
-                                bottom_center,
-                                jog_y + 1,
-                                self.options.get_arrow_for_direction("up"),
-                                edge_color,
-                            )
+                        self._paint_edge_cell(
+                            top_center,
+                            top_terminal_y,
+                            self.options.get_arrow_for_direction("up"),
+                            edge_color,
+                        )
 
         except IndexError as e:
             raise IndexError(f"Edge drawing exceeded canvas boundaries: {e}")

@@ -287,6 +287,38 @@ class TestASCIIRenderer(unittest.TestCase):
         self.assertIn("v", down)
         self.assertIn("^", up)
 
+    def test_upward_arrow_is_placed_at_destination_terminal(self):
+        edge = nx.DiGraph([("A", "B")])
+        result = ASCIIRenderer(
+            edge,
+            options=LayoutOptions(
+                use_ascii=True,
+                node_style=NodeStyle.MINIMAL,
+                flow_direction=FlowDirection.UP,
+                layer_spacing=4,
+            ),
+        ).render()
+        lines = result.splitlines()
+        top_idx = next(i for i, line in enumerate(lines) if "B" in line)
+        self.assertIn("^", lines[top_idx + 1])
+
+    def test_bidirectional_vertical_arrows_are_at_both_terminals(self):
+        edge = nx.DiGraph([("A", "B"), ("B", "A")])
+        result = ASCIIRenderer(
+            edge,
+            options=LayoutOptions(
+                use_ascii=True,
+                node_style=NodeStyle.MINIMAL,
+                flow_direction=FlowDirection.UP,
+                layer_spacing=4,
+            ),
+        ).render()
+        lines = result.splitlines()
+        top_idx = next(i for i, line in enumerate(lines) if "B" in line)
+        bottom_idx = next(i for i, line in enumerate(lines) if "A" in line)
+        self.assertIn("^", lines[top_idx + 1])
+        self.assertIn("v", lines[bottom_idx - 1])
+
     def test_boxed_node_rendering_with_padding(self):
         """Box mode should draw a rectangle with configured padding."""
         single = nx.DiGraph()
