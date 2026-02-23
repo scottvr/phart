@@ -13,10 +13,39 @@
 - Handles cycles and complex layouts
 - Bidirectional edge support
 - Orthogonal (yet correct, though perhaps unexpected) Triad Layout
-  
-## Examples
 
-phart can be used programmatically:
+## NEW Features Feb 2026
+ * binary_tree sort mode
+ * binary_tree sort can respect "side" properties ("left", 'right")
+ * bounding box mode (line art rectangles with configurable inner padding)
+ *(optionally) use labels instead of node names when rendering diagram.
+ *(optionally) color edges with ANSI colors to help discern edge paths in dense complex diagrams
+ 
+Binary Tree with "side"-steering examples are shown throughout below. I've finally updated to show phart's cosmetic enhancements.
+Same with bounding-box mode, which is demonstrated below on a couple of different tree-type graphs.
+
+
+### Labelling with label properties
+
+The label support can make an interesting but uninformative diagram suddenly more meaningful, and beautiful IMHO. 
+Take a look at this Unix Family Tree (also from a .dot file); I think it's gorgeous.
+
+<img width="700" height="600" alt="unix-family-tree" src="https://github.com/user-attachments/assets/1475614f-0f6b-425e-b088-7f121bef27d9" />
+
+
+### ANSI color edge paths
+
+ANSI color support turned out more interesting than I expected. Not completely satisfied with it, I ended up enabling three modes to the feature: color by source, color by target, and color by path. Here's an example of edge_anchors=ports, color_mode=true, and edge_color_mode=source, using a graph of Golang package dependencies. 
+
+<img width="700" height="600" alt="go-package-dependencies" src="https://github.com/user-attachments/assets/932ce0db-cc4e-42ce-b77e-895ecf80fb56" />
+
+I'm  not sure it's all *that* much easier to discern what goes to where, but it sure is fun to look at.
+
+----
+
+## Usage Examples
+
+phart can be used **programmatically**:
 ```python
 import networkx as nx
 from phart import ASCIIRenderer, NodeStyle
@@ -42,14 +71,14 @@ Basic Directed Graph:
    [D]
 ```
 
-phart also comes as a handy CLI tool, set up for you when you `pip install` phart.
+phart also comes as a handy **CLI tool**, set up for you when you `pip install` phart.
 The phart CLI can read graphs in **graphml** or **dot** format. Additionally, the phart CLI
 can reaad *python code* that itseslf makes use of phart such as that above, so that it can be tested from the command-line, allowing you to try out various display options without having to edit your code repeatedly to see what works best.
 
 phart supports ASCII and Unicode, and will try to use the sensible default for your 
 terminal environment.
 
-## How to phart?
+### How to phart?
 
 Let's make a simple graph in Python using NetworkX and phart:
 ```bash
@@ -216,11 +245,13 @@ This gives us:
 There are plenty more examples in the repo, along with a README in the examples/ directory
 that includes the output of a very early release of phart.
 
+----
+
 ## Why PHART?
 
 The acronym was a fortuitous accident from the non-abbreviated words that the letters represent: **Python Hierarchical ASCII Rendering Tool**.
 
-## Really, why?
+### Really, why?
 
 When I point out that phart is not a Perl or a PHP webapp, it may appear that I am
 *throwing shade* at the existing solutions, but it is meant in a good-hearted way. 
