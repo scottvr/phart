@@ -247,6 +247,22 @@ that includes the output of a very early release of phart.
 
 ----
 
+## NEW! Feb 2026 - Layout Strategies
+
+Now, explicitly exposed and selectable by the user, phart's layout_strategy is now configurable.
+Supported modes are:
+- auto (default) - This is the original PHART orthogonal/hierarchical layout method.
+- bfs - Breadth-First Search
+- bipartite - Arrange the node in two straight lines.
+- circular - Arrange the nodes in a circular layout.
+- kamada-kawai - Positions nodes using Kamada-Kawai path-length cost function. (requires scipy)
+- spring - Position nodes using Fruchterman-Reingold force-directed algorithm. (fallback for kamada-kawai if scipy not available.)
+- multipartite - Position nodes in layers of straight lines.
+- planar - Minimize edge (path) intersections.
+- random - Positions nodes uniformly at random within the unit square.
+
+
+
 ## Why PHART?
 
 The acronym was a fortuitous accident from the non-abbreviated words that the letters represent: **Python Hierarchical ASCII Rendering Tool**.
@@ -286,11 +302,13 @@ pip install .
 
 ## The CLI
 ```bash
-% phart --help
+% phart % phart --help
 usage: phart [-h] [--output OUTPUT] [--style {minimal,square,round,diamond,custom,bbox}]
-             [--node-spacing NODE_SPACING] [--layer-spacing LAYER_SPACING] [--charset {ascii,unicode}] [--ascii]
-             [--function FUNCTION] [--binary-tree] [--flow-direction {down,up,left,right}] [--bboxes]
-             [--hpad HPAD] [--vpad VPAD] [--uniform] [--edge-anchors {center,ports}]
+             [--node-spacing NODE_SPACING] [--layer-spacing LAYER_SPACING]
+             [--charset {ascii,unicode}] [--ascii] [--function FUNCTION] [--binary-tree]
+             [--flow-direction {down,up,left,right}] [--bboxes] [--hpad HPAD] [--vpad VPAD]
+             [--uniform] [--edge-anchors {center,ports}] [--labels] [--colors]
+             [--edge-color-mode {target,source,path}]
              input
 
 PHART: Python Hierarchical ASCII Rendering Tool
@@ -302,7 +320,7 @@ options:
   -h, --help            show this help message and exit
   --output, -o OUTPUT   Output file (if not specified, prints to stdout)
   --style {minimal,square,round,diamond,custom,bbox}
-                        Node style (default: square)
+                        Node style (default: square, or minimal when --bboxes is enabled)
   --node-spacing NODE_SPACING
                         Horizontal space between nodes (default: 4)
   --layer-spacing LAYER_SPACING
@@ -314,8 +332,8 @@ options:
                         Function to call in Python file (default: main)
   --binary-tree         Enable binary tree layout (respects edge 'side' attributes)
   --flow-direction, --flow {down,up,left,right}
-                        Layout flow direction: down (default, root at top), up (root at bottom), left (root at
-                        right), right (root at left)
+                        Layout flow direction: down (default, root at top), up (root at bottom),
+                        left (root at right), right (root at left)
   --bboxes              Draw line-art boxes around nodes
   --hpad HPAD           Horizontal padding inside node boxes (default: 1)
   --vpad VPAD           Vertical padding inside node boxes (default: 0)
@@ -323,6 +341,10 @@ options:
                         Use widest node text as the width baseline for all node boxes
   --edge-anchors {center,ports}
                         Edge anchor strategy: center (default) or ports (distributed on box edges)
+  --labels              Use node labels (if present) for displayed node text
+  --colors              Enable ANSI color output (unicode mode only)
+  --edge-color-mode {target,source,path}
+                        Edge coloring model when --colors is enabled (default: target)
 ```
 
 ## Developer Quick Start
