@@ -497,9 +497,17 @@ class ASCIIRenderer:
 
     def _line_dirs_for_char(self, ch: str) -> Set[str]:
         """Map existing glyphs to line connection directions."""
-        if ch in (self.options.edge_vertical, self.options.edge_arrow_up, self.options.edge_arrow_down):
+        if ch in (
+            self.options.edge_vertical,
+            self.options.edge_arrow_up,
+            self.options.edge_arrow_down,
+        ):
             return {"up", "down"}
-        if ch in (self.options.edge_horizontal, self.options.edge_arrow_l, self.options.edge_arrow_r):
+        if ch in (
+            self.options.edge_horizontal,
+            self.options.edge_arrow_l,
+            self.options.edge_arrow_r,
+        ):
             return {"left", "right"}
 
         unicode_map: Dict[str, Set[str]] = {

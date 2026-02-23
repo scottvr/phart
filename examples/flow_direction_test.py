@@ -12,12 +12,12 @@ from phart import ASCIIRenderer, LayoutOptions
 def create_test_graph():
     """Create a simple binary tree for testing."""
     G = nx.DiGraph()
-    G.add_edge('Root', 'Left', side='left')
-    G.add_edge('Root', 'Right', side='right')
-    G.add_edge('Left', 'LL', side='left')
-    G.add_edge('Left', 'LR', side='right')
-    G.add_edge('Right', 'RL', side='left')
-    G.add_edge('Right', 'RR', side='right')
+    G.add_edge("Root", "Left", side="left")
+    G.add_edge("Root", "Right", side="right")
+    G.add_edge("Left", "LL", side="left")
+    G.add_edge("Left", "LR", side="right")
+    G.add_edge("Right", "RL", side="left")
+    G.add_edge("Right", "RR", side="right")
     return G
 
 
@@ -36,9 +36,7 @@ def main():
     print("=" * 70)
     print("Arrows point UP toward parents")
     options = LayoutOptions(
-        binary_tree_layout=True,
-        flow_direction='down',
-        layer_spacing=2
+        binary_tree_layout=True, flow_direction="down", layer_spacing=2
     )
     renderer = ASCIIRenderer(G, options=options)
     print(renderer.render())
@@ -49,9 +47,7 @@ def main():
     print("=" * 70)
     print("Arrows point DOWN toward parents")
     options = LayoutOptions(
-        binary_tree_layout=True,
-        flow_direction='up',
-        layer_spacing=2
+        binary_tree_layout=True, flow_direction="up", layer_spacing=2
     )
     renderer = ASCIIRenderer(G, options=options)
     print(renderer.render())
@@ -62,9 +58,7 @@ def main():
     print("=" * 70)
     print("Arrows point LEFT toward parents")
     options = LayoutOptions(
-        binary_tree_layout=True,
-        flow_direction='right',
-        layer_spacing=2
+        binary_tree_layout=True, flow_direction="right", layer_spacing=2
     )
     renderer = ASCIIRenderer(G, options=options)
     print(renderer.render())
@@ -75,9 +69,7 @@ def main():
     print("=" * 70)
     print("Arrows point RIGHT toward parents")
     options = LayoutOptions(
-        binary_tree_layout=True,
-        flow_direction='left',
-        layer_spacing=2
+        binary_tree_layout=True, flow_direction="left", layer_spacing=2
     )
     renderer = ASCIIRenderer(G, options=options)
     print(renderer.render())
@@ -102,5 +94,5 @@ Use cases:
 """)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

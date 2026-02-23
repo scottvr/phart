@@ -16,8 +16,8 @@ def main():
 
     # Simple graph: A -> B, A -> C
     G = nx.DiGraph()
-    G.add_edge('A', 'B')
-    G.add_edge('A', 'C')
+    G.add_edge("A", "B")
+    G.add_edge("A", "C")
 
     print("\nGraph: A -> B, A -> C\n")
 
@@ -25,7 +25,7 @@ def main():
     print("-" * 70)
     print("DOWN: Traditional top-down")
     print("-" * 70)
-    options = LayoutOptions(flow_direction='down')
+    options = LayoutOptions(flow_direction="down")
     renderer = ASCIIRenderer(G, options=options)
     print(renderer.render())
 
@@ -33,7 +33,7 @@ def main():
     print("\n" + "-" * 70)
     print("UP: Dependencies flow upward")
     print("-" * 70)
-    options = LayoutOptions(flow_direction='up')
+    options = LayoutOptions(flow_direction="up")
     renderer = ASCIIRenderer(G, options=options)
     print(renderer.render())
 
@@ -41,7 +41,7 @@ def main():
     print("\n" + "-" * 70)
     print("RIGHT: Left-to-right flow")
     print("-" * 70)
-    options = LayoutOptions(flow_direction='right')
+    options = LayoutOptions(flow_direction="right")
     renderer = ASCIIRenderer(G, options=options)
     print(renderer.render())
 
@@ -49,7 +49,7 @@ def main():
     print("\n" + "-" * 70)
     print("LEFT: Right-to-left flow")
     print("-" * 70)
-    options = LayoutOptions(flow_direction='left')
+    options = LayoutOptions(flow_direction="left")
     renderer = ASCIIRenderer(G, options=options)
     print(renderer.render())
 
@@ -58,5 +58,5 @@ def main():
     print("=" * 70)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

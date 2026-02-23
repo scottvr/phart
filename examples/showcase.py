@@ -126,6 +126,8 @@ if __name__ == "__main__":
 
     for style in NodeStyle:
         print(f"\nUsing {style.name} style:")
+        if style.name == "bbox":
+            LayoutOptions.bboxes = True
         renderer = ASCIIRenderer(
             G,
             node_style=style,

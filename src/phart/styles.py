@@ -125,9 +125,7 @@ class LayoutOptions:
     instance_id: int = field(init=False)
 
     # Edge characters with ASCII fallbacks
-    edge_cross = EdgeChar(
-        "+", "┼"
-    )
+    edge_cross = EdgeChar("+", "┼")
     edge_vertical = EdgeChar("|", "│")
     edge_horizontal = EdgeChar("-", "─")
     edge_arrow_r = EdgeChar(">", "→")
