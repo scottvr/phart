@@ -100,7 +100,7 @@ class LayoutOptions:
     node_spacing: int = field(default=4)
     margin: int = field(default=1)
     layer_spacing: int = field(default=3)
-    node_style: Union[NodeStyle, str] = NodeStyle.SQUARE
+    node_style: Union[NodeStyle, str, None] = None
     show_arrows: bool = True
     use_ascii: Optional[bool] = None
     custom_decorators: Optional[Dict[str, Tuple[str, str]]] = field(
@@ -150,7 +150,10 @@ class LayoutOptions:
         self.instance_id = LayoutOptions._instance_counter
         LayoutOptions._instance_counter += 1
 
-        if isinstance(self.node_style, str):
+        if self.node_style is None:
+            # Keep boxed mode compact by default unless style is explicitly requested.
+            self.node_style = NodeStyle.MINIMAL if self.bboxes else NodeStyle.SQUARE
+        elif isinstance(self.node_style, str):
             try:
                 self.node_style = NodeStyle[self.node_style.upper()]
             except KeyError:

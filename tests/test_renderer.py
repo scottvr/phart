@@ -278,6 +278,40 @@ class TestASCIIRenderer(unittest.TestCase):
         )
         self.assertEqual(result.strip(), expected)
 
+    def test_boxed_default_style_is_minimal(self):
+        """When style is unspecified, boxed nodes should not include decorators."""
+        single = nx.DiGraph()
+        single.add_node("A")
+        renderer = ASCIIRenderer(
+            single,
+            options=LayoutOptions(
+                bboxes=True,
+                hpad=1,
+                vpad=0,
+                use_ascii=True,
+            ),
+        )
+        result = renderer.render()
+        self.assertIn("| A |", result)
+        self.assertNotIn("[A]", result)
+
+    def test_boxed_explicit_style_is_preserved(self):
+        """Explicitly requested node styles should still render inside boxes."""
+        single = nx.DiGraph()
+        single.add_node("A")
+        renderer = ASCIIRenderer(
+            single,
+            options=LayoutOptions(
+                node_style=NodeStyle.ROUND,
+                bboxes=True,
+                hpad=1,
+                vpad=0,
+                use_ascii=True,
+            ),
+        )
+        result = renderer.render()
+        self.assertIn("| (A) |", result)
+
     def test_uniform_box_widths(self):
         """Uniform box mode should size all boxes to the widest node text."""
         graph = nx.DiGraph([("A", "WIDE_NODE")])
@@ -452,6 +486,11 @@ class TestLayoutOptions(unittest.TestCase):
         options = LayoutOptions()
         self.assertGreater(options.node_spacing, 0)
         self.assertGreater(options.layer_spacing, 0)
+        self.assertEqual(options.node_style, NodeStyle.SQUARE)
+
+    def test_default_style_is_minimal_when_boxed(self):
+        options = LayoutOptions(bboxes=True)
+        self.assertEqual(options.node_style, NodeStyle.MINIMAL)
 
     def test_invalid_box_padding(self):
         with self.assertRaises(ValueError):

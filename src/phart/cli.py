@@ -30,8 +30,8 @@ def parse_args() -> tuple[argparse.Namespace, list[str]]:
     parser.add_argument(
         "--style",
         choices=[s.name.lower() for s in NodeStyle],
-        default="square",
-        help="Node style (default: square)",
+        default=None,
+        help="Node style (default: square, or minimal when --bboxes is enabled)",
     )
     parser.add_argument(
         "--node-spacing",
@@ -126,8 +126,9 @@ def _load_python_module(file_path: Path) -> Any:
 
 def create_layout_options(args: argparse.Namespace) -> LayoutOptions:
     """Create LayoutOptions from CLI arguments."""
+    node_style = NodeStyle[args.style.upper()] if args.style is not None else None
     return LayoutOptions(
-        node_style=NodeStyle[args.style.upper()],
+        node_style=node_style,
         node_spacing=args.node_spacing,
         layer_spacing=args.layer_spacing,
         use_ascii=(args.charset == CharSet.ASCII or args.use_legacy_ascii),
