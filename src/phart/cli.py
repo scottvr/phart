@@ -122,7 +122,7 @@ def parse_args() -> tuple[argparse.Namespace, list[str]]:
     parser.add_argument(
         "--edge-color-mode",
         choices=["target", "source", "path"],
-        default="target",
+        default="source",
         help="Edge coloring model when --colors is enabled (default: target)",
     )
     args, unknown = parser.parse_known_args()
