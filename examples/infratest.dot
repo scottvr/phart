@@ -1,0 +1,55 @@
+digraph{
+  graph [fontname = "monospace", fontsize="10", color="grey", fontcolor="grey"];
+  node [fontname = "monospace",shape="box",style="filled"];
+  edge [fontname = "monospace",color="blue", fontcolor="blue",fontsize="10"];
+  /* 
+    define components in the clusters they belong to
+  */
+  subgraph clusterProvider{
+    label="3rd party"
+    "user"
+    "app"
+    "provider-backend"[label="3rd party\nbackend"]
+    "provider-developer" 
+  }
+  subgraph clusterPublicSubnet {
+    label="public subnet"
+    "public-api"
+    "admin-api"
+    "admin-gui"
+  }
+  subgraph clusterPrivateSubnet {
+    label="private subnet"
+    "IOT Gateway"
+    "resource-service"
+    "state-service"
+    "DynamoDB" [shape="cylinder"]
+    "RDS" [shape="cylinder"]
+    "Kinesis"
+  }
+  subgraph clusterCustomerService {
+    label="customer service"
+   "customer-service"
+  }
+  subgraph clusterFleet {
+    label="things"
+    "thing" [shape="circle", color=""]
+  }
+  /* 
+   define calls between existing components
+  */
+  "user" -> "app"
+  "app" -> "provider-backend"
+  "provider-backend" -> "public-api"[label="x-auth-token=API_KEY"]
+  "public-api" -> "state-service" [label=" get thing\nlocation"]
+  "public-api" -> "resource-service" [label=" get user,"]
+  "resource-service" -> "RDS" [dir="both", label="read/write\nnon-transient\nresources"]
+  "customer-service" -> "admin-gui"[label="manage users"]
+  "customer-service" -> "provider-developer"[label="issue api key"]
+  "admin-gui" -> "admin-api"
+  "admin-api" -> "resource-service"[label="add users"]
+  "IOT Gateway" -> "Kinesis"
+  "Kinesis" -> "DynamoDB" [label="upsert \nthing state"]
+  "state-service" -> "DynamoDB" [label="read \nthing state"]
+  "thing" -> "IOT Gateway" [ label="thing\ntelematics\nstream" ] 
+}
