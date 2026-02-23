@@ -574,7 +574,7 @@ class LayoutManager:
                 node_depth.setdefault(node, 0)
 
             max_depth = max(node_depth.values(), default=0)
-            layers = [[] for _ in range(max_depth + 1)]
+            layers: List[List[Any]] = [[] for _ in range(max_depth + 1)]
             for node, depth in node_depth.items():
                 layers[depth].append(node)
             return layers
@@ -598,7 +598,7 @@ class LayoutManager:
         component_gap = layer_height
 
         for component in components:
-            layers = _build_layers(component)
+            layers = _build_layers(nx.DiGraph(component))
             widths = {
                 node: self._get_node_width(str(node)) for node in component.nodes()
             }
