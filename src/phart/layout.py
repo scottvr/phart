@@ -353,6 +353,16 @@ class LayoutManager:
             positions = self._layout_bipartite(self.graph, effective_spacing)
         elif strategy == "circular":
             positions = self._layout_circular(self.graph, effective_spacing)
+        elif strategy == "planar":
+            positions = self._layout_planar(self.graph, effective_spacing)
+        elif strategy == "kamada_kawai":
+            positions = self._layout_kamada_kawai(self.graph, effective_spacing)
+        elif strategy == "spring":
+            positions = self._layout_spring(self.graph, effective_spacing)
+        elif strategy == "random":
+            positions = self._layout_random(self.graph, effective_spacing)
+        elif strategy == "multipartite":
+            positions = self._layout_multipartite(self.graph, effective_spacing)
         else:
             # Auto mode preserves the original heuristics.
             if (
@@ -741,6 +751,150 @@ class LayoutManager:
             placed_rects.append(candidate_rect)
 
         return self._normalize_positions_to_origin(positions)
+
+    @staticmethod
+    def _as_float_xy(coord: Any) -> Tuple[float, float]:
+        """Convert a coordinate-like value to a float pair."""
+        try:
+            return float(coord[0]), float(coord[1])  # type: ignore[index]
+        except Exception:
+            return 0.0, 0.0
+
+    def _layout_from_coordinate_map(
+        self, coord_map: Dict[Any, Any], spacing: int
+    ) -> Dict[str, Tuple[int, int]]:
+        """Convert continuous coordinates to non-overlapping integer grid positions."""
+        if not coord_map:
+            return {}
+
+        widths = {node: self._get_node_width(node) for node in coord_map}
+        max_node_width = max(widths.values(), default=1)
+        node_height = self._get_node_height()
+        layer_step = self._get_layer_step()
+        node_count = len(coord_map)
+
+        xy_map = {node: self._as_float_xy(coord) for node, coord in coord_map.items()}
+        x_values = [xy[0] for xy in xy_map.values()]
+        y_values = [xy[1] for xy in xy_map.values()]
+        min_x = min(x_values, default=0.0)
+        max_x = max(x_values, default=0.0)
+        min_y = min(y_values, default=0.0)
+        max_y = max(y_values, default=0.0)
+        span_x = max(max_x - min_x, 1e-9)
+        span_y = max(max_y - min_y, 1e-9)
+
+        grid_factor = max(2, int(math.ceil(math.sqrt(node_count))) * 2)
+        base_x_span = max(1, (max_node_width + spacing) * grid_factor)
+        base_y_span = max(1, layer_step * grid_factor)
+        step_x = max(1, max_node_width + spacing)
+        step_y = max(1, layer_step)
+        row_limit = max(4, node_count * 2)
+
+        positions: Dict[Any, Tuple[int, int]] = {}
+        placed_rects: List[Tuple[int, int, int, int]] = []
+        nodes_ordered = sorted(
+            coord_map.keys(),
+            key=lambda n: (xy_map[n][1], xy_map[n][0], str(n)),
+        )
+
+        for node in nodes_ordered:
+            raw_x, raw_y = xy_map[node]
+            nx_norm = (raw_x - min_x) / span_x
+            ny_norm = (raw_y - min_y) / span_y
+
+            proposed_x = int(round(nx_norm * base_x_span))
+            proposed_y = int(round(ny_norm * base_y_span))
+
+            candidate_x = proposed_x
+            candidate_y = proposed_y
+            candidate_rect = self._node_rect(node, candidate_x, candidate_y, node_height)
+            attempts = 0
+            while any(
+                self._rectangles_overlap(candidate_rect, existing)
+                for existing in placed_rects
+            ):
+                attempts += 1
+                candidate_x += step_x
+                if attempts % row_limit == 0:
+                    candidate_x = proposed_x
+                    candidate_y += step_y
+                candidate_rect = self._node_rect(
+                    node, candidate_x, candidate_y, node_height
+                )
+
+            positions[node] = (candidate_x, candidate_y)
+            placed_rects.append(candidate_rect)
+
+        return self._normalize_positions_to_origin(positions)
+
+    def _layout_planar(self, graph: nx.DiGraph, spacing: int) -> Dict[str, Tuple[int, int]]:
+        """Planar layout with hierarchical fallback for non-planar graphs."""
+        planar_graph = nx.Graph(graph)
+        try:
+            coord_map = nx.planar_layout(planar_graph)
+            return self._layout_from_coordinate_map(coord_map, spacing)
+        except (nx.NetworkXException, ValueError):
+            return self._layout_hierarchical(graph, spacing)
+    
+    def _layout_spring(
+        self, graph: nx.DiGraph,
+        seed: int=42,
+    ): 
+        coord_map = nx.spring_layout(nx.Graph(graph), seed=seed)
+        return self._layout_from_coordinate_map(coord_map, spacing)
+
+    def _layout_kamada_kawai(
+        self, graph: nx.DiGraph, spacing: int
+    ) -> Dict[str, Tuple[int, int]]:
+        """Kamada-Kawai force-directed layout."""
+        try:
+            coord_map = nx.kamada_kawai_layout(nx.Graph(graph), weight=None)
+        except (ModuleNotFoundError, ImportError):
+            # NetworkX's Kamada-Kawai solver depends on SciPy; fallback keeps
+            # the strategy usable in minimal environments.
+            coord_map = nx.spring_layout(nx.Graph(graph), seed=42)
+        return self._layout_from_coordinate_map(coord_map, spacing)
+
+    def _layout_random(self, graph: nx.DiGraph, spacing: int) -> Dict[str, Tuple[int, int]]:
+        """Random node positioning layout."""
+        coord_map = nx.random_layout(graph)
+        return self._layout_from_coordinate_map(coord_map, spacing)
+
+    def _infer_multipartite_subset_map(self, graph: nx.DiGraph) -> Dict[Any, Any]:
+        """Infer multipartite subset assignment from node attrs, then BFS depth."""
+        subset_map: Dict[Any, Any] = {}
+        attr_keys = ("subset", "part", "partition", "layer", "level", "rank", "group")
+        for node, attrs in graph.nodes(data=True):
+            for key in attr_keys:
+                if key in attrs and attrs[key] is not None:
+                    subset_map[node] = attrs[key]
+                    break
+
+        if len(subset_map) == len(graph.nodes()):
+            return subset_map
+
+        layers = self._build_layers_bfs(nx.DiGraph(graph))
+        depth_map: Dict[Any, int] = {}
+        for depth, layer in enumerate(layers):
+            for node in layer:
+                depth_map[node] = depth
+
+        for node in graph.nodes():
+            subset_map.setdefault(node, depth_map.get(node, 0))
+
+        return subset_map
+
+    def _layout_multipartite(
+        self, graph: nx.DiGraph, spacing: int
+    ) -> Dict[str, Tuple[int, int]]:
+        """Multipartite layout driven by subset-like node attributes or BFS depth."""
+        multipartite_graph = nx.Graph(graph).copy()
+        subset_map = self._infer_multipartite_subset_map(graph)
+        nx.set_node_attributes(multipartite_graph, subset_map, "_phart_subset")
+        coord_map = nx.multipartite_layout(
+            multipartite_graph, subset_key="_phart_subset", align="horizontal"
+        )
+        return self._layout_from_coordinate_map(coord_map, spacing)
 
     def _layout_layered_fallback(
         self,

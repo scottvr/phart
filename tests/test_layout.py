@@ -170,6 +170,107 @@ class TestLayoutManager(unittest.TestCase):
                     manager._rectangles_overlap(rect_a, rect_b)  # noqa: SLF001
                 )
 
+    def test_planar_layout_strategy_positions_nodes(self):
+        graph = nx.DiGraph(
+            [
+                ("A", "B"),
+                ("B", "C"),
+                ("C", "D"),
+                ("D", "A"),
+                ("A", "C"),
+            ]
+        )
+        manager = LayoutManager(
+            graph,
+            LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="planar",
+                layer_spacing=4,
+                use_ascii=True,
+            ),
+        )
+        positions, _, _ = manager.calculate_layout()
+
+        self.assertEqual(set(positions.keys()), set(graph.nodes()))
+        self.assertGreaterEqual(len({x for x, _ in positions.values()}), 2)
+        self.assertGreaterEqual(len({y for _, y in positions.values()}), 2)
+
+    def test_planar_layout_strategy_falls_back_for_non_planar_graph(self):
+        graph = nx.DiGraph(nx.complete_bipartite_graph(3, 3))
+        manager = LayoutManager(
+            graph,
+            LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="planar",
+                layer_spacing=4,
+                use_ascii=True,
+            ),
+        )
+        positions, _, _ = manager.calculate_layout()
+
+        self.assertEqual(set(positions.keys()), set(graph.nodes()))
+        self.assertGreaterEqual(len({y for _, y in positions.values()}), 2)
+
+    def test_kamada_kawai_layout_strategy_positions_nodes(self):
+        graph = nx.DiGraph(
+            [("A", "B"), ("A", "C"), ("B", "D"), ("C", "E"), ("D", "E")]
+        )
+        manager = LayoutManager(
+            graph,
+            LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="kamada_kawai",
+                layer_spacing=4,
+                use_ascii=True,
+            ),
+        )
+        positions, _, _ = manager.calculate_layout()
+
+        self.assertEqual(set(positions.keys()), set(graph.nodes()))
+        self.assertGreaterEqual(len({x for x, _ in positions.values()}), 3)
+        self.assertGreaterEqual(len({y for _, y in positions.values()}), 2)
+
+    def test_random_layout_strategy_positions_nodes(self):
+        graph = nx.DiGraph([(f"N{i}", f"N{i+1}") for i in range(6)])
+        manager = LayoutManager(
+            graph,
+            LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="random",
+                layer_spacing=4,
+                use_ascii=True,
+            ),
+        )
+        positions, _, _ = manager.calculate_layout()
+
+        self.assertEqual(set(positions.keys()), set(graph.nodes()))
+        self.assertGreaterEqual(len({x for x, _ in positions.values()}), 3)
+
+    def test_multipartite_layout_strategy_uses_subset_attributes(self):
+        graph = nx.DiGraph()
+        graph.add_node("A", subset=0)
+        graph.add_node("B", subset=0)
+        graph.add_node("C", subset=1)
+        graph.add_node("D", subset=1)
+        graph.add_node("E", subset=2)
+        graph.add_edges_from([("A", "C"), ("B", "D"), ("C", "E"), ("D", "E")])
+
+        manager = LayoutManager(
+            graph,
+            LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="multipartite",
+                layer_spacing=4,
+                use_ascii=True,
+            ),
+        )
+        positions, _, _ = manager.calculate_layout()
+
+        self.assertEqual(positions["A"][1], positions["B"][1])
+        self.assertEqual(positions["C"][1], positions["D"][1])
+        self.assertNotEqual(positions["A"][1], positions["C"][1])
+        self.assertNotEqual(positions["C"][1], positions["E"][1])
+
 
 if __name__ == "__main__":
     unittest.main()

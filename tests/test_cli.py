@@ -325,3 +325,14 @@ def demonstrate_graph():
         exit_code = main()
         self.assertEqual(exit_code, 0)
         self.assertNotIn("Error", self.stderr.getvalue())
+
+    def test_layout_strategy_phase2_values(self):
+        for strategy in ("planar", "kamada-kawai", "random", "multipartite"):
+            self.stdout.truncate(0)
+            self.stdout.seek(0)
+            self.stderr.truncate(0)
+            self.stderr.seek(0)
+            sys.argv = ["phart", "--layout", strategy, str(self.test_text_file)]
+            exit_code = main()
+            self.assertEqual(exit_code, 0)
+            self.assertNotIn("Error", self.stderr.getvalue())

@@ -114,7 +114,9 @@ class LayoutOptions:
     preserve_triangle_shape: bool = field(default=True)
     triangle_height_ratio: float = field(default=0.866)  # sqrt(3)/2 for equilateral
     binary_tree_layout: bool = field(default=False)  # Use binary tree positioning
-    layout_strategy: str = field(default="auto")  # auto, bfs, bipartite, circular
+    layout_strategy: str = field(
+        default="auto"
+    )  # auto, bfs, bipartite, circular, planar, kamada_kawai, random, multipartite
     flow_direction: FlowDirection = field(default=FlowDirection.DOWN)
     bboxes: bool = field(default=False)  # Draw line-art boxes around nodes
     hpad: int = field(default=1)  # Horizontal inner padding for boxed nodes
@@ -219,10 +221,20 @@ class LayoutOptions:
             raise ValueError("edge_anchor_mode must be one of: center, ports")
 
         if isinstance(self.layout_strategy, str):
-            self.layout_strategy = self.layout_strategy.strip().lower()
-        if self.layout_strategy not in {"auto", "bfs", "bipartite", "circular"}:
+            self.layout_strategy = self.layout_strategy.strip().lower().replace("-", "_")
+        if self.layout_strategy not in {
+            "auto",
+            "bfs",
+            "bipartite",
+            "circular",
+            "planar",
+            "kamada_kawai",
+            "random",
+            "multipartite",
+        }:
             raise ValueError(
-                "layout_strategy must be one of: auto, bfs, bipartite, circular"
+                "layout_strategy must be one of: auto, bfs, bipartite, circular, "
+                "planar, kamada_kawai, random, multipartite"
             )
 
         if isinstance(self.edge_color_mode, str):

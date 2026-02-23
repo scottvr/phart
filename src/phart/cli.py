@@ -1,5 +1,4 @@
 """Command line interface for PHART."""
-# src path: src/phart/cli.py
 
 import sys
 import ast
@@ -14,6 +13,17 @@ from .charset import CharSet
 
 
 COLOR_MODES = {"none", "source", "target", "path"}
+LAYOUT_STRATEGIES = {
+    "auto",
+    "bfs",
+    "bipartite",
+    "circular",
+    "planar",
+    "kamada-kawai",
+    "spring",
+    "random",
+    "multipartite",
+}
 
 
 def _normalize_color_args(argv: list[str]) -> list[str]:
@@ -115,7 +125,7 @@ def parse_args() -> tuple[argparse.Namespace, list[str]]:
     parser.add_argument(
         "--layout",
         "--layout-strategy",
-        choices=["auto", "bfs", "bipartite", "circular"],
+        choices=sorted(LAYOUT_STRATEGIES),
         dest="layout_strategy",
         default="auto",
         help="Node positioning strategy (default: auto)",
@@ -188,13 +198,14 @@ def create_layout_options(args: argparse.Namespace) -> LayoutOptions:
     """Create LayoutOptions from CLI arguments."""
     node_style = NodeStyle[args.style.upper()] if args.style is not None else None
     color_mode = args.colors
+    layout_strategy = args.layout_strategy.replace("-", "_")
     return LayoutOptions(
         node_style=node_style,
         node_spacing=args.node_spacing,
         layer_spacing=args.layer_spacing,
         use_ascii=(args.charset == CharSet.ASCII or args.use_legacy_ascii),
         binary_tree_layout=args.binary_tree,
-        layout_strategy=args.layout_strategy,
+        layout_strategy=layout_strategy,
         flow_direction=args.flow_direction,
         bboxes=args.bboxes,
         hpad=args.hpad,

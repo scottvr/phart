@@ -669,6 +669,10 @@ class TestLayoutOptions(unittest.TestCase):
         with self.assertRaises(ValueError):
             LayoutOptions(layout_strategy="invalid")
 
+    def test_layout_strategy_normalizes_hyphenated_kamada_kawai(self):
+        options = LayoutOptions(layout_strategy="kamada-kawai")
+        self.assertEqual(options.layout_strategy, "kamada_kawai")
+
     def test_invalid_edge_color_mode(self):
         with self.assertRaises(ValueError):
             LayoutOptions(edge_color_mode="invalid")
