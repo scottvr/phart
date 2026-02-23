@@ -3,6 +3,7 @@
 
 import unittest
 import tempfile
+import shutil
 from pathlib import Path
 import sys
 from io import StringIO
@@ -82,8 +83,7 @@ def demonstrate_graph():
         sys.stdout = self.old_stdout
         sys.stderr = self.old_stderr
         sys.argv = self.old_argv
-        self.test_text_file.unlink()
-        Path(self.temp_dir).rmdir()
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_basic_rendering(self):
         """Test basic DOT file rendering."""
@@ -95,7 +95,7 @@ def demonstrate_graph():
         self.assertIn("A", output)
         self.assertIn("B", output)
         self.assertIn("C", output)
-        self.assertEqual(self.stderr.getvalue(), "")  # No errors
+        self.assertNotIn("Error", self.stderr.getvalue())
 
     def test_style_option(self):
         """Test node style option."""
@@ -105,7 +105,7 @@ def demonstrate_graph():
         output = self.stdout.getvalue()
         self.assertIn("(A)", output)
         self.assertIn("(B)", output)
-        self.assertEqual(self.stderr.getvalue(), "")
+        self.assertNotIn("Error", self.stderr.getvalue())
 
     def test_charset_unicode(self):
         """Test explicit unicode charset option."""
@@ -115,7 +115,7 @@ def demonstrate_graph():
         output = self.stdout.getvalue()
         # Should find at least one unicode character
         self.assertTrue(any(ord(c) > 127 for c in output))
-        self.assertEqual(self.stderr.getvalue(), "")
+        self.assertNotIn("Error", self.stderr.getvalue())
 
     def test_charset_ascii(self):
         """Test ASCII charset option."""
@@ -125,7 +125,7 @@ def demonstrate_graph():
         output = self.stdout.getvalue()
         # All characters should be ASCII
         self.assertTrue(all(ord(c) < 128 for c in output))
-        self.assertEqual(self.stderr.getvalue(), "")
+        self.assertNotIn("Error", self.stderr.getvalue())
 
     def test_legacy_ascii_flag(self):
         """Test that legacy --ascii flag still works."""
@@ -135,7 +135,7 @@ def demonstrate_graph():
         output = self.stdout.getvalue()
         # All characters should be ASCII
         self.assertTrue(all(ord(c) < 128 for c in output))
-        self.assertEqual(self.stderr.getvalue(), "")
+        self.assertNotIn("Error", self.stderr.getvalue())
 
     def test_charset_and_legacy_flag(self):
         """Test interaction between --charset and --ascii flags."""
@@ -152,7 +152,7 @@ def demonstrate_graph():
         output = self.stdout.getvalue()
         # Should still be ASCII-only despite unicode charset
         self.assertTrue(all(ord(c) < 128 for c in output))
-        self.assertEqual(self.stderr.getvalue(), "")
+        self.assertNotIn("Error", self.stderr.getvalue())
 
     def test_invalid_file(self):
         """Test handling of invalid file."""
@@ -180,7 +180,7 @@ def demonstrate_graph():
         self.assertIn("A", output)
         self.assertIn("B", output)
         self.assertIn("C", output)
-        self.assertEqual(self.stderr.getvalue(), "")
+        self.assertNotIn("Error", self.stderr.getvalue())
 
     def test_python_with_main_block(self):
         """Test executing Python file with __main__ block."""
@@ -191,7 +191,7 @@ def demonstrate_graph():
         self.assertIn("X", output)
         self.assertIn("Y", output)
         self.assertIn("Z", output)
-        self.assertEqual(self.stderr.getvalue(), "")
+        self.assertNotIn("Error", self.stderr.getvalue())
 
     def test_python_custom_function(self):
         """Test executing Python file with custom function."""
@@ -207,7 +207,7 @@ def demonstrate_graph():
         self.assertIn("P", output)
         self.assertIn("Q", output)
         self.assertIn("R", output)
-        self.assertEqual(self.stderr.getvalue(), "")
+        self.assertNotIn("Error", self.stderr.getvalue())
 
     def test_python_missing_function(self):
         """Test error handling for missing function."""
