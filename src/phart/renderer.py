@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Dict, List, Optional, TextIO, Tuple, ClassVar
+from typing import Any, Dict, List, Optional, TextIO, Tuple, ClassVar, Set
 import warnings
 
 import networkx as nx  # type: ignore
@@ -495,6 +495,67 @@ class ASCIIRenderer:
             raise IndexError(f"Drawing exceeded canvas bounds at ({x}, {y})")
         return None
 
+    def _line_dirs_for_char(self, ch: str) -> Set[str]:
+        """Map existing glyphs to line connection directions."""
+        if ch in (self.options.edge_vertical, self.options.edge_arrow_up, self.options.edge_arrow_down):
+            return {"up", "down"}
+        if ch in (self.options.edge_horizontal, self.options.edge_arrow_l, self.options.edge_arrow_r):
+            return {"left", "right"}
+
+        unicode_map: Dict[str, Set[str]] = {
+            "┌": {"right", "down"},
+            "┐": {"left", "down"},
+            "└": {"right", "up"},
+            "┘": {"left", "up"},
+            "┬": {"left", "right", "down"},
+            "┴": {"left", "right", "up"},
+            "├": {"up", "down", "right"},
+            "┤": {"up", "down", "left"},
+            "┼": {"up", "down", "left", "right"},
+            "+": {"up", "down", "left", "right"},
+            "|": {"up", "down"},
+            "-": {"left", "right"},
+        }
+        return unicode_map.get(ch, set())
+
+    def _glyph_for_line_dirs(self, dirs: Set[str]) -> str:
+        """Choose ASCII/Unicode line-art glyph for a connection set."""
+        if not dirs:
+            return " "
+
+        if self.options.use_ascii:
+            if ("left" in dirs or "right" in dirs) and ("up" in dirs or "down" in dirs):
+                return "+"
+            if "left" in dirs or "right" in dirs:
+                return "-"
+            return "|"
+
+        key = frozenset(dirs)
+        unicode_glyphs = {
+            frozenset({"up", "down"}): self.options.edge_vertical,
+            frozenset({"left", "right"}): self.options.edge_horizontal,
+            frozenset({"right", "down"}): self.options.edge_corner_ul,
+            frozenset({"left", "down"}): self.options.edge_corner_ur,
+            frozenset({"right", "up"}): self.options.edge_corner_ll,
+            frozenset({"left", "up"}): self.options.edge_corner_lr,
+            frozenset({"left", "right", "down"}): self.options.edge_tee_down,
+            frozenset({"left", "right", "up"}): self.options.edge_tee_up,
+            frozenset({"up", "down", "right"}): self.options.edge_tee_right,
+            frozenset({"up", "down", "left"}): self.options.edge_tee_left,
+            frozenset({"up", "down", "left", "right"}): self.options.edge_cross,
+        }
+
+        if key in unicode_glyphs:
+            return unicode_glyphs[key]
+        if "left" in dirs or "right" in dirs:
+            return self.options.edge_horizontal
+        return self.options.edge_vertical
+
+    def _merge_line_cell(self, x: int, y: int, add_dirs: Set[str]) -> None:
+        current = self.canvas[y][x]
+        merged_dirs = self._line_dirs_for_char(current) | add_dirs
+        self.canvas[y][x] = self._glyph_for_line_dirs(merged_dirs)
+
     def _is_terminal(
         self, positions: Dict[str, Tuple[int, int]], node: str, x: int, y: int
     ) -> bool:
@@ -602,7 +663,7 @@ class ASCIIRenderer:
                 max_x = max(start_x, end_x) - 1
 
                 for x in range(min_x, max_x + 1):
-                    self.canvas[y][x] = self.options.edge_horizontal
+                    self._merge_line_cell(x, y, {"left", "right"})
 
                 if is_bidirectional:
                     if min_x <= max_x:
@@ -662,25 +723,34 @@ class ASCIIRenderer:
                 # clobber a previously drawn edge.
                 for y in range(top_y + 1, jog_y):
                     if self.canvas[y][top_center] != self.options.edge_cross:
-                        self.canvas[y][top_center] = self.options.edge_vertical
+                        self._merge_line_cell(top_center, y, {"up", "down"})
 
                 if top_center != bottom_center:
-                    # Corners at both ends of the horizontal jog
-                    self.canvas[jog_y][top_center] = self.options.edge_cross
-                    self.canvas[jog_y][bottom_center] = self.options.edge_cross
+                    # Junctions at both ends of the horizontal jog.
+                    top_dirs: Set[str] = {"up"}
+                    bottom_dirs: Set[str] = {"down"}
+                    if bottom_center > top_center:
+                        top_dirs.add("right")
+                        bottom_dirs.add("left")
+                    else:
+                        top_dirs.add("left")
+                        bottom_dirs.add("right")
+
+                    self._merge_line_cell(top_center, jog_y, top_dirs)
+                    self._merge_line_cell(bottom_center, jog_y, bottom_dirs)
 
                     # Horizontal segment between the corners
                     min_x = min(top_center, bottom_center)
                     max_x = max(top_center, bottom_center)
                     for x in range(min_x + 1, max_x):
-                        self.canvas[jog_y][x] = self.options.edge_horizontal
+                        self._merge_line_cell(x, jog_y, {"left", "right"})
                 else:
                     # Straight down: vertical bar at jog_y too
-                    self.canvas[jog_y][top_center] = self.options.edge_vertical
+                    self._merge_line_cell(top_center, jog_y, {"up", "down"})
 
                 # Draw vertical segment from jog row down to child
                 for y in range(jog_y + 1, bottom_y):
-                    self.canvas[y][bottom_center] = self.options.edge_vertical
+                    self._merge_line_cell(bottom_center, y, {"up", "down"})
 
                 # Direction indicators
                 if is_bidirectional:

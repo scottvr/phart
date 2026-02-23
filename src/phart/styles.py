@@ -126,14 +126,22 @@ class LayoutOptions:
 
     # Edge characters with ASCII fallbacks
     edge_cross = EdgeChar(
-        "+", "+"
-    )  # '┼' seems unnecessarily large, and will be replaced by proper corner chars soon
+        "+", "┼"
+    )
     edge_vertical = EdgeChar("|", "│")
     edge_horizontal = EdgeChar("-", "─")
     edge_arrow_r = EdgeChar(">", "→")
     edge_arrow_l = EdgeChar("<", "←")
     edge_arrow_up = EdgeChar("^", "↑")
     edge_arrow_down = EdgeChar("v", "↓")
+    edge_corner_ul = EdgeChar("+", "┌")
+    edge_corner_ur = EdgeChar("+", "┐")
+    edge_corner_ll = EdgeChar("+", "└")
+    edge_corner_lr = EdgeChar("+", "┘")
+    edge_tee_up = EdgeChar("+", "┴")
+    edge_tee_down = EdgeChar("+", "┬")
+    edge_tee_left = EdgeChar("+", "┤")
+    edge_tee_right = EdgeChar("+", "├")
     box_top_left = EdgeChar("+", "┌")
     box_top_right = EdgeChar("+", "┐")
     box_bottom_left = EdgeChar("+", "└")

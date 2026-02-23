@@ -348,6 +348,38 @@ class TestASCIIRenderer(unittest.TestCase):
 
         self.assertEqual(len(set(starts)), 1)
 
+    def test_unicode_boxed_edges_use_line_junction_glyphs(self):
+        graph = nx.DiGraph([("Root", "Left"), ("Root", "Right")])
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                bboxes=True,
+                hpad=2,
+                vpad=0,
+                use_ascii=False,
+                layer_spacing=4,
+            ),
+        )
+        result = renderer.render()
+        self.assertTrue(any(ch in result for ch in "┌┐└┘┬┴├┤┼"))
+
+    def test_ascii_boxed_edges_do_not_emit_unicode_junctions(self):
+        graph = nx.DiGraph([("Root", "Left"), ("Root", "Right")])
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                bboxes=True,
+                hpad=2,
+                vpad=0,
+                use_ascii=True,
+                layer_spacing=4,
+            ),
+        )
+        result = renderer.render()
+        self.assertTrue(all(ord(c) < 128 for c in result))
+
     def test_file_writing(self):
         """Test writing to file with proper encoding."""
 
