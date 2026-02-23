@@ -7,6 +7,7 @@ import shutil
 from pathlib import Path
 import sys
 from io import StringIO
+from unittest.mock import patch
 
 from phart.cli import main
 
@@ -179,6 +180,19 @@ def demonstrate_graph():
         error_msg = self.stderr.getvalue()
         self.assertIn("Error", error_msg)
         self.assertIn("Could not parse file as GraphML or DOT format", error_msg)
+
+    def test_option_construction_errors_are_not_reported_as_parse_errors(self):
+        sys.argv = ["phart", str(self.test_text_file)]
+        with patch(
+            "phart.cli.create_layout_options",
+            side_effect=ValueError("synthetic options error"),
+        ):
+            exit_code = main()
+
+        self.assertEqual(exit_code, 1)
+        error_msg = self.stderr.getvalue()
+        self.assertIn("Error: synthetic options error", error_msg)
+        self.assertNotIn("Could not parse file as GraphML or DOT format", error_msg)
 
     def test_python_with_main(self):
         """Test executing Python file with main() function."""

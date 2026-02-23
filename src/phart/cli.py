@@ -299,8 +299,9 @@ def main() -> Optional[int]:
             with open(args.input, "r", encoding="utf-8") as f:
                 content = f.read()
 
+            cli_options = create_layout_options(args)
+
             try:
-                cli_options = create_layout_options(args)
                 if content.strip().startswith("<?xml") or content.strip().startswith(
                     "<graphml"
                 ):
@@ -309,9 +310,9 @@ def main() -> Optional[int]:
                     )
                 else:
                     renderer = ASCIIRenderer.from_dot(content, options=cli_options)
-            except Exception as format_error:
+            except Exception as parse_error:
                 print(
-                    f"Error: Could not parse file as GraphML or DOT format: {format_error}",
+                    f"Error: Could not parse file as GraphML or DOT format: {parse_error}",
                     file=sys.stderr,
                 )
                 return 1
