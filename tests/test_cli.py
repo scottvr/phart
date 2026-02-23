@@ -233,3 +233,16 @@ def demonstrate_graph():
         output = self.stdout.getvalue()
         self.assertTrue("┌" in output or "+" in output)
         self.assertNotIn("Error", self.stderr.getvalue())
+
+    def test_edge_anchor_mode_flag(self):
+        """Test edge anchor mode CLI option."""
+        sys.argv = [
+            "phart",
+            "--bboxes",
+            "--edge-anchors",
+            "ports",
+            str(self.test_text_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        self.assertNotIn("Error", self.stderr.getvalue())

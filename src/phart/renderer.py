@@ -126,6 +126,7 @@ class ASCIIRenderer:
             )
         self.layout_manager = LayoutManager(graph, self.options)
         self.canvas: List[List[str]] = []
+        self._edge_anchor_map: Dict[Tuple[Any, Any], Dict[str, Tuple[int, int]]] = {}
     
     
     def _resolve_options(cls, options: Optional[LayoutOptions]) -> LayoutOptions:
@@ -179,6 +180,132 @@ class ASCIIRenderer:
             "center_y": center_y,
         }
 
+    def _get_edge_sides(
+        self, start_bounds: Dict[str, int], end_bounds: Dict[str, int]
+    ) -> Tuple[str, str]:
+        """Choose source/target box sides for an edge based on relative geometry."""
+        if start_bounds["center_y"] == end_bounds["center_y"]:
+            if start_bounds["center_x"] <= end_bounds["center_x"]:
+                return "right", "left"
+            return "left", "right"
+        if start_bounds["center_y"] < end_bounds["center_y"]:
+            return "bottom", "top"
+        return "top", "bottom"
+
+    def _get_center_anchor_for_side(
+        self, bounds: Dict[str, int], side: str
+    ) -> Tuple[int, int]:
+        if side == "top":
+            return bounds["center_x"], bounds["top"]
+        if side == "bottom":
+            return bounds["center_x"], bounds["bottom"]
+        if side == "left":
+            return bounds["left"], bounds["center_y"]
+        return bounds["right"], bounds["center_y"]
+
+    def _get_side_port_values(self, bounds: Dict[str, int], side: str) -> List[int]:
+        """Get candidate port coordinates along a side (axis-only values)."""
+        if side in ("top", "bottom"):
+            if bounds["right"] - bounds["left"] > 1:
+                return list(range(bounds["left"] + 1, bounds["right"]))
+            return [bounds["center_x"]]
+        # Keep left/right anchored at center row for now to avoid extra jog complexity.
+        return [bounds["center_y"]]
+
+    def _port_value_to_xy(
+        self, bounds: Dict[str, int], side: str, value: int
+    ) -> Tuple[int, int]:
+        if side == "top":
+            return value, bounds["top"]
+        if side == "bottom":
+            return value, bounds["bottom"]
+        if side == "left":
+            return bounds["left"], value
+        return bounds["right"], value
+
+    def _compute_edge_anchor_map(
+        self, positions: Dict[str, Tuple[int, int]]
+    ) -> Dict[Tuple[Any, Any], Dict[str, Tuple[int, int]]]:
+        """Precompute deterministic per-edge anchors for ports mode."""
+        if self.options.edge_anchor_mode != "ports" or not self.options.bboxes:
+            return {}
+
+        requirements: Dict[Any, Dict[str, List[Tuple[Tuple[Any, Any], str, int, str]]]] = {}
+
+        for start, end in self.graph.edges():
+            if start not in positions or end not in positions:
+                continue
+
+            start_bounds = self._get_node_bounds(start, positions)
+            end_bounds = self._get_node_bounds(end, positions)
+            start_side, end_side = self._get_edge_sides(start_bounds, end_bounds)
+
+            start_counter = (
+                end_bounds["center_x"]
+                if start_side in ("top", "bottom")
+                else end_bounds["center_y"]
+            )
+            end_counter = (
+                start_bounds["center_x"]
+                if end_side in ("top", "bottom")
+                else start_bounds["center_y"]
+            )
+
+            requirements.setdefault(start, {}).setdefault(start_side, []).append(
+                ((start, end), "start", start_counter, str(end))
+            )
+            requirements.setdefault(end, {}).setdefault(end_side, []).append(
+                ((start, end), "end", end_counter, str(start))
+            )
+
+        edge_anchor_map: Dict[Tuple[Any, Any], Dict[str, Tuple[int, int]]] = {}
+        for node, side_map in requirements.items():
+            node_bounds = self._get_node_bounds(node, positions)
+
+            for side, items in side_map.items():
+                sorted_items = sorted(items, key=lambda item: (item[2], item[3]))
+                candidates = self._get_side_port_values(node_bounds, side)
+                if not candidates:
+                    candidates = [
+                        node_bounds["center_x"]
+                        if side in ("top", "bottom")
+                        else node_bounds["center_y"]
+                    ]
+
+                item_count = len(sorted_items)
+                max_index = len(candidates) - 1
+
+                for idx, (edge_key, role, _, _) in enumerate(sorted_items):
+                    if item_count <= 1:
+                        candidate_idx = max_index // 2
+                    else:
+                        candidate_idx = round((idx * max_index) / (item_count - 1))
+
+                    candidate_value = candidates[candidate_idx]
+                    anchor_xy = self._port_value_to_xy(node_bounds, side, candidate_value)
+                    edge_anchor_map.setdefault(edge_key, {})[role] = anchor_xy
+
+        return edge_anchor_map
+
+    def _get_edge_anchor_points(
+        self, start: Any, end: Any, positions: Dict[str, Tuple[int, int]]
+    ) -> Tuple[Tuple[int, int], Tuple[int, int]]:
+        start_bounds = self._get_node_bounds(start, positions)
+        end_bounds = self._get_node_bounds(end, positions)
+
+        if self.options.edge_anchor_mode == "ports" and self.options.bboxes:
+            cached = self._edge_anchor_map.get((start, end), {})
+            start_anchor = cached.get("start")
+            end_anchor = cached.get("end")
+            if start_anchor is not None and end_anchor is not None:
+                return start_anchor, end_anchor
+
+        start_side, end_side = self._get_edge_sides(start_bounds, end_bounds)
+        return (
+            self._get_center_anchor_for_side(start_bounds, start_side),
+            self._get_center_anchor_for_side(end_bounds, end_side),
+        )
+
     def _draw_node(self, node: str, x: int, y: int) -> None:
         label = self.options.get_node_text(str(node))
         node_width, node_height = self._get_node_dimensions(node)
@@ -218,6 +345,7 @@ class ASCIIRenderer:
 
         # Initialize canvas with adjusted positions
         self._init_canvas(width, height, positions)
+        self._edge_anchor_map = self._compute_edge_anchor_map(positions)
 
         # Only try to draw edges if we have any
         if self.graph.edges():
@@ -449,13 +577,9 @@ class ASCIIRenderer:
                 f"Node position not found: {start if start not in positions else end}"
             )
 
-        start_bounds = self._get_node_bounds(start, positions)
-        end_bounds = self._get_node_bounds(end, positions)
-
-        start_center_x = start_bounds["center_x"]
-        start_center_y = start_bounds["center_y"]
-        end_center_x = end_bounds["center_x"]
-        end_center_y = end_bounds["center_y"]
+        start_anchor, end_anchor = self._get_edge_anchor_points(start, end, positions)
+        start_x, start_y = start_anchor
+        end_x, end_y = end_anchor
 
         # Check if this is a bidirectional edge
         is_bidirectional = (
@@ -464,18 +588,10 @@ class ASCIIRenderer:
 
         try:
             # Case 1: Same level horizontal connection
-            if start_center_y == end_center_y:
-                y = start_center_y
-
-                if start_center_x <= end_center_x:
-                    left_node = start_bounds
-                    right_node = end_bounds
-                else:
-                    left_node = end_bounds
-                    right_node = start_bounds
-
-                min_x = left_node["right"] + 1
-                max_x = right_node["left"] - 1
+            if start_y == end_y:
+                y = start_y
+                min_x = min(start_x, end_x) + 1
+                max_x = max(start_x, end_x) - 1
 
                 for x in range(min_x, max_x + 1):
                     self.canvas[y][x] = self.options.edge_horizontal
@@ -485,23 +601,20 @@ class ASCIIRenderer:
                         self.canvas[y][min_x] = self.options.get_arrow_for_direction("right")
                         self.canvas[y][max_x] = self.options.get_arrow_for_direction("left")
                 elif min_x <= max_x:
-                    if start_center_x < end_center_x:
+                    if start_x < end_x:
                         self.canvas[y][max_x] = self.options.get_arrow_for_direction("right")
                     else:
                         self.canvas[y][min_x] = self.options.get_arrow_for_direction("left")
 
             # Case 2: Top to bottom (or bottom to top) connection
             else:
-                # Identify top and bottom nodes
-                top_node = start if start_center_y < end_center_y else end
-                bottom_node = end if start_center_y < end_center_y else start
-                top_bounds = start_bounds if top_node == start else end_bounds
-                bottom_bounds = end_bounds if bottom_node == end else start_bounds
+                top_anchor = start_anchor if start_y < end_y else end_anchor
+                bottom_anchor = end_anchor if start_y < end_y else start_anchor
 
-                top_center = top_bounds["center_x"]
-                bottom_center = bottom_bounds["center_x"]
-                top_y = top_bounds["bottom"]
-                bottom_y = bottom_bounds["top"]
+                top_center = top_anchor[0]
+                bottom_center = bottom_anchor[0]
+                top_y = top_anchor[1]
+                bottom_y = bottom_anchor[1]
 
                 # --- Jog row selection ---
                 #
@@ -561,7 +674,7 @@ class ASCIIRenderer:
                         self.options.get_arrow_for_direction("down")
                     )
                 else:
-                    if start_center_y < end_center_y:  # top-to-bottom: arrow points down toward child
+                    if start_y < end_y:  # top-to-bottom: arrow points down toward child
                         if bottom_y > jog_y + 1:
                             self.canvas[bottom_y - 1][bottom_center] = (
                                 self.options.get_arrow_for_direction("down")
@@ -706,6 +819,7 @@ def merge_layout_options(
         "hpad",
         "vpad",
         "uniform",
+        "edge_anchor_mode",
     }
        
     for field in fields(LayoutOptions):

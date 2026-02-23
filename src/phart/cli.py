@@ -102,6 +102,12 @@ def parse_args() -> tuple[argparse.Namespace, list[str]]:
         dest="uniform",
         help="Use widest node text as the width baseline for all node boxes",
     )
+    parser.add_argument(
+        "--edge-anchors",
+        choices=["center", "ports"],
+        default="center",
+        help="Edge anchor strategy: center (default) or ports (distributed on box edges)",
+    )
     args, unknown = parser.parse_known_args()
     return args, unknown
 
@@ -130,6 +136,7 @@ def create_layout_options(args: argparse.Namespace) -> LayoutOptions:
         hpad=args.hpad,
         vpad=args.vpad,
         uniform=args.uniform,
+        edge_anchor_mode=args.edge_anchors,
     )
 
 def _run_python_as_main(file_path: Path) -> Any:

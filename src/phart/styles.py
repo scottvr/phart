@@ -24,6 +24,7 @@ class NodeStyle(Enum):
     ROUND = "round"
     DIAMOND = "diamond"
     CUSTOM = "custom"
+    BBOX = "bboxes"
 
 
 class EdgeChar:
@@ -118,6 +119,7 @@ class LayoutOptions:
     hpad: int = field(default=1)  # Horizontal inner padding for boxed nodes
     vpad: int = field(default=0)  # Vertical inner padding for boxed nodes
     uniform: bool = field(default=False)  # Use widest node text width for all boxes
+    edge_anchor_mode: str = field(default="center")  # center or ports
 
     # Instance-specific ID (unchanged)
     instance_id: int = field(init=False)
@@ -169,6 +171,8 @@ class LayoutOptions:
             raise ValueError(
                 "Custom decorators must be provided when using NodeStyle.CUSTOM"
             )
+        if self.node_style == NodeStyle.BBOX:
+           self.bboxes = True
 
         # Validate core spacing parameters
         if self.node_spacing < 1:
@@ -193,6 +197,11 @@ class LayoutOptions:
             raise ValueError("hpad must be non-negative")
         if self.vpad < 0:
             raise ValueError("vpad must be non-negative")
+
+        if isinstance(self.edge_anchor_mode, str):
+            self.edge_anchor_mode = self.edge_anchor_mode.strip().lower()
+        if self.edge_anchor_mode not in {"center", "ports"}:
+            raise ValueError("edge_anchor_mode must be one of: center, ports")
 
     def get_effective_node_spacing(self, has_edges: bool = True) -> int:
         """Calculate effective node spacing considering edge requirements.

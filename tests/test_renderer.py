@@ -301,6 +301,50 @@ class TestASCIIRenderer(unittest.TestCase):
         wide_width = wide_line.rindex("|") - wide_line.index("|") + 1
         self.assertEqual(a_width, wide_width)
 
+    def test_edge_anchor_ports_distribute_parent_connections(self):
+        """Ports mode should spread parent-child edge starts along the box side."""
+        graph = nx.DiGraph([("Root", "Left"), ("Root", "Mid"), ("Root", "Right")])
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                bboxes=True,
+                hpad=2,
+                vpad=0,
+                edge_anchor_mode="ports",
+                use_ascii=True,
+                layer_spacing=4,
+            ),
+        )
+        positions, _, _ = renderer.layout_manager.calculate_layout()
+        anchor_map = renderer._compute_edge_anchor_map(positions)
+        starts = [anchor_map[("Root", child)]["start"] for child in ("Left", "Mid", "Right")]
+
+        self.assertGreater(len({x for x, _ in starts}), 1)
+
+    def test_edge_anchor_center_uses_single_parent_connection(self):
+        """Center mode keeps all parent-child starts on one shared anchor."""
+        graph = nx.DiGraph([("Root", "Left"), ("Root", "Mid"), ("Root", "Right")])
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                bboxes=True,
+                hpad=2,
+                vpad=0,
+                edge_anchor_mode="center",
+                use_ascii=True,
+                layer_spacing=4,
+            ),
+        )
+        positions, _, _ = renderer.layout_manager.calculate_layout()
+        starts = [
+            renderer._get_edge_anchor_points("Root", child, positions)[0]
+            for child in ("Left", "Mid", "Right")
+        ]
+
+        self.assertEqual(len(set(starts)), 1)
+
     def test_file_writing(self):
         """Test writing to file with proper encoding."""
 
@@ -379,6 +423,10 @@ class TestLayoutOptions(unittest.TestCase):
             LayoutOptions(hpad=-1)
         with self.assertRaises(ValueError):
             LayoutOptions(vpad=-1)
+
+    def test_invalid_edge_anchor_mode(self):
+        with self.assertRaises(ValueError):
+            LayoutOptions(edge_anchor_mode="invalid")
 
 
 if __name__ == "__main__":
