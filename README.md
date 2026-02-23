@@ -341,7 +341,7 @@ Circular Dependencies:
     ↓             │             ↓
 [certifi]    [package_c]    [urllib3]
 ```
-We might want to tweak the spacing, the character set, add some bounding boxes, etc. THe phart cli is your friend for experimenting with styling.
+We might want to tweak the spacing, the character set, add some bounding boxes, etc. The phart cli is your friend for experimenting with styling.
 
 The renderer shows edge direction using arrows:
 
