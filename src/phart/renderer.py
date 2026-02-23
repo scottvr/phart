@@ -144,6 +144,7 @@ class ASCIIRenderer:
         self._node_color_map: Dict[Any, str] = {}
         self._edge_color_map: Dict[Tuple[Any, Any], str] = {}
         self._edge_conflict_cells: Set[Tuple[int, int]] = set()
+        self._locked_arrow_cells: Set[Tuple[int, int]] = set()
 
     def _resolve_options(cls, options: Optional[LayoutOptions]) -> LayoutOptions:
         if cls.default_options is None:
@@ -213,11 +214,17 @@ class ASCIIRenderer:
             return
         self._color_canvas[y][x] = color
         self._edge_conflict_cells.discard((x, y))
+        self._locked_arrow_cells.discard((x, y))
 
-    def _paint_edge_cell(
-        self, x: int, y: int, char: str, color: Optional[str] = None
-    ) -> None:
-        self.canvas[y][x] = char
+    def _is_arrow_glyph(self, char: str) -> bool:
+        return char in {
+            self.options.edge_arrow_up,
+            self.options.edge_arrow_down,
+            self.options.edge_arrow_l,
+            self.options.edge_arrow_r,
+        }
+
+    def _merge_edge_cell_color(self, x: int, y: int, color: Optional[str]) -> None:
         if not self._use_ansi_colors():
             return
 
@@ -236,6 +243,21 @@ class ASCIIRenderer:
 
         self._color_canvas[y][x] = None
         self._edge_conflict_cells.add(key)
+
+    def _paint_edge_cell(
+        self, x: int, y: int, char: str, color: Optional[str] = None
+    ) -> None:
+        key = (x, y)
+        if key in self._locked_arrow_cells and not self._is_arrow_glyph(char):
+            # Preserve terminal arrow glyphs even when later edges overlap.
+            self._merge_edge_cell_color(x, y, color)
+            return
+
+        self.canvas[y][x] = char
+        if self._is_arrow_glyph(char):
+            self._locked_arrow_cells.add(key)
+
+        self._merge_edge_cell_color(x, y, color)
 
     def _render_row(self, row: List[str], colors: List[Optional[str]]) -> str:
         last = -1
@@ -616,6 +638,7 @@ class ASCIIRenderer:
             [None for _ in range(final_width)] for _ in range(final_height)
         ]
         self._edge_conflict_cells = set()
+        self._locked_arrow_cells = set()
 
     def _draw_vertical_segment(
         self,

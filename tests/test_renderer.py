@@ -319,6 +319,89 @@ class TestASCIIRenderer(unittest.TestCase):
         self.assertIn("^", lines[top_idx + 1])
         self.assertIn("v", lines[bottom_idx - 1])
 
+    def test_overlapping_paths_do_not_erase_terminal_arrow(self):
+        graph = nx.DiGraph()
+        graph.add_edge("package_a", "package_b")
+        graph.add_edge("package_a", "requests")
+        graph.add_edge("package_b", "package_c")
+        graph.add_edge("package_c", "package_a")
+        graph.add_edge("requests", "urllib3")
+        graph.add_edge("requests", "certifi")
+
+        result = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                use_ascii=True,
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="circular",
+                edge_anchor_mode="center",
+                layer_spacing=4,
+            ),
+        ).render()
+
+        lines = result.splitlines()
+        urllib3_idx = next(i for i, line in enumerate(lines) if "urllib3" in line)
+        self.assertIn("^", lines[urllib3_idx + 1])
+
+    def test_overlapping_colored_paths_preserve_terminal_arrow_cell(self):
+        graph = nx.DiGraph()
+        graph.add_edge("package_a", "package_b")
+        graph.add_edge("package_a", "requests")
+        graph.add_edge("package_b", "package_c")
+        graph.add_edge("package_c", "package_a")
+        graph.add_edge("requests", "urllib3")
+        graph.add_edge("requests", "certifi")
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                use_ascii=False,
+                node_style=NodeStyle.MINIMAL,
+                bboxes=True,
+                hpad=1,
+                vpad=0,
+                layout_strategy="circular",
+                edge_anchor_mode="center",
+                ansi_colors=True,
+                edge_color_mode="target",
+                layer_spacing=4,
+                node_spacing=6,
+            ),
+        )
+        renderer.render()
+
+        positions, _, _ = renderer.layout_manager.calculate_layout()
+        start_anchor, end_anchor = renderer._get_edge_anchor_points(
+            "requests", "urllib3", positions
+        )
+        start_x, start_y = start_anchor
+        end_x, end_y = end_anchor
+
+        if start_y == end_y:
+            min_x = min(start_x, end_x) + 1
+            max_x = max(start_x, end_x) - 1
+            if start_x < end_x:
+                expected_x = max_x
+                expected_arrow = renderer.options.get_arrow_for_direction("right")
+            else:
+                expected_x = min_x
+                expected_arrow = renderer.options.get_arrow_for_direction("left")
+            expected_y = start_y
+        else:
+            top_anchor = start_anchor if start_y < end_y else end_anchor
+            bottom_anchor = end_anchor if start_y < end_y else start_anchor
+            if start_y < end_y:
+                expected_x = bottom_anchor[0]
+                expected_y = bottom_anchor[1] - 1
+                expected_arrow = renderer.options.get_arrow_for_direction("down")
+            else:
+                expected_x = top_anchor[0]
+                expected_y = top_anchor[1] + 1
+                expected_arrow = renderer.options.get_arrow_for_direction("up")
+
+        self.assertEqual(renderer.canvas[expected_y][expected_x], expected_arrow)  # noqa: SLF001
+        self.assertIn((expected_x, expected_y), renderer._locked_arrow_cells)  # noqa: SLF001
+
     def test_boxed_node_rendering_with_padding(self):
         """Box mode should draw a rectangle with configured padding."""
         single = nx.DiGraph()
