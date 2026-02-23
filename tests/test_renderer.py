@@ -8,6 +8,7 @@ import networkx as nx  # type: ignore
 
 from phart import ASCIIRenderer, LayoutOptions, NodeStyle
 from phart.styles import FlowDirection
+from phart.renderer import merge_layout_options
 
 from pathlib import Path
 
@@ -429,6 +430,12 @@ class TestLayoutOptions(unittest.TestCase):
     def test_invalid_edge_anchor_mode(self):
         with self.assertRaises(ValueError):
             LayoutOptions(edge_anchor_mode="invalid")
+
+    def test_merge_layout_options_cli_overrides_binary_tree_layout(self):
+        script_options = LayoutOptions(binary_tree_layout=False, use_ascii=True)
+        cli_options = LayoutOptions(binary_tree_layout=True, use_ascii=True)
+        merged = merge_layout_options(script_options, cli_options)
+        self.assertTrue(merged.binary_tree_layout)
 
 
 if __name__ == "__main__":
