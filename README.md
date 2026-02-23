@@ -99,7 +99,7 @@ $ phart balanced_tree.py --bbox --hpad 2 --style minimal --layer-spacing 3  --as
 +-----+    +-----+    +-----+    +-----+
 ```
 
-We can increasae the space between "layers" of nodes, we can move the edges to connect to/from "ports" on the most efficient side of the nodes, and we can render in unicode, using the same script, but passing the options via the command-line until we find what we like:
+We can increasae the space between "layers" of nodes, we can move the edges to connect to/from "ports" on the most efficient side of the nodes, and we can render in unicode, using the same script, by passing the options via the command-line until we find what we like:
 
 ```
 $ phart balanced_tree.py --bbox --hpad 2 --style minimal --layer-spacing 4 --edge-anchors ports    
