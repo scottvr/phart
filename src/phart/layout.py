@@ -346,7 +346,6 @@ class LayoutManager:
             return positions
 
         # Find bounding box
-        max_x = max(x for x, _ in positions.values())
         max_y = max(y for _, y in positions.values())
 
         transformed = {}
