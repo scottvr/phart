@@ -105,8 +105,7 @@ class LayoutManager:
             return {node: (int(x), int(y)) for node, (x, y) in positions.items()}
 
         return {
-            node: (int(x - min_x), int(y - min_y))
-            for node, (x, y) in positions.items()
+            node: (int(x - min_x), int(y - min_y)) for node, (x, y) in positions.items()
         }
 
     def _binary_tree_node_sorter(
@@ -385,10 +384,7 @@ class LayoutManager:
 
         # Calculate base dimensions from full node bounds.
         base_width = max(
-            (
-                x + self._get_node_width(node) - 1
-                for node, (x, _) in positions.items()
-            ),
+            (x + self._get_node_width(node) - 1 for node, (x, _) in positions.items()),
             default=0,
         )
         node_height = self._get_node_height()
@@ -602,7 +598,9 @@ class LayoutManager:
         # (The old centred-layer layout has been superseded by the subtree-aware
         #  layout above and is intentionally removed.)
 
-    def _layout_bfs(self, graph: nx.DiGraph, spacing: int) -> Dict[str, Tuple[int, int]]:
+    def _layout_bfs(
+        self, graph: nx.DiGraph, spacing: int
+    ) -> Dict[str, Tuple[int, int]]:
         """Layer nodes by BFS depth regardless of DAG status."""
         layer_height = self._get_layer_step()
         return self._layout_layered_fallback(
@@ -725,7 +723,9 @@ class LayoutManager:
 
         node_count = len(nodes)
         circumference_hint = node_count * (max_node_width + spacing + 1)
-        radius_x = max(int(math.ceil(circumference_hint / (2 * math.pi))), max_node_width)
+        radius_x = max(
+            int(math.ceil(circumference_hint / (2 * math.pi))), max_node_width
+        )
         radius_y = max(layer_height, int(radius_x * 0.7))
         center_x = radius_x + max_node_width
         center_y = radius_y + node_height
@@ -743,7 +743,9 @@ class LayoutManager:
 
             candidate_x = proposed_x
             candidate_y = proposed_y
-            candidate_rect = self._node_rect(node, candidate_x, candidate_y, node_height)
+            candidate_rect = self._node_rect(
+                node, candidate_x, candidate_y, node_height
+            )
             while any(
                 self._rectangles_overlap(candidate_rect, existing)
                 for existing in placed_rects
@@ -823,7 +825,9 @@ class LayoutManager:
 
             candidate_x = proposed_x
             candidate_y = proposed_y
-            candidate_rect = self._node_rect(node, candidate_x, candidate_y, node_height)
+            candidate_rect = self._node_rect(
+                node, candidate_x, candidate_y, node_height
+            )
             attempts = 0
             while any(
                 self._rectangles_overlap(candidate_rect, existing)
@@ -843,7 +847,9 @@ class LayoutManager:
 
         return self._normalize_positions_to_origin(positions)
 
-    def _layout_planar(self, graph: nx.DiGraph, spacing: int) -> Dict[str, Tuple[int, int]]:
+    def _layout_planar(
+        self, graph: nx.DiGraph, spacing: int
+    ) -> Dict[str, Tuple[int, int]]:
         """Planar layout with hierarchical fallback for non-planar graphs."""
         planar_graph = nx.Graph(graph)
         try:
@@ -851,7 +857,7 @@ class LayoutManager:
             return self._layout_from_coordinate_map(coord_map, spacing)
         except (nx.NetworkXException, ValueError):
             return self._layout_hierarchical(graph, spacing)
-    
+
     def _layout_spring(
         self, graph: nx.DiGraph, spacing: int, seed: int = 42
     ) -> Dict[str, Tuple[int, int]]:
@@ -882,7 +888,9 @@ class LayoutManager:
         coord_map = nx.spiral_layout(ordered_graph)
         return self._layout_from_coordinate_map(coord_map, spacing)
 
-    def _layout_shell(self, graph: nx.DiGraph, spacing: int) -> Dict[str, Tuple[int, int]]:
+    def _layout_shell(
+        self, graph: nx.DiGraph, spacing: int
+    ) -> Dict[str, Tuple[int, int]]:
         """Concentric shell layout using BFS-derived rings."""
         ordered_graph = self._to_ordered_undirected_graph(graph)
         layers = self._build_layers_bfs(nx.DiGraph(graph))
@@ -904,7 +912,9 @@ class LayoutManager:
             coord_map = nx.spring_layout(nx.Graph(graph), seed=42)
         return self._layout_from_coordinate_map(coord_map, spacing)
 
-    def _layout_random(self, graph: nx.DiGraph, spacing: int) -> Dict[str, Tuple[int, int]]:
+    def _layout_random(
+        self, graph: nx.DiGraph, spacing: int
+    ) -> Dict[str, Tuple[int, int]]:
         """Random node positioning layout."""
         coord_map = nx.random_layout(graph)
         return self._layout_from_coordinate_map(coord_map, spacing)

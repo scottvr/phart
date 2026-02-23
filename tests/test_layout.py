@@ -86,11 +86,15 @@ class TestLayoutManager(unittest.TestCase):
 
         without_labels = LayoutManager(
             graph,
-            LayoutOptions(node_style=NodeStyle.MINIMAL, use_labels=False, use_ascii=True),
+            LayoutOptions(
+                node_style=NodeStyle.MINIMAL, use_labels=False, use_ascii=True
+            ),
         )
         with_labels = LayoutManager(
             graph,
-            LayoutOptions(node_style=NodeStyle.MINIMAL, use_labels=True, use_ascii=True),
+            LayoutOptions(
+                node_style=NodeStyle.MINIMAL, use_labels=True, use_ascii=True
+            ),
         )
 
         self.assertGreater(
@@ -99,9 +103,7 @@ class TestLayoutManager(unittest.TestCase):
         )
 
     def test_bfs_layout_strategy_layers_by_distance(self):
-        graph = nx.DiGraph(
-            [("A", "B"), ("A", "C"), ("B", "D"), ("C", "E"), ("E", "F")]
-        )
+        graph = nx.DiGraph([("A", "B"), ("A", "C"), ("B", "D"), ("C", "E"), ("E", "F")])
         manager = LayoutManager(
             graph,
             LayoutOptions(
@@ -212,9 +214,7 @@ class TestLayoutManager(unittest.TestCase):
         self.assertGreaterEqual(len({y for _, y in positions.values()}), 2)
 
     def test_kamada_kawai_layout_strategy_positions_nodes(self):
-        graph = nx.DiGraph(
-            [("A", "B"), ("A", "C"), ("B", "D"), ("C", "E"), ("D", "E")]
-        )
+        graph = nx.DiGraph([("A", "B"), ("A", "C"), ("B", "D"), ("C", "E"), ("D", "E")])
         manager = LayoutManager(
             graph,
             LayoutOptions(
@@ -231,7 +231,7 @@ class TestLayoutManager(unittest.TestCase):
         self.assertGreaterEqual(len({y for _, y in positions.values()}), 2)
 
     def test_random_layout_strategy_positions_nodes(self):
-        graph = nx.DiGraph([(f"N{i}", f"N{i+1}") for i in range(6)])
+        graph = nx.DiGraph([(f"N{i}", f"N{i + 1}") for i in range(6)])
         manager = LayoutManager(
             graph,
             LayoutOptions(
@@ -247,7 +247,7 @@ class TestLayoutManager(unittest.TestCase):
         self.assertGreaterEqual(len({x for x, _ in positions.values()}), 3)
 
     def test_spring_layout_strategy_positions_nodes(self):
-        graph = nx.DiGraph([(f"S{i}", f"S{i+1}") for i in range(6)])
+        graph = nx.DiGraph([(f"S{i}", f"S{i + 1}") for i in range(6)])
         manager = LayoutManager(
             graph,
             LayoutOptions(
@@ -261,6 +261,58 @@ class TestLayoutManager(unittest.TestCase):
 
         self.assertEqual(set(positions.keys()), set(graph.nodes()))
         self.assertGreaterEqual(len({x for x, _ in positions.values()}), 3)
+
+    def test_arf_layout_strategy_positions_nodes(self):
+        graph = nx.DiGraph([(f"A{i}", f"A{i + 1}") for i in range(6)])
+        manager = LayoutManager(
+            graph,
+            LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="arf",
+                layer_spacing=4,
+                use_ascii=True,
+            ),
+        )
+        positions, _, _ = manager.calculate_layout()
+
+        self.assertEqual(set(positions.keys()), set(graph.nodes()))
+        self.assertGreaterEqual(len({x for x, _ in positions.values()}), 3)
+
+    def test_spiral_layout_strategy_positions_nodes(self):
+        graph = nx.DiGraph([(f"P{i}", f"P{i + 1}") for i in range(8)])
+        manager = LayoutManager(
+            graph,
+            LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="spiral",
+                layer_spacing=4,
+                use_ascii=True,
+            ),
+        )
+        positions, _, _ = manager.calculate_layout()
+
+        self.assertEqual(set(positions.keys()), set(graph.nodes()))
+        self.assertGreaterEqual(len({x for x, _ in positions.values()}), 3)
+        self.assertGreaterEqual(len({y for _, y in positions.values()}), 3)
+
+    def test_shell_layout_strategy_positions_nodes(self):
+        graph = nx.DiGraph(
+            [("Root", "B"), ("Root", "C"), ("B", "D"), ("C", "E"), ("E", "F")]
+        )
+        manager = LayoutManager(
+            graph,
+            LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="shell",
+                layer_spacing=4,
+                use_ascii=True,
+            ),
+        )
+        positions, _, _ = manager.calculate_layout()
+
+        self.assertEqual(set(positions.keys()), set(graph.nodes()))
+        self.assertGreaterEqual(len({x for x, _ in positions.values()}), 2)
+        self.assertGreaterEqual(len({y for _, y in positions.values()}), 2)
 
     def test_multipartite_layout_strategy_uses_subset_attributes(self):
         graph = nx.DiGraph()

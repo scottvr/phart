@@ -792,6 +792,12 @@ class TestLayoutOptions(unittest.TestCase):
         options = LayoutOptions(layout_strategy="spring")
         self.assertEqual(options.layout_strategy, "spring")
 
+    def test_layout_strategy_accepts_arf_spiral_shell(self):
+        for strategy in ("arf", "spiral", "shell"):
+            with self.subTest(strategy=strategy):
+                options = LayoutOptions(layout_strategy=strategy)
+                self.assertEqual(options.layout_strategy, strategy)
+
     def test_invalid_edge_color_mode(self):
         with self.assertRaises(ValueError):
             LayoutOptions(edge_color_mode="invalid")

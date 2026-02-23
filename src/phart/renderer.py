@@ -12,14 +12,14 @@ import io
 
 ANSI_RESET = "\x1b[0m"
 ANSI_SUBWAY_PALETTE: Tuple[str, ...] = (
-    "\x1b[38;5;45m",   # cyan
+    "\x1b[38;5;45m",  # cyan
     "\x1b[38;5;214m",  # orange
     "\x1b[38;5;118m",  # green
     "\x1b[38;5;199m",  # magenta
-    "\x1b[38;5;39m",   # blue
+    "\x1b[38;5;39m",  # blue
     "\x1b[38;5;226m",  # yellow
     "\x1b[38;5;160m",  # red
-    "\x1b[38;5;81m",   # aqua
+    "\x1b[38;5;81m",  # aqua
 )
 
 
@@ -181,10 +181,16 @@ class ASCIIRenderer:
             key=lambda item: (item[1][1], item[1][0], str(item[0])),
         )
         for idx, (node, _) in enumerate(sorted_nodes):
-            self._node_color_map[node] = ANSI_SUBWAY_PALETTE[idx % len(ANSI_SUBWAY_PALETTE)]
+            self._node_color_map[node] = ANSI_SUBWAY_PALETTE[
+                idx % len(ANSI_SUBWAY_PALETTE)
+            ]
 
         sorted_edges = sorted(
-            (edge for edge in self.graph.edges() if edge[0] in positions and edge[1] in positions),
+            (
+                edge
+                for edge in self.graph.edges()
+                if edge[0] in positions and edge[1] in positions
+            ),
             key=lambda edge: (
                 positions[edge[0]][1],
                 positions[edge[0]][0],
@@ -208,7 +214,9 @@ class ASCIIRenderer:
                 color = ANSI_SUBWAY_PALETTE[idx % len(ANSI_SUBWAY_PALETTE)]
             self._edge_color_map[edge] = color
 
-    def _paint_cell(self, x: int, y: int, char: str, color: Optional[str] = None) -> None:
+    def _paint_cell(
+        self, x: int, y: int, char: str, color: Optional[str] = None
+    ) -> None:
         self.canvas[y][x] = char
         if not self._use_ansi_colors():
             return
@@ -670,7 +678,9 @@ class ASCIIRenderer:
             self._paint_edge_cell(mid_x, y, marker, color)
         return None
 
-    def _safe_draw(self, x: int, y: int, char: str, color: Optional[str] = None) -> None:
+    def _safe_draw(
+        self, x: int, y: int, char: str, color: Optional[str] = None
+    ) -> None:
         try:
             self._paint_edge_cell(x, y, char, color)
         except IndexError:
@@ -933,9 +943,7 @@ class ASCIIRenderer:
                 # clobber a previously drawn edge.
                 for y in range(top_y + 1, jog_y):
                     if self.canvas[y][top_center] != self.options.edge_cross:
-                        self._merge_line_cell(
-                            top_center, y, {"up", "down"}, edge_color
-                        )
+                        self._merge_line_cell(top_center, y, {"up", "down"}, edge_color)
 
                 if top_center != bottom_center:
                     # Junctions at both ends of the horizontal jog.

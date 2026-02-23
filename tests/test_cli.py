@@ -345,6 +345,9 @@ def demonstrate_graph():
             "planar",
             "kamada-kawai",
             "spring",
+            "arf",
+            "spiral",
+            "shell",
             "random",
             "multipartite",
         ):

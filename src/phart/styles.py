@@ -221,7 +221,9 @@ class LayoutOptions:
             raise ValueError("edge_anchor_mode must be one of: center, ports")
 
         if isinstance(self.layout_strategy, str):
-            self.layout_strategy = self.layout_strategy.strip().lower().replace("-", "_")
+            self.layout_strategy = (
+                self.layout_strategy.strip().lower().replace("-", "_")
+            )
         if self.layout_strategy not in {
             "auto",
             "bfs",
