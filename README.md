@@ -16,245 +16,250 @@
   
 ## Examples
 
-<details>
-
-<summary>Example output PHARTs [click triangle/arrow to expand/collapse]</summary>
-
-## PHART Graph Visualization Examples
-
-I was doing some last-minute testing and came across this, from the networkx gallery:
-
-https://networkx.org/documentation/latest/auto_examples/drawing/plot_chess_masters.html#sphx-glr-auto-examples-drawing-plot-chess-masters-py
-
-The code there creates a graph from some data pulled from a database of Chess masters tournaments and such at this site:
-
-https://chessproblem.my-free-games.com/chess/games/Download-PGN.php
-
-And plots it with matplotlib. It looked pretty complex so I thought as a lark I would see how difficult it would be to get phart to render the graph. The matplot can be seen here:
-
-![screen capture of graph plot](https://github.com/scottvr/phart/blob/67bd3d02b6ad9cc4a8a09fe6fc2920a6712f5c7a/examples/WCC-plt-Capture.png)
-
-So, I added the following to the code at the networkx gallery page linked above:
-
-```
+phart can be used programmatically:
+```python
+import networkx as nx
 from phart import ASCIIRenderer, NodeStyle
 
-.. existing code remains here ...
+def demonstrate_basic_graph():
+    print("\nBasic Directed Graph:")
+    G = nx.DiGraph()
+    G.add_edges_from([("A", "B"), ("A", "C"), ("B", "D"), ("C", "D")])
 
-... then directly below the existing lines to create the nx graph:
-# make new undirected graph H without multi-edges
-H = nx.Graph(G)
-... I added this:
-renderer=ASCIIRenderer(H)
-renderer.write_to_file("wcc.txt")
+    renderer = ASCIIRenderer(G)
+    print(renderer.render())
+```
+which will output this very underwhelming diagram:
+```
+Basic Directed Graph:
+
+   [A]
+ +--+---+
+ v      v
+[B]    [C]
+ +--+---+
+    v
+   [D]
 ```
 
-and ran the code. Immediately this was written to wcc.txt:
+phart also comes as a handy CLI tool, set up for you when you `pip install` phart.
+The phart CLI can read graphs in **graphml** or **dot** format. Additionally, the phart CLI
+can reaad *python code* that itseslf makes use of phart such as that above, so that it can be tested from the command-line, allowinf you to try out various display options without having to edit your code repeatedly to see what works best.
 
+phart supports ASCII and Unicode, and will try to use the sensible default for your 
+terminal environment.
+
+## How to phart?
+
+Let's make a simple graph in Python using NetworkX and phart:
+```bash
+$ cat > balanced_tree.py
 ```
-                               ---------------------------------[Botvinnik, Mikhail M]---------------------------------
-                               |               |                           |                 |                        |
-            v                  |               |                    v      |                 |                        |                     v
-  [Bronstein, David I]----[Euwe, Max]----[Keres, Paul]----[Petrosian, Tigran V]----[Reshevsky, Samuel H]----[Smyslov, Vassily V]----[Tal, Mikhail N]
-                               ^                               |    |
-                                                               |    |                   v
-                                                    [Alekhine, Alexander A]----[Spassky, Boris V]
-                                                               |           |            |
-                                                  v            |           |            |           v
-                                        [Bogoljubow, Efim D]----[Capablanca, Jose Raul] ---[Fischer, Robert J]
-                                                                          |^
-                                                                          |
-                                                                  [Lasker, Emanuel]--------------
-                                                                          |                     |
-                            v                      v                      v                     |                       v
-                   [Janowski, Dawid M]----[Marshall, Frank J]----[Schlechter, Carl]----[Steinitz, Wilhelm]----[Tarrasch, Siegbert]
-                                                                                                |  |
-                                                 v                        v                     |  |
-                                       [Chigorin, Mikhail I]----[Gunsberg, Isidor A]----[Zukertort, Johannes H]
-
-
-                                            [Karpov, Anatoly]----[Kasparov, Gary]----[Korchnoi, Viktor L]
+```python
+import networkx as nx
+from phart import ASCIIRenderer, NodeStyle
+G = nx.balanced_tree(2, 2, create_using=nx.DiGraph)
+renderer = ASCIIRenderer(G, inode_style=NodeStyle.SQUARE)
+print(renderer.render())
 ```
-
-No fuss. No muss. Just phart.
-
-### Software Dependency Example:
-
+and when we run that tiny script, we see:
+```bash
+$ python balanced_tree.py
 ```
-            [main.py]
-                |
-         v      |       v
-    [config.py]----[utils.py]
-         |              |
-         v              | v
-  [constants.py]----[helpers.py]
+```
+          [0]
+    ┌──────┴──────┐
+    ↓             ↓
+   [1]           [2]
+ ┌──┴───┐      ┌──┴───┐
+ ↓      ↓      ↓      ↓
+[3]    [4]    [5]    [6]
 ```
 
-### Organizational Hierarchy Example:
+----
 
-```
-                                       [CEO]
-                                         |
-                                v        v        v
-                              [CFO]----[COO]----[CTO]
-                                |        |        |
-        v              v        |      v |        |       v                v
-  [Controller]----[Dev Lead]----[Marketing Dir]----[Research Lead]----[Sales Dir]
-```
+phart has lots of output options. Here's a good use for the cli as I described above. 
+We can test other options, without having to edit that python script we just wrote.
 
-### Network Topology Example:
-
-```
-                     [Router1]
-                         |
-                   v     |      v
-               [Switch1]----[Switch2]
-                   |            |
-      v            v            |            v
-  [Server1]----[Server2]    [Server3]----[Server4]
-```
-
-### Workflow Example:
-
-```
-        [Start]
-           |
-           v
-        [Input]
-           |
-           |v
-       [Validate]
-            |
-           v|
-     --[Process]
-     |     ^
-     |     v
-     |  [Check]
-     |     |
-     |     |     v
-  [Error]----[Success]
-                 |
-            v    |
-        [Output]--
-            |
-           v|
-         [End]
+Let's see how the balanced tree looks with the nodes in bounding boxes:
+```bash
+$ phart balanced_tree.py --bbox --hpad 2 --style minimal --layer-spacing 3  --ascii
+                +-----+
+                |  0  |
+                +-----+
+        +----------+----------+
+        v                     v
+     +-----+               +-----+
+     |  1  |               |  2  |
+     +-----+               +-----+
+   +----+-----+          +----+-----+
+   v          v          v          v
++-----+    +-----+    +-----+    +-----+
+|  3  |    |  4  |    |  5  |    |  6  |
++-----+    +-----+    +-----+    +-----+
 ```
 
-### DOT Import Example:
+We can increasae the space between "layers" of nodes, we can move the edges to connect to/from "ports" on the most efficient side of the nodes, and we can render in unicode, using the same script, but passing the options via the command-line until we find what we like:
 
 ```
-     [A]
-      |
-   v  |   v
-  [B]----[D]
-   |      |
-   |  v   |
-   --[C]---
-      |
-      v
-     [E]
+$ phart balanced_tree.py --bbox --hpad 2 --style minimal --layer-spacing 4 --edge-anchors ports    
+                ┌─────┐
+                │  0  │
+                └─────┘
+        ┌────────┘   └────────┐
+        │                     │
+        ↓                     ↓
+     ┌─────┐               ┌─────┐
+     │  1  │               │  2  │
+     └─────┘               └─────┘
+   ┌──┘   └───┐          ┌──┘   └───┐
+   │          │          │          │
+   ↓          ↓          ↓          ↓
+┌─────┐    ┌─────┐    ┌─────┐    ┌─────┐
+│  3  │    │  4  │    │  5  │    │  6  │
+└─────┘    └─────┘    └─────┘    └─────┘
 ```
-
-## Custom Styling Example:
-
-Different node styles for the same graph:
-
-### Using MINIMAL style:
-
-```
-         0
-         |
-       v |  v
-       1----2
-       |    |
-  v    v    |    v
-  3----4    5----6
-```
-
-### Using SQUARE style:
+We can put a NodeStyle around our label, and put a bounding box around that, and have all 
+edges come out of the center of the boxes.
 
 ```
-            [0]
-             |
-          v  |   v
-         [1]----[2]
-          |      |
-   v      v      |      v
-  [3]----[4]    [5]----[6]
+$ phart balanced_tree.py --bbox --hpad 0 --style round --layer-spacing 4 --edge-anchors center
+             ┌───┐
+             │(0)│
+             └───┘
+      ┌────────┤
+      │        └────────┐
+      ↓                 ↓
+    ┌───┐             ┌───┐
+    │(1)│             │(2)│
+    └───┘             └───┘
+  ┌───┤             ┌───┤
+  │   └────┐        │   └────┐
+  ↓        ↓        ↓        ↓
+┌───┐    ┌───┐    ┌───┐    ┌───┐
+│(3)│    │(4)│    │(5)│    │(6)│
+└───┘    └───┘    └───┘    └───┘
 ```
 
-### Using ROUND style:
+Let's look a slightly more interesting graph, courtesy of phart user @deostroll, in the [Discussions](https://github.com/scottvr/phart/discussions/15).
 
+His script generates a Collatz Tree, and takes an argument for the depth for which you wish to calculate terms. As you will see, we can pass arguments for the phart cli to use as 
+arguments for the script you've given it as an input file.  We will just separate the
+switches meant for phart from any switches meant for the script it is loading by an extra
+ `--`, like so:
+
+`phart --charset unicode  --style bbox --style minimal  --hpad 1 --binary-tree 
+  --node-spacing 1 --layer-spacing 4  --vpad 0  --edge-anchors ports --bboxes 
+  deostroll/collatz.py -- 3`
+
+This results in the following graph:
 ```
-            (0)
-             |
-          v  |   v
-         (1)----(2)
-          |      |
-   v      v      |      v
-  (3)----(4)    (5)----(6)
+                    ┌───┐
+                    │ 1 │
+                    └───┘
+                 ┌────┤
+                 │    └────────────────────┐
+                 ↓                         ↓
+               ┌───┐                    ┌────┐
+               │ 2 │                    │ Z1 │
+               └───┘                    └────┘
+            ┌────┤
+            │    └───────────────┐
+            ↓                    ↓
+          ┌───┐               ┌────┐
+          │ 4 │               │ F1 │
+          └───┘               └────┘
+       ┌────┤
+       │    └──────────┐
+       ↓               ↓
+     ┌───┐          ┌────┐
+     │ 8 │          │ E1 │
+     └───┘          └────┘
+   ┌───┤
+   │   └─────┐
+   ↓         ↓
+┌────┐    ┌────┐
+│ L1 │    │ L2 │
+└────┘    └────┘
+```
+You can see that all of the number terms are on the left, while Leaves, Zero, Fractalsi, 
+etc  are to the right (and also the terminal Leaves at the bottom of the tree.)
+
+We can see what this graph would look like without the binary-tree sorting (which respects "side" properties such as "left" and "right" in your graph.) We'll pass a `4` to deostroll's `collatz.py`, this time with ascii output, and a simple "diamond" styling, without the "left/right" properties being read:
+
+`phart --charset unicode --layer-spacing 4  --vpad 0 --style diamond  --charset ascii deostroll/collatz.py -- 4`
+This gives us:
+```
+                      <001>
+                        +----+
+  +---------------------+    |
+  v                          v
+<#Z1>                      <002>
+                             +---+
+           +-----------------+   |
+           v                     v
+         <#F1>                 <004>
+                                 +----+
+                    +------------+    |
+                    v                 v
+                  <#E1>             <008>
+                                      +---+
+                             +--------+   |
+                             v            v
+                           <#F2>        <016>
+                                      +---+
+                                      |   +----+
+                                      v        v
+                                    <#L1>    <#L2>
 ```
 
-### Using DIAMOND style:
-
-```
-            <0>
-             |
-          v  |   v
-         <1>----<2>
-          |      |
-   v      v      |      v
-  <3>----<4>    <5>----<6>
-```
-
-</details>
+There are plenty more examples in the repo, along with a README in the examples/ directory
+that includes the output of a very early release of phart.
 
 ## Why PHART?
 
-The acronym was a fortuitous accident from the non-abbreviated words that the letters represent. 
-
-Also, as I am beginning to update the usage instructions and the examples and their output in the README to more accurately reflect current capabilities, it occurs to me that the name may not be as fitting anymore. At first release PHART only handled DAGs and fairly strictly rendered a heirarchical layout. 
-
-As it's capabilities have increased (by user request) faster than my knowledge of Graphs and the layout thereof, and my lack of deep understanding of exactly what NetworkX's focus and strengths are (to be fair, their dev lists and Roadmap directly contribute to me not fully understanding their focus and direction, and I mean no disrespect.) Anyway, as such - at times I struggle with having to remind myself "but that information is already known - to the graph - you don't need to calculate or keep track of that", and similarly with certain layout decisions that really don't need to be pondered by PHART at all I have spent too many hours working on.  But I digress...
-
-It might be more properly named something that indicates that it sometimes adheres *mostly* to a **Hierarchical Layout** strategy, but other times it might be more accurately branded an **Orthogonal Layout**. Nevertheless, perhaps its name needs to expand along with its function. Something incorporating **Orthogonal Layout**. Hmm.. "**OL-PHART**" perhaps? Maybe  **B**oundary **I**nvariant **G**eodesic **O**rthogonal **L**ayout **PHART** - that is...
-
-**BIGOL-PHART**
-
-Regardless, you may pronounce it the obvious monosyllabic way, or as "eff art", or perhaps "pee heart", or any way that you like.
+The acronym was a fortuitous accident from the non-abbreviated words that the letters represent: **Python Hierarchical ASCII Rendering Tool**.
 
 ## Really, why?
 
-The mention of not being Perl or a PHP webapp may appear to be me throwing shade at the existing solutions, but it is meant in a good-hearted way. Wrapping the OG perl Graph::Easy is a straightforeard way to go about it, and a web interface to the same is a project I might create as well, but Perl being installed is not the sure ubiquitous thing it once was, and spinning up a Docker container in order to add ascii art graph output to a python tool seemed a bit excessive.
+When I point out thata phart is not a Perl or a PHP webapp, it may appear that I am
+*throwing shade* at the existing solutions, but it is meant in a good-hearted way. 
+Wrapping the OG perl Graph::Easy is a straightforeward way to go about it, and a web interface to the same is a project I might create have created as well, but it is no 
+longer a certainty that a system you are working on will have Perl installed these days, 
+and spinning up a Docker container in order to add ascii line art graph visualizations to 
+a python tool seemed a bit excessive, *even for me.*
 
-Additionally, I'm not sure how I didn't find *pydot2ascii* - which is native python - when I first looked for a solution, but even if I had seen it I may not have realized that I could have exported my NX DAG to DOT, and then used pydot2ascii to go from DOT to ascii art.
+Also, I'm not sure how I didn't find *pydot2ascii* - which is native python - when I first
+looked for a solution, but even if I had, it may not have obvious to me that I could have
+exported my NX DAG to DOT, and then used pydot2ascii to go from DOT to an ascii diagram.
 
-So, now we have PHART, and the ability to render a NX digraph in ASCII/Unicode, read a DOT file, read GraphML, and a few other things in a well-tested Python module published to PyPi. I hope you find it useful.
+So, for better or worse, we have PHART, and the ability to render a NX digraph in ASCII and Unicode, to read a DOT file, read GraphML, and a few other things in a well-tested Python module published to PyPi. I hope you find it useful.
 
-## Installation
+# Installation
 
 requires Python >= 3.10 and NetworkX >= 3.3
 
+From PyPi (the phart package there is out of date at the moment):
 ```bash
 pip install phart
 ```
+Or for the latest version:
+```
+git clone https://github.com/scottvr/phart
+cd phart
+python -mvenv .venv
+. .venv/bin/activate
+# or .venv\Scripts\activate on Windows
+pip install .
+```
 
 ## The CLI
-
-These docs are a little out of date now, which I will try to remedy soon.
-In the mean time, I should mention that the primary focus lately has been
-use from the CLI command `phart` which is installed when you install via pip.
-This repor is well ahead of the release in PyPi as I work on some specific
-graphlet features for a user Issue. I will update the docs to match when the package is released.
-But to fill in some of the info gap here is the CLI usage info, which should be
-self-explanatory to many of you.
-
 ```bash
-└─$ phart --help
-usage: phart [-h] [--output OUTPUT] [--style {minimal,square,round,diamond,custom}]
-             [--node-spacing NODE_SPACING] [--layer-spacing LAYER_SPACING] [--charset {ascii,unicode}]
-             [--ascii] [--function FUNCTION]
+% phart --help
+usage: phart [-h] [--output OUTPUT] [--style {minimal,square,round,diamond,custom,bbox}]
+             [--node-spacing NODE_SPACING] [--layer-spacing LAYER_SPACING] [--charset {ascii,unicode}] [--ascii]
+             [--function FUNCTION] [--binary-tree] [--flow-direction {down,up,left,right}] [--bboxes]
+             [--hpad HPAD] [--vpad VPAD] [--uniform] [--edge-anchors {center,ports}]
              input
 
 PHART: Python Hierarchical ASCII Rendering Tool
@@ -264,43 +269,79 @@ positional arguments:
 
 options:
   -h, --help            show this help message and exit
-  --output OUTPUT, -o OUTPUT
-                        Output file (if not specified, prints to stdout)
-  --style {minimal,square,round,diamond,custom}
+  --output, -o OUTPUT   Output file (if not specified, prints to stdout)
+  --style {minimal,square,round,diamond,custom,bbox}
                         Node style (default: square)
   --node-spacing NODE_SPACING
                         Horizontal space between nodes (default: 4)
   --layer-spacing LAYER_SPACING
-                        Vertical space between layers (default: 2)
+                        Vertical space between layers (default: 3)
   --charset {ascii,unicode}
                         Character set to use for rendering (default: unicode)
   --ascii               Force ASCII output (deprecated, use --charset ascii instead)
-  --function FUNCTION, -f FUNCTION
+  --function, -f FUNCTION
                         Function to call in Python file (default: main)
+  --binary-tree         Enable binary tree layout (respects edge 'side' attributes)
+  --flow-direction, --flow {down,up,left,right}
+                        Layout flow direction: down (default, root at top), up (root at bottom), left (root at
+                        right), right (root at left)
+  --bboxes              Draw line-art boxes around nodes
+  --hpad HPAD           Horizontal padding inside node boxes (default: 1)
+  --vpad VPAD           Vertical padding inside node boxes (default: 0)
+  --uniform, --size-to-widest
+                        Use widest node text as the width baseline for all node boxes
+  --edge-anchors {center,ports}
+                        Edge anchor strategy: center (default) or ports (distributed on box edges)
 ```
 
-## Quick Start
+## Developer Quick Start
 
 ```python
 import networkx as nx
 from phart import ASCIIRenderer
 
-# Create a simple graph
-G = nx.DiGraph()
-G.add_edges_from([("A", "B"), ("A", "C"), ("B", "D")])
+def create_circular_deps():
+    """Create a dependency graph with circular references."""
+    G = nx.DiGraph()
 
-# Render it in ASCII
-renderer = ASCIIRenderer(G)
-print(renderer.render())
+    # Circular dependency example
+    dependencies = {
+        "package_a": ["package_b", "requests"],
+        "package_b": ["package_c"],
+        "package_c": ["package_a"],  # Creates cycle
+        "requests": ["urllib3", "certifi"],
+    }
 
-     [A]
-      │
-   v  │   v
-  [B]────[C]
-   │
-   │  v
-   ──[D]
+    for package, deps in dependencies.items():
+        for dep in deps:
+            G.add_edge(package, dep)
+
+    return G
+     
+def main():
+    # Circular dependencies
+    print("\nCircular Dependencies:")
+    G = create_circular_deps()
+    renderer = ASCIIRenderer(G)
+    print(renderer.render())     
+     
+if __name__ == "__main__":
+    main()
 ```
+
+This will output:
+
+```
+Circular Dependencies:
+             [package_a]
+           ┌──────┼───────┐
+           ↓      ↑       ↓
+      [package_b] │  [requests]
+    ┌──────┴──────┼───────┴─────┐
+    ↓             │             ↓
+[certifi]    [package_c]    [urllib3]
+```
+We might want to tweak the spacing, the character set, add some bounding boxes, etc. THe phart cli is your friend for experimenting with styling.
 
 The renderer shows edge direction using arrows:
 
@@ -308,42 +349,16 @@ The renderer shows edge direction using arrows:
 - ^ : upward flow
 - &gt; or < : horizontal flow
 
-These directional indicators are particularly useful for:
-
-- Dependency graphs
-- Workflow diagrams
-- Process flows
-- Any directed relationships
-
 # Extras
 
 ## Character Sets
-
-PHART supports multiple character sets for rendering:
 
 - `--charset unicode` (default): Uses Unicode box drawing characters and arrows for
   cleaner visualization
 - `--charset ascii`: Uses only 7-bit ASCII characters, ensuring maximum compatibility
   with all terminals
 
-Example:
-
-```bash
-# Using Unicode (default)
-phart graph.dot
-# ┌─A─┐
-# │   │
-# └─B─┘
-
-# Using ASCII only
-phart --charset ascii graph.dot
-# +-A-+
-# |   |
-# +-B-+
-```
-
 ## File Format Support
-
 ### DOT Files
 
 - DOT file support
@@ -360,25 +375,28 @@ pip install -r requirements\extra.txt
 ```
 
 ### Example
-
-    >>> dot = '''
-    ... digraph {
-    ...     A -> B
-    ...     B -> C
-    ... }
-    ... '''
-    >>> renderer = ASCIIRenderer.from_dot(dot)
-    >>> print(renderer.render())
-    A
-    |
-    B
-    |
-    C
-    >>>
+```bash
+$ python
+>>> from phart import ASCIIRenderer
+>>> import networkx as nx
+>>> dot = '''
+... digraph G {
+...     A -> B
+...     B -> C
+... }
+... '''
+>>> renderer = ASCIIRenderer.from_dot(dot)
+>>> print(renderer.render())
+[A]
+ │
+ ↓
+[B]
+ │
+ ↓
+[C]
+```
 
 ### Note on DOT format support:
-
----
 
 PHART uses pydot for DOT format support. When processing DOT strings containing
 multiple graph definitions, only the first graph will be rendered. For more
@@ -395,9 +413,8 @@ print(renderer.render())
 ```
 
 or, of course just
-```bash
-phart graph.graphml 
-```
+`phart [--options] graph.graphml`
+
 ## Python Files
 
 While developing and testing some new functionality, I had some demo scripts that themselves contained functions for spitting out various graphs and I wanted to test just a specific graph's function from a given file, so this feature was added; likely no one else will ever need this functionality.
@@ -408,26 +425,7 @@ PHART can directly execute Python files that create and render graphs. When give
 2. Otherwise, try to execute a `main()` function if one exists
 3. Finally, execute code in the `if __name__ == "__main__":` block
 
-Example Python file:
-
-```python
-import networkx as nx
-from phart import ASCIIRenderer
-
-def demonstrate_graph():
-    # Create a simple directed graph
-    G = nx.DiGraph()
-    G.add_edges_from([("A", "B"), ("B", "C")])
-
-    # Create renderer and display the graph
-    renderer = ASCIIRenderer(G)
-    print(renderer.render())
-
-if __name__ == "__main__":
-    demonstrate_graph()
-```
-
-You can execute this file in several ways:
+You can execute the phart python file in a couple of ways:
 
 ```bash
 # Execute main() or __main__ block (default behavior)
@@ -436,20 +434,20 @@ phart graph.py
 # Execute a specific function
 phart graph.py --function demonstrate_graph
 
-# Use specific rendering options
+# Use specific rendering options (as already shown)
 phart graph.py --charset ascii --style round
 ```
 
 ### Option handling when passed a .py file
 
-Again, something that may only be relevant to me during dev/testing but when a Python file is used as input to phart, command-line options are merged with any options specified in your code:
-
-- Options set in your Python code (like custom_decorators or specific node styles) are preserved
 - Command-line options will override general settings (like --charset or --style)
-- Custom settings (like custom_decorators) are never overridden by command-line defaults
+- Custom settings (like custom_decorators) are ~~never~~mostly never overridden by command-line defaults. Sometimes you can even combine multiple conflicting style options
+to interesting effect. (I will get around to fixing those things.)
 
 This means you can set specific options in your code while still using command-line
 options to adjust general rendering settings.
+
+#### I hope you enjoy it, and include many surprising plain-text diagrams in your next paper/book/website/video. Let me know if you do something cool with it, or if it breaks on your graph.
 
 ## License
 
