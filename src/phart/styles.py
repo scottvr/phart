@@ -121,6 +121,8 @@ class LayoutOptions:
     uniform: bool = field(default=False)  # Use widest node text width for all boxes
     edge_anchor_mode: str = field(default="center")  # center or ports
     use_labels: bool = field(default=False)  # Prefer node labels for display text
+    ansi_colors: bool = field(default=False)  # ANSI colorized render output (unicode)
+    edge_color_mode: str = field(default="target")  # target, source, or path
 
     # Instance-specific ID (unchanged)
     instance_id: int = field(init=False)
@@ -214,6 +216,11 @@ class LayoutOptions:
             self.edge_anchor_mode = self.edge_anchor_mode.strip().lower()
         if self.edge_anchor_mode not in {"center", "ports"}:
             raise ValueError("edge_anchor_mode must be one of: center, ports")
+
+        if isinstance(self.edge_color_mode, str):
+            self.edge_color_mode = self.edge_color_mode.strip().lower()
+        if self.edge_color_mode not in {"target", "source", "path"}:
+            raise ValueError("edge_color_mode must be one of: target, source, path")
 
     def get_effective_node_spacing(self, has_edges: bool = True) -> int:
         """Calculate effective node spacing considering edge requirements.

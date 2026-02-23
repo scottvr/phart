@@ -10,6 +10,18 @@ from .styles import LayoutOptions, NodeStyle
 import sys
 import io
 
+ANSI_RESET = "\x1b[0m"
+ANSI_SUBWAY_PALETTE: Tuple[str, ...] = (
+    "\x1b[38;5;45m",   # cyan
+    "\x1b[38;5;214m",  # orange
+    "\x1b[38;5;118m",  # green
+    "\x1b[38;5;199m",  # magenta
+    "\x1b[38;5;39m",   # blue
+    "\x1b[38;5;226m",  # yellow
+    "\x1b[38;5;160m",  # red
+    "\x1b[38;5;81m",   # aqua
+)
+
 
 class ASCIIRenderer:
     """
@@ -127,7 +139,11 @@ class ASCIIRenderer:
             )
         self.layout_manager = LayoutManager(graph, self.options)
         self.canvas: List[List[str]] = []
+        self._color_canvas: List[List[Optional[str]]] = []
         self._edge_anchor_map: Dict[Tuple[Any, Any], Dict[str, Tuple[int, int]]] = {}
+        self._node_color_map: Dict[Any, str] = {}
+        self._edge_color_map: Dict[Tuple[Any, Any], str] = {}
+        self._edge_conflict_cells: Set[Tuple[int, int]] = set()
 
     def _resolve_options(cls, options: Optional[LayoutOptions]) -> LayoutOptions:
         if cls.default_options is None:
@@ -146,6 +162,107 @@ class ASCIIRenderer:
             return text.encode("utf-8").decode("utf-8")
         except UnicodeEncodeError:
             return text.encode("ascii", errors="replace").decode("ascii")
+
+    def _use_ansi_colors(self) -> bool:
+        return bool(self.options.ansi_colors and not self.options.use_ascii)
+
+    def _initialize_color_maps(self, positions: Dict[Any, Tuple[int, int]]) -> None:
+        self._node_color_map = {}
+        self._edge_color_map = {}
+        if not self._use_ansi_colors():
+            return
+
+        if not ANSI_SUBWAY_PALETTE:
+            return
+
+        sorted_nodes = sorted(
+            positions.items(),
+            key=lambda item: (item[1][1], item[1][0], str(item[0])),
+        )
+        for idx, (node, _) in enumerate(sorted_nodes):
+            self._node_color_map[node] = ANSI_SUBWAY_PALETTE[idx % len(ANSI_SUBWAY_PALETTE)]
+
+        sorted_edges = sorted(
+            (edge for edge in self.graph.edges() if edge[0] in positions and edge[1] in positions),
+            key=lambda edge: (
+                positions[edge[0]][1],
+                positions[edge[0]][0],
+                positions[edge[1]][1],
+                positions[edge[1]][0],
+                str(edge[0]),
+                str(edge[1]),
+            ),
+        )
+
+        edge_mode = self.options.edge_color_mode
+        for idx, edge in enumerate(sorted_edges):
+            if edge_mode == "target":
+                color = self._node_color_map.get(edge[1])
+            elif edge_mode == "source":
+                color = self._node_color_map.get(edge[0])
+            else:  # path
+                color = ANSI_SUBWAY_PALETTE[idx % len(ANSI_SUBWAY_PALETTE)]
+
+            if color is None:
+                color = ANSI_SUBWAY_PALETTE[idx % len(ANSI_SUBWAY_PALETTE)]
+            self._edge_color_map[edge] = color
+
+    def _paint_cell(self, x: int, y: int, char: str, color: Optional[str] = None) -> None:
+        self.canvas[y][x] = char
+        if not self._use_ansi_colors():
+            return
+        self._color_canvas[y][x] = color
+        self._edge_conflict_cells.discard((x, y))
+
+    def _paint_edge_cell(
+        self, x: int, y: int, char: str, color: Optional[str] = None
+    ) -> None:
+        self.canvas[y][x] = char
+        if not self._use_ansi_colors():
+            return
+
+        key = (x, y)
+        if key in self._edge_conflict_cells:
+            self._color_canvas[y][x] = None
+            return
+
+        existing = self._color_canvas[y][x]
+        if existing is None:
+            self._color_canvas[y][x] = color
+            return
+
+        if color is None or existing == color:
+            return
+
+        self._color_canvas[y][x] = None
+        self._edge_conflict_cells.add(key)
+
+    def _render_row(self, row: List[str], colors: List[Optional[str]]) -> str:
+        last = -1
+        for idx, ch in enumerate(row):
+            if ch != " ":
+                last = idx
+        if last < 0:
+            return ""
+
+        if not self._use_ansi_colors():
+            return "".join(row[: last + 1])
+
+        rendered: List[str] = []
+        active_color: Optional[str] = None
+        for idx in range(last + 1):
+            color = colors[idx]
+            if color != active_color:
+                if active_color is not None:
+                    rendered.append(ANSI_RESET)
+                if color is not None:
+                    rendered.append(color)
+                active_color = color
+            rendered.append(row[idx])
+
+        if active_color is not None:
+            rendered.append(ANSI_RESET)
+        return "".join(rendered)
 
     @staticmethod
     def _normalize_label_value(label: Any) -> str:
@@ -336,10 +453,11 @@ class ASCIIRenderer:
     def _draw_node(self, node: Any, x: int, y: int) -> None:
         label = self.options.get_node_text(self._get_display_node_text(node))
         node_width, node_height = self._get_node_dimensions(node)
+        node_color = self._node_color_map.get(node)
 
         if not self.options.bboxes:
             for i, char in enumerate(label):
-                self.canvas[y][x + i] = char
+                self._paint_cell(x + i, y, char, node_color)
             return
 
         right_x = x + node_width - 1
@@ -347,22 +465,22 @@ class ASCIIRenderer:
         inner_start_x = x + 1 + self.options.hpad
         label_y = y + 1 + self.options.vpad
 
-        self.canvas[y][x] = self.options.box_top_left
-        self.canvas[y][right_x] = self.options.box_top_right
+        self._paint_cell(x, y, self.options.box_top_left, node_color)
+        self._paint_cell(right_x, y, self.options.box_top_right, node_color)
         for col in range(x + 1, right_x):
-            self.canvas[y][col] = self.options.edge_horizontal
+            self._paint_cell(col, y, self.options.edge_horizontal, node_color)
 
-        self.canvas[bottom_y][x] = self.options.box_bottom_left
-        self.canvas[bottom_y][right_x] = self.options.box_bottom_right
+        self._paint_cell(x, bottom_y, self.options.box_bottom_left, node_color)
+        self._paint_cell(right_x, bottom_y, self.options.box_bottom_right, node_color)
         for col in range(x + 1, right_x):
-            self.canvas[bottom_y][col] = self.options.edge_horizontal
+            self._paint_cell(col, bottom_y, self.options.edge_horizontal, node_color)
 
         for row in range(y + 1, bottom_y):
-            self.canvas[row][x] = self.options.edge_vertical
-            self.canvas[row][right_x] = self.options.edge_vertical
+            self._paint_cell(x, row, self.options.edge_vertical, node_color)
+            self._paint_cell(right_x, row, self.options.edge_vertical, node_color)
 
         for i, char in enumerate(label):
-            self.canvas[label_y][inner_start_x + i] = char
+            self._paint_cell(inner_start_x + i, label_y, char, node_color)
 
     def render(self, print_config: Optional[bool] = False) -> str:
         """Render the graph as ASCII art."""
@@ -372,6 +490,7 @@ class ASCIIRenderer:
 
         # Initialize canvas with adjusted positions
         self._init_canvas(width, height, positions)
+        self._initialize_color_maps(positions)
         self._edge_anchor_map = self._compute_edge_anchor_map(positions)
 
         # Only try to draw edges if we have any
@@ -402,7 +521,10 @@ class ASCIIRenderer:
                     f"Node drawing failed: {pos_info}, {canvas_info}"
                 ) from e
 
-        return "\n".join("".join(row).rstrip() for row in self.canvas)
+        return "\n".join(
+            self._render_row(row, colors)
+            for row, colors in zip(self.canvas, self._color_canvas)
+        )
 
     def draw(self, file: Optional[TextIO] = None) -> None:
         """
@@ -490,30 +612,44 @@ class ASCIIRenderer:
             )
 
         self.canvas = [[" " for _ in range(final_width)] for _ in range(final_height)]
+        self._color_canvas = [
+            [None for _ in range(final_width)] for _ in range(final_height)
+        ]
+        self._edge_conflict_cells = set()
 
     def _draw_vertical_segment(
-        self, x: int, start_y: int, end_y: int, marker: Optional[str]
+        self,
+        x: int,
+        start_y: int,
+        end_y: int,
+        marker: Optional[str],
+        color: Optional[str] = None,
     ) -> None:
         for y in range(start_y + 1, end_y):
-            self.canvas[y][x] = self.options.edge_vertical
+            self._paint_edge_cell(x, y, self.options.edge_vertical, color)
         if marker is not None:
             mid_y = (start_y + end_y) // 2
-            self.canvas[mid_y][x] = marker
+            self._paint_edge_cell(x, mid_y, marker, color)
         return None
 
     def _draw_horizontal_segment(
-        self, y: int, start_x: int, end_x: int, marker: Optional[str]
+        self,
+        y: int,
+        start_x: int,
+        end_x: int,
+        marker: Optional[str],
+        color: Optional[str] = None,
     ) -> None:
         for x in range(start_x + 1, end_x):
-            self.canvas[y][x] = self.options.edge_horizontal
+            self._paint_edge_cell(x, y, self.options.edge_horizontal, color)
         if marker is not None:
             mid_x = (start_x + end_x) // 2
-            self.canvas[y][mid_x] = marker
+            self._paint_edge_cell(mid_x, y, marker, color)
         return None
 
-    def _safe_draw(self, x: int, y: int, char: str) -> None:
+    def _safe_draw(self, x: int, y: int, char: str, color: Optional[str] = None) -> None:
         try:
-            self.canvas[y][x] = char
+            self._paint_edge_cell(x, y, char, color)
         except IndexError:
             raise IndexError(f"Drawing exceeded canvas bounds at ({x}, {y})")
         return None
@@ -582,10 +718,12 @@ class ASCIIRenderer:
             return self.options.edge_horizontal
         return self.options.edge_vertical
 
-    def _merge_line_cell(self, x: int, y: int, add_dirs: Set[str]) -> None:
+    def _merge_line_cell(
+        self, x: int, y: int, add_dirs: Set[str], color: Optional[str] = None
+    ) -> None:
         current = self.canvas[y][x]
         merged_dirs = self._line_dirs_for_char(current) | add_dirs
-        self.canvas[y][x] = self._glyph_for_line_dirs(merged_dirs)
+        self._paint_edge_cell(x, y, self._glyph_for_line_dirs(merged_dirs), color)
 
     def _is_terminal(
         self, positions: Dict[Any, Tuple[int, int]], node: Any, x: int, y: int
@@ -606,7 +744,12 @@ class ASCIIRenderer:
         }
 
     def _draw_direction(
-        self, y: int, x: int, direction: str, is_terminal: bool = False
+        self,
+        y: int,
+        x: int,
+        direction: str,
+        is_terminal: bool = False,
+        color: Optional[str] = None,
     ) -> None:
         """
         Draw a directional indicator, respecting terminal points.
@@ -616,13 +759,13 @@ class ASCIIRenderer:
         """
         if is_terminal:
             # Always show direction at node connection points
-            self.canvas[y][x] = direction
+            self._paint_edge_cell(x, y, direction, color)
         elif self.canvas[y][x] not in (
             self.options.edge_arrow_up,
             self.options.edge_arrow_down,
         ):
             # Only draw direction on non-terminals if there isn't already a direction
-            self.canvas[y][x] = direction
+            self._paint_edge_cell(x, y, direction, color)
 
     def _get_jog_row(
         self,
@@ -680,6 +823,7 @@ class ASCIIRenderer:
         start_anchor, end_anchor = self._get_edge_anchor_points(start, end, positions)
         start_x, start_y = start_anchor
         end_x, end_y = end_anchor
+        edge_color = self._edge_color_map.get((start, end))
 
         # Check if this is a bidirectional edge
         is_bidirectional = (
@@ -694,24 +838,36 @@ class ASCIIRenderer:
                 max_x = max(start_x, end_x) - 1
 
                 for x in range(min_x, max_x + 1):
-                    self._merge_line_cell(x, y, {"left", "right"})
+                    self._merge_line_cell(x, y, {"left", "right"}, edge_color)
 
                 if is_bidirectional:
                     if min_x <= max_x:
-                        self.canvas[y][min_x] = self.options.get_arrow_for_direction(
-                            "right"
+                        self._paint_edge_cell(
+                            min_x,
+                            y,
+                            self.options.get_arrow_for_direction("right"),
+                            edge_color,
                         )
-                        self.canvas[y][max_x] = self.options.get_arrow_for_direction(
-                            "left"
+                        self._paint_edge_cell(
+                            max_x,
+                            y,
+                            self.options.get_arrow_for_direction("left"),
+                            edge_color,
                         )
                 elif min_x <= max_x:
                     if start_x < end_x:
-                        self.canvas[y][max_x] = self.options.get_arrow_for_direction(
-                            "right"
+                        self._paint_edge_cell(
+                            max_x,
+                            y,
+                            self.options.get_arrow_for_direction("right"),
+                            edge_color,
                         )
                     else:
-                        self.canvas[y][min_x] = self.options.get_arrow_for_direction(
-                            "left"
+                        self._paint_edge_cell(
+                            min_x,
+                            y,
+                            self.options.get_arrow_for_direction("left"),
+                            edge_color,
                         )
 
             # Case 2: Top to bottom (or bottom to top) connection
@@ -754,7 +910,9 @@ class ASCIIRenderer:
                 # clobber a previously drawn edge.
                 for y in range(top_y + 1, jog_y):
                     if self.canvas[y][top_center] != self.options.edge_cross:
-                        self._merge_line_cell(top_center, y, {"up", "down"})
+                        self._merge_line_cell(
+                            top_center, y, {"up", "down"}, edge_color
+                        )
 
                 if top_center != bottom_center:
                     # Junctions at both ends of the horizontal jog.
@@ -767,41 +925,53 @@ class ASCIIRenderer:
                         top_dirs.add("left")
                         bottom_dirs.add("right")
 
-                    self._merge_line_cell(top_center, jog_y, top_dirs)
-                    self._merge_line_cell(bottom_center, jog_y, bottom_dirs)
+                    self._merge_line_cell(top_center, jog_y, top_dirs, edge_color)
+                    self._merge_line_cell(bottom_center, jog_y, bottom_dirs, edge_color)
 
                     # Horizontal segment between the corners
                     min_x = min(top_center, bottom_center)
                     max_x = max(top_center, bottom_center)
                     for x in range(min_x + 1, max_x):
-                        self._merge_line_cell(x, jog_y, {"left", "right"})
+                        self._merge_line_cell(x, jog_y, {"left", "right"}, edge_color)
                 else:
                     # Straight down: vertical bar at jog_y too
-                    self._merge_line_cell(top_center, jog_y, {"up", "down"})
+                    self._merge_line_cell(top_center, jog_y, {"up", "down"}, edge_color)
 
                 # Draw vertical segment from jog row down to child
                 for y in range(jog_y + 1, bottom_y):
-                    self._merge_line_cell(bottom_center, y, {"up", "down"})
+                    self._merge_line_cell(bottom_center, y, {"up", "down"}, edge_color)
 
                 # Direction indicators
                 if is_bidirectional:
                     if bottom_y > jog_y + 1:
-                        self.canvas[jog_y + 1][bottom_center] = (
-                            self.options.get_arrow_for_direction("up")
+                        self._paint_edge_cell(
+                            bottom_center,
+                            jog_y + 1,
+                            self.options.get_arrow_for_direction("up"),
+                            edge_color,
                         )
-                    self.canvas[bottom_y - 1][bottom_center] = (
-                        self.options.get_arrow_for_direction("down")
+                    self._paint_edge_cell(
+                        bottom_center,
+                        bottom_y - 1,
+                        self.options.get_arrow_for_direction("down"),
+                        edge_color,
                     )
                 else:
                     if start_y < end_y:  # top-to-bottom: arrow points down toward child
                         if bottom_y > jog_y + 1:
-                            self.canvas[bottom_y - 1][bottom_center] = (
-                                self.options.get_arrow_for_direction("down")
+                            self._paint_edge_cell(
+                                bottom_center,
+                                bottom_y - 1,
+                                self.options.get_arrow_for_direction("down"),
+                                edge_color,
                             )
                     else:  # bottom-to-top: arrow points up toward parent
                         if bottom_y > jog_y + 1:
-                            self.canvas[jog_y + 1][bottom_center] = (
-                                self.options.get_arrow_for_direction("up")
+                            self._paint_edge_cell(
+                                bottom_center,
+                                jog_y + 1,
+                                self.options.get_arrow_for_direction("up"),
+                                edge_color,
                             )
 
         except IndexError as e:
@@ -937,6 +1107,8 @@ def merge_layout_options(
         "uniform",
         "edge_anchor_mode",
         "use_labels",
+        "ansi_colors",
+        "edge_color_mode",
     }
 
     for field in fields(LayoutOptions):

@@ -3,6 +3,7 @@
 
 import unittest
 import sys
+import re
 
 import networkx as nx  # type: ignore
 
@@ -448,6 +449,132 @@ class TestASCIIRenderer(unittest.TestCase):
         result = renderer.render()
         self.assertTrue(all(ord(c) < 128 for c in result))
 
+    def test_ansi_colors_emit_escape_sequences(self):
+        renderer = ASCIIRenderer(
+            self.chain,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=False,
+                ansi_colors=True,
+            ),
+        )
+        result = renderer.render()
+        self.assertIn("\x1b[", result)
+        self.assertIn("\x1b[0m", result)
+
+    def test_ansi_colors_are_disabled_in_ascii_mode(self):
+        renderer = ASCIIRenderer(
+            self.chain,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=True,
+                ansi_colors=True,
+            ),
+        )
+        result = renderer.render()
+        self.assertNotIn("\x1b[", result)
+
+    def test_stripping_ansi_matches_plain_render_output(self):
+        base_options = dict(
+            node_style=NodeStyle.MINIMAL,
+            use_ascii=False,
+            bboxes=True,
+            hpad=1,
+            vpad=0,
+            layer_spacing=4,
+        )
+        plain = ASCIIRenderer(
+            self.tree,
+            options=LayoutOptions(**base_options),
+        ).render()
+        colored = ASCIIRenderer(
+            self.tree,
+            options=LayoutOptions(ansi_colors=True, **base_options),
+        ).render()
+        stripped = re.sub(r"\x1b\[[0-9;]*m", "", colored)
+        self.assertEqual(stripped, plain)
+
+    def test_edge_colors_follow_target_node_colors(self):
+        graph = nx.DiGraph([("A", "B"), ("A", "C")])
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=False,
+                ansi_colors=True,
+                bboxes=True,
+                layer_spacing=4,
+            ),
+        )
+        renderer.render()
+        self.assertEqual(
+            renderer._edge_color_map[("A", "B")],  # noqa: SLF001
+            renderer._node_color_map["B"],  # noqa: SLF001
+        )
+        self.assertEqual(
+            renderer._edge_color_map[("A", "C")],  # noqa: SLF001
+            renderer._node_color_map["C"],  # noqa: SLF001
+        )
+
+    def test_shared_edge_segments_become_uncolored_on_conflict(self):
+        graph = nx.DiGraph([("A", "B"), ("A", "C"), ("A", "D")])
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=False,
+                ansi_colors=True,
+                bboxes=True,
+                hpad=1,
+                vpad=0,
+                layer_spacing=4,
+            ),
+        )
+        renderer.render()
+        self.assertGreater(len(renderer._edge_conflict_cells), 0)  # noqa: SLF001
+        for x, y in renderer._edge_conflict_cells:  # noqa: SLF001
+            self.assertIsNone(renderer._color_canvas[y][x])  # noqa: SLF001
+
+    def test_edge_color_mode_source(self):
+        graph = nx.DiGraph([("A", "B"), ("C", "D")])
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=False,
+                ansi_colors=True,
+                edge_color_mode="source",
+                bboxes=True,
+                layer_spacing=4,
+            ),
+        )
+        renderer.render()
+        self.assertEqual(
+            renderer._edge_color_map[("A", "B")],  # noqa: SLF001
+            renderer._node_color_map["A"],  # noqa: SLF001
+        )
+        self.assertEqual(
+            renderer._edge_color_map[("C", "D")],  # noqa: SLF001
+            renderer._node_color_map["C"],  # noqa: SLF001
+        )
+
+    def test_edge_color_mode_path(self):
+        graph = nx.DiGraph([("A", "B"), ("A", "C"), ("B", "D")])
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=False,
+                ansi_colors=True,
+                edge_color_mode="path",
+                bboxes=True,
+                layer_spacing=4,
+            ),
+        )
+        renderer.render()
+        colors = set(renderer._edge_color_map.values())  # noqa: SLF001
+        self.assertGreaterEqual(len(colors), 2)
+
     def test_file_writing(self):
         """Test writing to file with proper encoding."""
 
@@ -535,6 +662,10 @@ class TestLayoutOptions(unittest.TestCase):
     def test_invalid_edge_anchor_mode(self):
         with self.assertRaises(ValueError):
             LayoutOptions(edge_anchor_mode="invalid")
+
+    def test_invalid_edge_color_mode(self):
+        with self.assertRaises(ValueError):
+            LayoutOptions(edge_color_mode="invalid")
 
     def test_merge_layout_options_cli_overrides_binary_tree_layout(self):
         script_options = LayoutOptions(binary_tree_layout=False, use_ascii=True)

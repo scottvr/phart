@@ -264,3 +264,29 @@ def demonstrate_graph():
         self.assertIn("Alpha Node", output)
         self.assertIn("Beta Node", output)
         self.assertNotIn("n1", output)
+
+    def test_colors_flag_emits_ansi_in_unicode_mode(self):
+        sys.argv = ["phart", "--colors", str(self.test_text_file)]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertIn("\x1b[", output)
+
+    def test_colors_flag_is_ignored_in_ascii_mode(self):
+        sys.argv = ["phart", "--colors", "--charset", "ascii", str(self.test_text_file)]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertNotIn("\x1b[", output)
+
+    def test_edge_color_mode_flag(self):
+        sys.argv = [
+            "phart",
+            "--colors",
+            "--edge-color-mode",
+            "source",
+            str(self.test_text_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        self.assertNotIn("Error", self.stderr.getvalue())
