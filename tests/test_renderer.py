@@ -251,6 +251,56 @@ class TestASCIIRenderer(unittest.TestCase):
         self.assertIn("v", down)
         self.assertIn("^", up)
 
+    def test_boxed_node_rendering_with_padding(self):
+        """Box mode should draw a rectangle with configured padding."""
+        single = nx.DiGraph()
+        single.add_node("A")
+        renderer = ASCIIRenderer(
+            single,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                bboxes=True,
+                hpad=2,
+                vpad=1,
+                use_ascii=True,
+            ),
+        )
+        result = renderer.render()
+        expected = "\n".join(
+            [
+                "+-----+",
+                "|     |",
+                "|  A  |",
+                "|     |",
+                "+-----+",
+            ]
+        )
+        self.assertEqual(result.strip(), expected)
+
+    def test_uniform_box_widths(self):
+        """Uniform box mode should size all boxes to the widest node text."""
+        graph = nx.DiGraph([("A", "WIDE_NODE")])
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                bboxes=True,
+                hpad=1,
+                vpad=0,
+                uniform=True,
+                use_ascii=True,
+                layer_spacing=4,
+            ),
+        )
+        result = renderer.render()
+        lines = result.splitlines()
+
+        a_line = next(line for line in lines if "A" in line)
+        wide_line = next(line for line in lines if "WIDE_NODE" in line)
+        a_width = a_line.rindex("|") - a_line.index("|") + 1
+        wide_width = wide_line.rindex("|") - wide_line.index("|") + 1
+        self.assertEqual(a_width, wide_width)
+
     def test_file_writing(self):
         """Test writing to file with proper encoding."""
 
@@ -323,6 +373,12 @@ class TestLayoutOptions(unittest.TestCase):
         options = LayoutOptions()
         self.assertGreater(options.node_spacing, 0)
         self.assertGreater(options.layer_spacing, 0)
+
+    def test_invalid_box_padding(self):
+        with self.assertRaises(ValueError):
+            LayoutOptions(hpad=-1)
+        with self.assertRaises(ValueError):
+            LayoutOptions(vpad=-1)
 
 
 if __name__ == "__main__":

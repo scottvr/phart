@@ -78,6 +78,30 @@ def parse_args() -> tuple[argparse.Namespace, list[str]]:
         help="Layout flow direction: down (default, root at top), up (root at bottom), "
              "left (root at right), right (root at left)",
     )
+    parser.add_argument(
+        "--bboxes",
+        action="store_true",
+        help="Draw line-art boxes around nodes",
+    )
+    parser.add_argument(
+        "--hpad",
+        type=int,
+        default=1,
+        help="Horizontal padding inside node boxes (default: 1)",
+    )
+    parser.add_argument(
+        "--vpad",
+        type=int,
+        default=0,
+        help="Vertical padding inside node boxes (default: 0)",
+    )
+    parser.add_argument(
+        "--uniform",
+        "--size-to-widest",
+        action="store_true",
+        dest="uniform",
+        help="Use widest node text as the width baseline for all node boxes",
+    )
     args, unknown = parser.parse_known_args()
     return args, unknown
 
@@ -102,6 +126,10 @@ def create_layout_options(args: argparse.Namespace) -> LayoutOptions:
         use_ascii=(args.charset == CharSet.ASCII or args.use_legacy_ascii),
         binary_tree_layout=args.binary_tree,
         flow_direction=args.flow_direction,
+        bboxes=args.bboxes,
+        hpad=args.hpad,
+        vpad=args.vpad,
+        uniform=args.uniform,
     )
 
 def _run_python_as_main(file_path: Path) -> Any:
@@ -182,25 +210,21 @@ def main() -> Optional[int]:
                 content = f.read()
 
             try:
+                cli_options = create_layout_options(args)
                 if content.strip().startswith("<?xml") or content.strip().startswith(
                     "<graphml"
                 ):
-                    renderer = ASCIIRenderer.from_graphml(str(args.input))
+                    renderer = ASCIIRenderer.from_graphml(
+                        str(args.input), options=cli_options
+                    )
                 else:
-                    renderer = ASCIIRenderer.from_dot(content)
+                    renderer = ASCIIRenderer.from_dot(content, options=cli_options)
             except Exception as format_error:
                 print(
                     f"Error: Could not parse file as GraphML or DOT format: {format_error}",
                     file=sys.stderr,
                 )
                 return 1
-
-            renderer.options.node_style = NodeStyle[args.style.upper()]
-            # Prefer explicit charset if specified, fall back to legacy flag if used
-            use_ascii = args.charset == CharSet.ASCII or args.use_legacy_ascii
-            renderer.options.use_ascii = use_ascii
-            renderer.options.node_spacing = args.node_spacing
-            renderer.options.layer_spacing = args.layer_spacing
 
             if args.output:
                 renderer.write_to_file(str(args.output))

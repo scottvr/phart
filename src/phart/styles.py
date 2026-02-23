@@ -114,6 +114,10 @@ class LayoutOptions:
     triangle_height_ratio: float = field(default=0.866)  # sqrt(3)/2 for equilateral
     binary_tree_layout: bool = field(default=False)  # Use binary tree positioning
     flow_direction: FlowDirection = field(default=FlowDirection.DOWN)
+    bboxes: bool = field(default=False)  # Draw line-art boxes around nodes
+    hpad: int = field(default=1)  # Horizontal inner padding for boxed nodes
+    vpad: int = field(default=0)  # Vertical inner padding for boxed nodes
+    uniform: bool = field(default=False)  # Use widest node text width for all boxes
 
     # Instance-specific ID (unchanged)
     instance_id: int = field(init=False)
@@ -128,6 +132,10 @@ class LayoutOptions:
     edge_arrow_l = EdgeChar("<", "←")
     edge_arrow_up = EdgeChar("^", "↑")
     edge_arrow_down = EdgeChar("v", "↓")
+    box_top_left = EdgeChar("+", "┌")
+    box_top_right = EdgeChar("+", "┐")
+    box_bottom_left = EdgeChar("+", "└")
+    box_bottom_right = EdgeChar("+", "┘")
 
     def __post_init__(self) -> None:
         """Validate and normalize configuration values."""
@@ -181,6 +189,10 @@ class LayoutOptions:
             raise ValueError("min_edge_space must be at least 1")
         if self.triangle_height_ratio <= 0:
             raise ValueError("triangle_height_ratio must be positive")
+        if self.hpad < 0:
+            raise ValueError("hpad must be non-negative")
+        if self.vpad < 0:
+            raise ValueError("vpad must be non-negative")
 
     def get_effective_node_spacing(self, has_edges: bool = True) -> int:
         """Calculate effective node spacing considering edge requirements.
@@ -279,3 +291,29 @@ class LayoutOptions:
                 return "<", ">"
             case _:
                 return "[", "]"  # Default to square brackets
+
+    def get_node_text(self, node_str: str) -> str:
+        """Get the full rendered node text including decorators."""
+        prefix, suffix = self.get_node_decorators(node_str)
+        return f"{prefix}{node_str}{suffix}"
+
+    def get_node_height(self) -> int:
+        """Get rendered node height in rows."""
+        if not self.bboxes:
+            return 1
+        # top border + bottom border + content row + optional vertical padding rows
+        return (2 * self.vpad) + 3
+
+    def get_node_dimensions(
+        self, node_str: str, widest_text_width: Optional[int] = None
+    ) -> Tuple[int, int]:
+        """Get rendered node width/height for a given node text."""
+        text_width = len(self.get_node_text(node_str))
+        if self.bboxes and self.uniform and widest_text_width is not None:
+            text_width = max(text_width, widest_text_width)
+
+        if not self.bboxes:
+            return text_width, 1
+
+        width = text_width + (2 * self.hpad) + 2  # left/right border columns
+        return width, self.get_node_height()

@@ -146,6 +146,70 @@ class ASCIIRenderer:
         except UnicodeEncodeError:
             return text.encode("ascii", errors="replace").decode("ascii")
 
+    def _get_widest_node_text_width(self) -> Optional[int]:
+        if not self.options.uniform:
+            return None
+        return max(
+            (len(self.options.get_node_text(str(node))) for node in self.graph.nodes()),
+            default=0,
+        )
+
+    def _get_node_dimensions(self, node: str) -> Tuple[int, int]:
+        return self.options.get_node_dimensions(
+            str(node), widest_text_width=self._get_widest_node_text_width()
+        )
+
+    def _get_node_bounds(
+        self, node: str, positions: Dict[str, Tuple[int, int]]
+    ) -> Dict[str, int]:
+        x, y = positions[node]
+        width, height = self._get_node_dimensions(node)
+        left = x
+        right = x + width - 1
+        top = y
+        bottom = y + height - 1
+        center_x = left + (width // 2)
+        center_y = top + (height // 2)
+        return {
+            "left": left,
+            "right": right,
+            "top": top,
+            "bottom": bottom,
+            "center_x": center_x,
+            "center_y": center_y,
+        }
+
+    def _draw_node(self, node: str, x: int, y: int) -> None:
+        label = self.options.get_node_text(str(node))
+        node_width, node_height = self._get_node_dimensions(node)
+
+        if not self.options.bboxes:
+            for i, char in enumerate(label):
+                self.canvas[y][x + i] = char
+            return
+
+        right_x = x + node_width - 1
+        bottom_y = y + node_height - 1
+        inner_start_x = x + 1 + self.options.hpad
+        label_y = y + 1 + self.options.vpad
+
+        self.canvas[y][x] = self.options.box_top_left
+        self.canvas[y][right_x] = self.options.box_top_right
+        for col in range(x + 1, right_x):
+            self.canvas[y][col] = self.options.edge_horizontal
+
+        self.canvas[bottom_y][x] = self.options.box_bottom_left
+        self.canvas[bottom_y][right_x] = self.options.box_bottom_right
+        for col in range(x + 1, right_x):
+            self.canvas[bottom_y][col] = self.options.edge_horizontal
+
+        for row in range(y + 1, bottom_y):
+            self.canvas[row][x] = self.options.edge_vertical
+            self.canvas[row][right_x] = self.options.edge_vertical
+
+        for i, char in enumerate(label):
+            self.canvas[label_y][inner_start_x + i] = char
+
     def render(self, print_config: Optional[bool] = False) -> str:
         """Render the graph as ASCII art."""
         positions, width, height = self.layout_manager.calculate_layout()
@@ -174,17 +238,14 @@ class ASCIIRenderer:
 
         # Draw nodes
         for node, (x, y) in positions.items():
-            prefix, suffix = self.options.get_node_decorators(str(node))
-            label = f"{prefix}{node}{suffix}"
-            for i, char in enumerate(label):
-                try:
-                    self.canvas[y][x + i] = char
-                except IndexError as e:
-                    pos_info = f"pos=({x},{y}), i={i}, label={label}"
-                    canvas_info = f"canvas={len(self.canvas)}x{len(self.canvas[0])}"
-                    raise IndexError(
-                        f"Node drawing failed: {pos_info}, {canvas_info}"
-                    ) from e
+            try:
+                self._draw_node(str(node), x, y)
+            except IndexError as e:
+                pos_info = f"pos=({x},{y}), node={node}"
+                canvas_info = f"canvas={len(self.canvas)}x{len(self.canvas[0])}"
+                raise IndexError(
+                    f"Node drawing failed: {pos_info}, {canvas_info}"
+                ) from e
 
         return "\n".join("".join(row).rstrip() for row in self.canvas)
 
@@ -246,23 +307,24 @@ class ASCIIRenderer:
             ValueError: If dimensions are negative
         """
         # Calculate minimum dimensions needed
-        max_x_pos = max(x for x, _ in positions.values()) if positions else 0
-        max_y_pos = max(y for _, y in positions.values()) if positions else 0
-
-        # Calculate width needed for widest node plus its position
-        max_node_width = (
-            max(
-                sum(len(part) for part in self.options.get_node_decorators(str(node)))
-                + len(str(node))
-                for node in positions.keys()
-            )
-            if positions
-            else 1
+        max_right = max(
+            (
+                x + self._get_node_dimensions(str(node))[0]
+                for node, (x, _) in positions.items()
+            ),
+            default=1,
+        )
+        max_bottom = max(
+            (
+                y + self._get_node_dimensions(str(node))[1]
+                for node, (_, y) in positions.items()
+            ),
+            default=1,
         )
 
-        # Ensure minimum dimensions that can hold all nodes and edges
-        min_width = max_x_pos + max_node_width + 1  # +1 for safety margin
-        min_height = max_y_pos + 3  # +3 to ensure room for edges between layers
+        # Ensure minimum dimensions that can hold all nodes and edge routing.
+        min_width = max_right + 1
+        min_height = max_bottom + 2
 
         final_width = max(width, min_width)
         final_height = max(height, min_height)
@@ -312,12 +374,11 @@ class ASCIIRenderer:
         """
         if node not in positions:
             return False
-        node_x, node_y = positions[node]
-        prefix, _ = self.options.get_node_decorators(str(node))
-        node_width = len(str(node)) + len(str(prefix))
-        node_center = node_x + node_width // 2
-
-        return y == node_y and x == node_center
+        bounds = self._get_node_bounds(node, positions)
+        return (
+            y == bounds["center_y"]
+            and x in {bounds["left"], bounds["right"], bounds["center_x"]}
+        )
 
     def _draw_direction(
         self, y: int, x: int, direction: str, is_terminal: bool = False
@@ -359,6 +420,8 @@ class ASCIIRenderer:
         min_x = min(top_center, bottom_center)
         max_x = max(top_center, bottom_center)
         latest_jog = bottom_y - 2
+        if latest_jog < top_y + 1:
+            return top_y + 1
 
         for jog_y in range(top_y + 1, latest_jog + 1):
             conflict = False
@@ -386,16 +449,13 @@ class ASCIIRenderer:
                 f"Node position not found: {start if start not in positions else end}"
             )
 
-        start_x, start_y = positions[start]
-        end_x, end_y = positions[end]
+        start_bounds = self._get_node_bounds(start, positions)
+        end_bounds = self._get_node_bounds(end, positions)
 
-        # Calculate node widths for edge positioning
-        prefix, _ = self.options.get_node_decorators(str(start))
-        start_width = len(str(start)) + len(str(prefix))
-        end_width = len(str(end)) + len(str(prefix))
-
-        start_center = start_x + start_width // 2
-        end_center = end_x + end_width // 2
+        start_center_x = start_bounds["center_x"]
+        start_center_y = start_bounds["center_y"]
+        end_center_x = end_bounds["center_x"]
+        end_center_y = end_bounds["center_y"]
 
         # Check if this is a bidirectional edge
         is_bidirectional = (
@@ -404,33 +464,44 @@ class ASCIIRenderer:
 
         try:
             # Case 1: Same level horizontal connection
-            if start_y == end_y:
-                min_x = min(start_center, end_center)
-                max_x = max(start_center, end_center)
-                for x in range(min_x + 1, max_x):
-                    self.canvas[start_y][x] = self.options.edge_horizontal
-                if is_bidirectional:
-                    self.canvas[start_y][min_x + 1] = self.options.get_arrow_for_direction('right')
-                    self.canvas[start_y][max_x - 1] = self.options.get_arrow_for_direction('left')
+            if start_center_y == end_center_y:
+                y = start_center_y
+
+                if start_center_x <= end_center_x:
+                    left_node = start_bounds
+                    right_node = end_bounds
                 else:
-                    if start_center < end_center:
-                        self.canvas[start_y][max_x - 1] = self.options.get_arrow_for_direction('right')
+                    left_node = end_bounds
+                    right_node = start_bounds
+
+                min_x = left_node["right"] + 1
+                max_x = right_node["left"] - 1
+
+                for x in range(min_x, max_x + 1):
+                    self.canvas[y][x] = self.options.edge_horizontal
+
+                if is_bidirectional:
+                    if min_x <= max_x:
+                        self.canvas[y][min_x] = self.options.get_arrow_for_direction("right")
+                        self.canvas[y][max_x] = self.options.get_arrow_for_direction("left")
+                elif min_x <= max_x:
+                    if start_center_x < end_center_x:
+                        self.canvas[y][max_x] = self.options.get_arrow_for_direction("right")
                     else:
-                        self.canvas[start_y][min_x + 1] = self.options.get_arrow_for_direction('left')
+                        self.canvas[y][min_x] = self.options.get_arrow_for_direction("left")
 
             # Case 2: Top to bottom (or bottom to top) connection
-            elif start_y != end_y:
+            else:
                 # Identify top and bottom nodes
-                top_node = start if start_y < end_y else end
-                bottom_node = end if start_y < end_y else start
-                top_x, top_y = positions[top_node]
-                bottom_x, bottom_y = positions[bottom_node]
+                top_node = start if start_center_y < end_center_y else end
+                bottom_node = end if start_center_y < end_center_y else start
+                top_bounds = start_bounds if top_node == start else end_bounds
+                bottom_bounds = end_bounds if bottom_node == end else start_bounds
 
-                # Calculate centres
-                top_center = top_x + (len(str(top_node)) + len(str(prefix))) // 2
-                bottom_center = (
-                    bottom_x + (len(str(bottom_node)) + len(str(prefix))) // 2
-                )
+                top_center = top_bounds["center_x"]
+                bottom_center = bottom_bounds["center_x"]
+                top_y = top_bounds["bottom"]
+                bottom_y = bottom_bounds["top"]
 
                 # --- Jog row selection ---
                 #
@@ -446,6 +517,9 @@ class ASCIIRenderer:
                 #   ...        |
                 #   bottom_y-1 v               <- arrow just above child
                 #   bottom_y   Child           <- node row
+
+                if bottom_y <= top_y + 1:
+                    return
 
                 if top_center == bottom_center:
                     jog_y = top_y + 1
@@ -482,20 +556,20 @@ class ASCIIRenderer:
                 # Direction indicators
                 if is_bidirectional:
                     if bottom_y > jog_y + 1:
-                        self.canvas[jog_y + 1][bottom_center] = self.options.get_arrow_for_direction('up')
+                        self.canvas[jog_y + 1][bottom_center] = self.options.get_arrow_for_direction("up")
                     self.canvas[bottom_y - 1][bottom_center] = (
-                        self.options.get_arrow_for_direction('down')
+                        self.options.get_arrow_for_direction("down")
                     )
                 else:
-                    if start_y < end_y:  # top-to-bottom: arrow points down toward child
+                    if start_center_y < end_center_y:  # top-to-bottom: arrow points down toward child
                         if bottom_y > jog_y + 1:
                             self.canvas[bottom_y - 1][bottom_center] = (
-                                self.options.get_arrow_for_direction('down')
+                                self.options.get_arrow_for_direction("down")
                             )
                     else:  # bottom-to-top: arrow points up toward parent
                         if bottom_y > jog_y + 1:
                             self.canvas[jog_y + 1][bottom_center] = (
-                                self.options.get_arrow_for_direction('up')
+                                self.options.get_arrow_for_direction("up")
                             )
 
         except IndexError as e:
@@ -619,8 +693,20 @@ def merge_layout_options(
     merged_dict: dict[str, Any] = {}
         
     # Define which fields are "rendering" vs "semantic"
-    rendering_fields = {'use_ascii', 'node_style', 'node_spacing', 'layer_spacing', 
-                           'left_padding', 'right_padding', 'margin', 'flow_direction'}
+    rendering_fields = {
+        "use_ascii",
+        "node_style",
+        "node_spacing",
+        "layer_spacing",
+        "left_padding",
+        "right_padding",
+        "margin",
+        "flow_direction",
+        "bboxes",
+        "hpad",
+        "vpad",
+        "uniform",
+    }
        
     for field in fields(LayoutOptions):
         field_name = field.name

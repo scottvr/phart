@@ -215,3 +215,21 @@ def demonstrate_graph():
         exit_code = main()
         self.assertEqual(exit_code, 1)
         self.assertIn("Error: Function 'nonexistent' not found", self.stderr.getvalue())
+
+    def test_bbox_flags(self):
+        """Test boxed node flags and widest-size alias."""
+        sys.argv = [
+            "phart",
+            "--bboxes",
+            "--hpad",
+            "2",
+            "--vpad",
+            "1",
+            "--size-to-widest",
+            str(self.test_text_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertTrue("┌" in output or "+" in output)
+        self.assertNotIn("Error", self.stderr.getvalue())

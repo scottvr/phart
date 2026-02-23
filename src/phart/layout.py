@@ -16,6 +16,26 @@ class LayoutManager:
         self.node_positions: Dict[str, Tuple[int, int]] = {}
         self.max_width = 0
         self.max_height = 0
+        self._widest_node_text_width = (
+            max(
+                (
+                    len(self.options.get_node_text(str(node)))
+                    for node in self.graph.nodes()
+                ),
+                default=0,
+            )
+            if self.options.uniform
+            else None
+        )
+
+    def _get_node_height(self) -> int:
+        """Get rendered node height for current options."""
+        return self.options.get_node_height()
+
+    def _get_layer_step(self) -> int:
+        """Get vertical step between layer top rows."""
+        # Preserve prior semantics for 1-line nodes while expanding for boxed nodes.
+        return max(1, self.options.layer_spacing) + self._get_node_height() - 1
 
     def _get_node_width(self, node: str) -> int:
         """Calculate display width of a node including decorators.
@@ -30,8 +50,10 @@ class LayoutManager:
         int
             Total width of node when rendered
         """
-        prefix, suffix = self.options.get_node_decorators(node)
-        return len(str(node)) + len(str(prefix)) + len(str(suffix))
+        width, _ = self.options.get_node_dimensions(
+            node, widest_text_width=self._widest_node_text_width
+        )
+        return width
 
     def _binary_tree_node_sorter(
         self,
@@ -249,10 +271,8 @@ class LayoutManager:
         # Position nodes with proper centering
         top_x = (bottom_width - widths[top_node]) // 2
 
-        # Use layer_spacing for vertical distance (like hierarchical layout)
-        layer_height = (
-            1 if self.options.layer_spacing == 0 else self.options.layer_spacing
-        )
+        # Use layer spacing plus node height for vertical distance.
+        layer_height = self._get_layer_step()
 
         positions[top_node] = (top_x, 0)
 
@@ -286,17 +306,16 @@ class LayoutManager:
         # Apply flow direction transformation
         positions = self._transform_positions(positions)
 
-        # Calculate base dimensions from positions
-        # Ensure minimum width for node display
-        node_widths = [self._get_node_width(str(node)) for node in self.graph.nodes()]
-        min_width = max(node_widths) if node_widths else 0
-
-        base_width = max(min_width, max((x for x, _ in positions.values()), default=0))
-
-        # Ensure we have at least enough height for the nodes
-        base_height = max(y for _, y in positions.values()) if positions else 0
-        if base_height == 0 and positions:  # If we have nodes but no height
-            base_height = self.options.layer_spacing  # Use at least one layer of height
+        # Calculate base dimensions from full node bounds.
+        base_width = max(
+            (
+                x + self._get_node_width(str(node)) - 1
+                for node, (x, _) in positions.items()
+            ),
+            default=0,
+        )
+        node_height = self._get_node_height()
+        base_height = max((y + node_height - 1 for _, y in positions.values()), default=0)
 
         return positions, base_width, base_height
 
@@ -440,7 +459,7 @@ class LayoutManager:
             root = max(graph.nodes(), key=lambda n: graph.degree(n))
             roots = [root]
 
-        layer_height = max(1, self.options.layer_spacing)
+        layer_height = self._get_layer_step()
 
         # Subtree-aware layout is great for trees, but expands badly on DAGs
         # with shared descendants (multi-parent nodes). Use it only for
@@ -595,13 +614,10 @@ class LayoutManager:
         if not positions:
             return 0, 0
 
-        # Calculate width needed for nodes and decorations
+        # Calculate width needed for full node bounds.
         max_node_end = 0
-        for node, (x, y) in positions.items():
-            node_width = sum(
-                len(part) for part in self.options.get_node_decorators(str(node))
-            ) + len(str(node))
-            node_end = x + node_width
+        for node, (x, _) in positions.items():
+            node_end = x + self._get_node_width(str(node))
             max_node_end = max(max_node_end, node_end)
 
         # Add configured padding plus extra space for edge decorators
@@ -612,8 +628,9 @@ class LayoutManager:
             1, max_node_end + self.options.right_padding + extra_edge_space
         )
 
-        # Calculate height including padding, ensuring minimum height
-        max_y = max(y for _, y in positions.values())
-        final_height = max(1, max_y + 2)  # Ensure at least height of 1
+        # Calculate height including full node height and extra rendering room.
+        node_height = self._get_node_height()
+        max_y = max((y + node_height for _, y in positions.values()), default=0)
+        final_height = max(1, max_y + 1)
 
         return final_width, final_height
