@@ -20,7 +20,8 @@
  * bounding box mode (line art rectangles with configurable inner padding)
  *(optionally) use labels instead of node names when rendering diagram.
  *(optionally) color edges with ANSI colors to help discern edge paths in dense complex diagrams
- 
+ * and several [NEW LAYOUT STRATEGIES](https://github.com/scottvr/phart/blob/457246eec877517cbbdc9b344c6667bf92b5e5ba/LAYOUT-STRATEGIES.md)
+ * 
 Binary Tree with "side"-steering examples are shown throughout below. I've finally updated to show phart's cosmetic enhancements.
 Same with bounding-box mode, which is demonstrated below on a couple of different tree-type graphs.
 
