@@ -23,6 +23,7 @@
  * and several **new layout strategies** including `circular`, `bfs`, `shell`, `Kamada-Kawai`, and others.
 
 ## New Layout Strategies
+
 See [LAYOUT-STRATEGIES.md](https://github.com/scottvr/phart/blob/457246eec877517cbbdc9b344c6667bf92b5e5ba/LAYOUT-STRATEGIES.md) in the repo for demos.
    
 Binary Tree with "side"-steering examples are shown throughout below. I've finally updated to show phart's cosmetic enhancements.
