@@ -21,6 +21,27 @@ ANSI_SUBWAY_PALETTE: Tuple[str, ...] = (
     "\x1b[38;5;160m",  # red
     "\x1b[38;5;81m",  # aqua
 )
+ANSI_NAMED_COLORS: Dict[str, str] = {
+    "black": "\x1b[30m",
+    "red": "\x1b[31m",
+    "green": "\x1b[32m",
+    "yellow": "\x1b[33m",
+    "blue": "\x1b[34m",
+    "magenta": "\x1b[35m",
+    "cyan": "\x1b[36m",
+    "white": "\x1b[37m",
+    "bright_black": "\x1b[90m",
+    "bright_red": "\x1b[91m",
+    "bright_green": "\x1b[92m",
+    "bright_yellow": "\x1b[93m",
+    "bright_blue": "\x1b[94m",
+    "bright_magenta": "\x1b[95m",
+    "bright_cyan": "\x1b[96m",
+    "bright_white": "\x1b[97m",
+    # Palette aliases used by existing subway colors.
+    "orange": "\x1b[38;5;214m",
+    "aqua": "\x1b[38;5;81m",
+}
 
 
 class ASCIIRenderer:
@@ -167,6 +188,114 @@ class ASCIIRenderer:
     def _use_ansi_colors(self) -> bool:
         return bool(self.options.ansi_colors and not self.options.use_ascii)
 
+    @staticmethod
+    def _normalize_edge_attr_value(value: Any) -> str:
+        text = str(value).strip()
+        if len(text) >= 2 and text[0] == text[-1] and text[0] in {"'", '"'}:
+            text = text[1:-1]
+        return text.strip().lower()
+
+    @staticmethod
+    def _resolve_color_spec(spec: Any) -> Optional[str]:
+        """Resolve a color spec into an ANSI escape sequence."""
+        token = str(spec).strip()
+        if not token:
+            return None
+
+        lowered = token.lower()
+        if lowered in ANSI_NAMED_COLORS:
+            return ANSI_NAMED_COLORS[lowered]
+
+        if token.startswith("\x1b[") and token.endswith("m"):
+            return token
+
+        if lowered.startswith("color") and lowered[5:].isdigit():
+            lowered = lowered[5:]
+
+        if lowered.isdigit():
+            color_index = int(lowered)
+            if 0 <= color_index <= 255:
+                return f"\x1b[38;5;{color_index}m"
+
+        if lowered.startswith("#") and len(lowered) == 7:
+            try:
+                r = int(lowered[1:3], 16)
+                g = int(lowered[3:5], 16)
+                b = int(lowered[5:7], 16)
+                return f"\x1b[38;2;{r};{g};{b}m"
+            except ValueError:
+                return None
+
+        return None
+
+    def _resolve_attr_edge_color(
+        self, edge: Tuple[Any, Any], idx: int
+    ) -> Optional[str]:
+        """Resolve edge color from configured attribute rules."""
+        fallback = self._node_color_map.get(edge[0]) or ANSI_SUBWAY_PALETTE[
+            idx % len(ANSI_SUBWAY_PALETTE)
+        ]
+        edge_data = self.graph.get_edge_data(edge[0], edge[1]) or {}
+        normalized_data = {
+            str(key).strip().lower(): self._normalize_edge_attr_value(value)
+            for key, value in edge_data.items()
+        }
+
+        for attr_name, mapping in self.options.edge_color_rules.items():
+            attr_value = normalized_data.get(attr_name)
+            if attr_value is None:
+                continue
+            color_spec = mapping.get(attr_value)
+            if color_spec is None:
+                continue
+            resolved = self._resolve_color_spec(color_spec)
+            if resolved is not None:
+                return resolved
+            break
+
+        return fallback
+
+    def _normalized_edge_attrs(self, start: Any, end: Any) -> Dict[str, str]:
+        edge_data = self.graph.get_edge_data(start, end) or {}
+        return {
+            str(key).strip().lower(): self._normalize_edge_attr_value(value)
+            for key, value in edge_data.items()
+        }
+
+    def _attr_rules_match_for_reverse_edge(self, start: Any, end: Any) -> bool:
+        """Return True when attr-color rule attributes agree in both directions."""
+        if self.options.edge_color_mode != "attr":
+            return True
+        if not self.options.edge_color_rules:
+            return True
+
+        forward_attrs = self._normalized_edge_attrs(start, end)
+        reverse_attrs = self._normalized_edge_attrs(end, start)
+        for attr_name in self.options.edge_color_rules:
+            if forward_attrs.get(attr_name) != reverse_attrs.get(attr_name):
+                return False
+        return True
+
+    def _is_bidirectional_edge(self, start: Any, end: Any) -> bool:
+        """Determine whether an edge should render as bidirectional."""
+        if not self.graph.is_directed():
+            return True
+        if (end, start) not in self.graph.edges():
+            return False
+        return self._attr_rules_match_for_reverse_edge(start, end)
+
+    def _should_use_ports_for_edge(self, start: Any, end: Any) -> bool:
+        """Decide whether this edge should use distributed box ports."""
+        if not self.options.bboxes:
+            return False
+        if self.options.edge_anchor_mode == "ports":
+            return True
+        if self.options.edge_anchor_mode != "auto":
+            return False
+        if (end, start) not in self.graph.edges():
+            return False
+        return not self._attr_rules_match_for_reverse_edge(start, end)
+
     def _initialize_color_maps(self, positions: Dict[Any, Tuple[int, int]]) -> None:
         self._node_color_map = {}
         self._edge_color_map = {}
@@ -207,6 +336,8 @@ class ASCIIRenderer:
                 color = self._node_color_map.get(edge[1])
             elif edge_mode == "source":
                 color = self._node_color_map.get(edge[0])
+            elif edge_mode == "attr":
+                color = self._resolve_attr_edge_color(edge, idx)
             else:  # path
                 color = ANSI_SUBWAY_PALETTE[idx % len(ANSI_SUBWAY_PALETTE)]
 
@@ -396,8 +527,8 @@ class ASCIIRenderer:
     def _compute_edge_anchor_map(
         self, positions: Dict[Any, Tuple[int, int]]
     ) -> Dict[Tuple[Any, Any], Dict[str, Tuple[int, int]]]:
-        """Precompute deterministic per-edge anchors for ports mode."""
-        if self.options.edge_anchor_mode != "ports" or not self.options.bboxes:
+        """Precompute deterministic per-edge anchors for edges that use ports."""
+        if not self.options.bboxes:
             return {}
 
         requirements: Dict[
@@ -406,6 +537,8 @@ class ASCIIRenderer:
 
         for start, end in self.graph.edges():
             if start not in positions or end not in positions:
+                continue
+            if not self._should_use_ports_for_edge(start, end):
                 continue
 
             start_bounds = self._get_node_bounds(start, positions)
@@ -467,7 +600,7 @@ class ASCIIRenderer:
         start_bounds = self._get_node_bounds(start, positions)
         end_bounds = self._get_node_bounds(end, positions)
 
-        if self.options.edge_anchor_mode == "ports" and self.options.bboxes:
+        if self._should_use_ports_for_edge(start, end):
             cached = self._edge_anchor_map.get((start, end), {})
             start_anchor = cached.get("start")
             end_anchor = cached.get("end")
@@ -858,10 +991,8 @@ class ASCIIRenderer:
         end_x, end_y = end_anchor
         edge_color = self._edge_color_map.get((start, end))
 
-        # Check if this is a bidirectional edge
-        is_bidirectional = (
-            not self.graph.is_directed() or (end, start) in self.graph.edges()
-        )
+        # Check if this is a bidirectional edge (attribute-aware in attr color mode).
+        is_bidirectional = self._is_bidirectional_edge(start, end)
 
         try:
             # Case 1: Same level horizontal connection
@@ -1140,6 +1271,7 @@ def merge_layout_options(
         "use_labels",
         "ansi_colors",
         "edge_color_mode",
+        "edge_color_rules",
     }
 
     for field in fields(LayoutOptions):

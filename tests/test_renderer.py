@@ -692,6 +692,105 @@ class TestASCIIRenderer(unittest.TestCase):
         colors = set(renderer._edge_color_map.values())  # noqa: SLF001
         self.assertGreaterEqual(len(colors), 2)
 
+    def test_edge_color_mode_attr_uses_edge_attributes(self):
+        graph = nx.DiGraph()
+        graph.add_edge("Alice", "Bob", relationship="friend")
+        graph.add_edge("Bob", "Charlie", relationship="enemy")
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=False,
+                ansi_colors=True,
+                edge_color_mode="attr",
+                edge_color_rules={
+                    "relationship": {"friend": "bright_green", "enemy": "red"}
+                },
+                bboxes=True,
+                layer_spacing=4,
+            ),
+        )
+        renderer.render()
+        self.assertEqual(renderer._edge_color_map[("Alice", "Bob")], "\x1b[92m")  # noqa: SLF001
+        self.assertEqual(renderer._edge_color_map[("Bob", "Charlie")], "\x1b[31m")  # noqa: SLF001
+
+    def test_edge_color_mode_attr_falls_back_to_source_color(self):
+        graph = nx.DiGraph()
+        graph.add_edge("Alice", "Bob", relationship="ally")
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=False,
+                ansi_colors=True,
+                edge_color_mode="attr",
+                edge_color_rules={"relationship": {"enemy": "red"}},
+                bboxes=True,
+                layer_spacing=4,
+            ),
+        )
+        renderer.render()
+        self.assertEqual(
+            renderer._edge_color_map[("Alice", "Bob")],  # noqa: SLF001
+            renderer._node_color_map["Alice"],  # noqa: SLF001
+        )
+
+    def test_attr_mode_bidirectional_requires_rule_attribute_agreement(self):
+        graph = nx.DiGraph()
+        graph.add_edge("Alice", "Bob", relationship="friend")
+        graph.add_edge("Bob", "Alice", relationship="friend")
+        graph.add_edge("Bob", "Charlie", relationship="friend")
+        graph.add_edge("Charlie", "Bob", relationship="enemy")
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=False,
+                ansi_colors=True,
+                edge_color_mode="attr",
+                edge_color_rules={
+                    "relationship": {"friend": "bright_green", "enemy": "red"}
+                },
+                bboxes=True,
+                edge_anchor_mode="ports",
+                layer_spacing=4,
+            ),
+        )
+        renderer.render()
+
+        self.assertTrue(renderer._is_bidirectional_edge("Alice", "Bob"))  # noqa: SLF001
+        self.assertTrue(renderer._is_bidirectional_edge("Bob", "Alice"))  # noqa: SLF001
+        self.assertFalse(renderer._is_bidirectional_edge("Bob", "Charlie"))  # noqa: SLF001
+        self.assertFalse(renderer._is_bidirectional_edge("Charlie", "Bob"))  # noqa: SLF001
+
+    def test_edge_anchor_auto_switches_to_ports_for_attr_mismatch(self):
+        graph = nx.DiGraph()
+        graph.add_edge("Alice", "Bob", relationship="friend")
+        graph.add_edge("Bob", "Alice", relationship="friend")
+        graph.add_edge("Bob", "Charlie", relationship="friend")
+        graph.add_edge("Charlie", "Bob", relationship="enemy")
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=False,
+                ansi_colors=True,
+                edge_color_mode="attr",
+                edge_color_rules={
+                    "relationship": {"friend": "bright_green", "enemy": "red"}
+                },
+                bboxes=True,
+                edge_anchor_mode="auto",
+                layer_spacing=4,
+            ),
+        )
+        renderer.render()
+
+        self.assertFalse(renderer._should_use_ports_for_edge("Alice", "Bob"))  # noqa: SLF001
+        self.assertTrue(renderer._should_use_ports_for_edge("Bob", "Charlie"))  # noqa: SLF001
+
     def test_file_writing(self):
         """Test writing to file with proper encoding."""
 
@@ -780,6 +879,12 @@ class TestLayoutOptions(unittest.TestCase):
         with self.assertRaises(ValueError):
             LayoutOptions(edge_anchor_mode="invalid")
 
+    def test_edge_anchor_mode_auto_is_valid_and_default(self):
+        options = LayoutOptions()
+        self.assertEqual(options.edge_anchor_mode, "auto")
+        explicit = LayoutOptions(edge_anchor_mode="auto")
+        self.assertEqual(explicit.edge_anchor_mode, "auto")
+
     def test_invalid_layout_strategy(self):
         with self.assertRaises(ValueError):
             LayoutOptions(layout_strategy="invalid")
@@ -801,6 +906,19 @@ class TestLayoutOptions(unittest.TestCase):
     def test_invalid_edge_color_mode(self):
         with self.assertRaises(ValueError):
             LayoutOptions(edge_color_mode="invalid")
+
+    def test_edge_color_mode_attr_is_valid(self):
+        options = LayoutOptions(edge_color_mode="attr")
+        self.assertEqual(options.edge_color_mode, "attr")
+
+    def test_edge_color_rules_are_normalized(self):
+        options = LayoutOptions(
+            edge_color_rules={"RELATIONSHIP": {'"Friend"': "bright_green"}}
+        )
+        self.assertIn("relationship", options.edge_color_rules)
+        self.assertEqual(
+            options.edge_color_rules["relationship"]["friend"], "bright_green"
+        )
 
     def test_default_edge_color_mode_is_source(self):
         options = LayoutOptions()

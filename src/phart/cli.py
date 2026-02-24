@@ -12,7 +12,7 @@ from .styles import NodeStyle, LayoutOptions
 from .charset import CharSet
 
 
-COLOR_MODES = {"none", "source", "target", "path"}
+COLOR_MODES = {"none", "source", "target", "path", "attr"}
 LAYOUT_STRATEGIES = {
     "auto",
     "bfs",
@@ -167,9 +167,12 @@ def parse_args() -> tuple[argparse.Namespace, list[str]]:
     )
     parser.add_argument(
         "--edge-anchors",
-        choices=["center", "ports"],
-        default="center",
-        help="Edge anchor strategy: center (default) or ports (distributed on box edges)",
+        choices=["auto", "center", "ports"],
+        default="auto",
+        help=(
+            "Edge anchor strategy: auto (default), center, or ports "
+            "(distributed on box edges)"
+        ),
     )
     parser.add_argument(
         "--labels",
@@ -180,10 +183,81 @@ def parse_args() -> tuple[argparse.Namespace, list[str]]:
         "--colors",
         choices=sorted(COLOR_MODES),
         default="none",
-        help="ANSI edge coloring mode: none (default), source, target, or path",
+        help="ANSI edge coloring mode: none (default), source, target, path, or attr",
+    )
+    parser.add_argument(
+        "--edge-color-rule",
+        action="append",
+        default=[],
+        metavar="RULE",
+        help=(
+            "Attribute-driven edge color rule for --colors attr. "
+            "Format: <attribute>:<value>=<color>[,<value>=<color>...] "
+            "(repeatable)"
+        ),
     )
     args, unknown = parser.parse_known_args(argv)
     return args, unknown
+
+
+def _normalize_attr_match_value(value: str) -> str:
+    text = value.strip()
+    if len(text) >= 2 and text[0] == text[-1] and text[0] in {"'", '"'}:
+        text = text[1:-1]
+    return text.strip().lower()
+
+
+def _parse_edge_color_rules(rule_specs: list[str]) -> dict[str, dict[str, str]]:
+    parsed: dict[str, dict[str, str]] = {}
+    for rule in rule_specs:
+        text = str(rule).strip()
+        if not text:
+            continue
+
+        if ":" not in text:
+            raise ValueError(
+                f"Invalid --edge-color-rule '{rule}'. Expected "
+                "<attribute>:<value>=<color>[,<value>=<color>...]"
+            )
+        attr_name, mapping_text = text.split(":", 1)
+        attr_key = attr_name.strip().lower()
+        if not attr_key:
+            raise ValueError(
+                f"Invalid --edge-color-rule '{rule}': attribute name cannot be empty"
+            )
+
+        value_map = parsed.setdefault(attr_key, {})
+        mapping_tokens = [token.strip() for token in mapping_text.split(",")]
+        added = False
+        for token in mapping_tokens:
+            if not token:
+                continue
+            if "=" not in token:
+                raise ValueError(
+                    f"Invalid --edge-color-rule '{rule}'. Expected "
+                    "<value>=<color> pairs after ':'."
+                )
+
+            raw_value, raw_color = token.split("=", 1)
+            value_key = _normalize_attr_match_value(raw_value)
+            color_text = raw_color.strip()
+            if not value_key:
+                raise ValueError(
+                    f"Invalid --edge-color-rule '{rule}': value cannot be empty"
+                )
+            if not color_text:
+                raise ValueError(
+                    f"Invalid --edge-color-rule '{rule}': color cannot be empty"
+                )
+            value_map.setdefault(value_key, color_text)
+            added = True
+
+        if not added:
+            raise ValueError(
+                f"Invalid --edge-color-rule '{rule}': no <value>=<color> pairs found"
+            )
+
+    return parsed
 
 
 def _load_python_module(file_path: Path) -> Any:
@@ -202,6 +276,9 @@ def create_layout_options(args: argparse.Namespace) -> LayoutOptions:
     node_style = NodeStyle[args.style.upper()] if args.style is not None else None
     color_mode = args.colors
     layout_strategy = args.layout_strategy.replace("-", "_")
+    edge_color_rules = _parse_edge_color_rules(args.edge_color_rule)
+    if edge_color_rules and color_mode != "attr":
+        raise ValueError("--edge-color-rule requires --colors attr")
     return LayoutOptions(
         node_style=node_style,
         node_spacing=args.node_spacing,
@@ -218,6 +295,7 @@ def create_layout_options(args: argparse.Namespace) -> LayoutOptions:
         use_labels=args.labels,
         ansi_colors=(color_mode != "none"),
         edge_color_mode="source" if color_mode == "none" else color_mode,
+        edge_color_rules=edge_color_rules,
     )
 
 

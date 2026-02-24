@@ -38,7 +38,7 @@ Take a look at this **Unix Family Tree** (also from a .dot file); I think it's g
 
 ### ANSI color edge paths
 
-ANSI color support turned out more interesting than I expected. Not completely satisfied with it, I ended up enabling three modes to the feature: color by source, color by target, and color by path. Here's an example of `edge_anchors=ports`, `colors=source`, using a graph of Golang package dependencies. 
+ANSI color support turned out more interesting than I expected. Not completely satisfied with it, I ended up enabling four modes to the feature: color by source, color by target, color by path, and color by edge attributes. Here's an example of `edge_anchors=ports`, `colors=source`, using a graph of Golang package dependencies. 
 
 <img width="700" height="600" alt="go-package-dependencies" src="https://github.com/user-attachments/assets/932ce0db-cc4e-42ce-b77e-895ecf80fb56" />
 
@@ -301,8 +301,8 @@ usage: phart [-h] [--output OUTPUT] [--style {minimal,square,round,diamond,custo
              [--charset {ascii,unicode}] [--ascii] [--function FUNCTION] [--binary-tree]
              [--layout {arf,auto,bfs,bipartite,circular,kamada-kawai,multipartite,planar,random,shell,spiral,spring}]
              [--flow-direction {down,up,left,right}] [--bboxes] [--hpad HPAD] [--vpad VPAD]
-             [--uniform] [--edge-anchors {center,ports}] [--labels]
-             [--colors {none,path,source,target}]
+             [--uniform] [--edge-anchors {auto,center,ports}] [--labels]
+             [--colors {attr,none,path,source,target}] [--edge-color-rule RULE]
              input
 
 PHART: Python Hierarchical ASCII Rendering Tool
@@ -335,12 +335,15 @@ options:
   --vpad VPAD           Vertical padding inside node boxes (default: 0)
   --uniform, --size-to-widest
                         Use widest node text as the width baseline for all node boxes
-  --edge-anchors {center,ports}
-                        Edge anchor strategy: center (default) or ports (distributed on box
-                        edges)
+  --edge-anchors {auto,center,ports}
+                        Edge anchor strategy: auto (default), center, or ports (distributed
+                        on box edges)
   --labels              Use node labels (if present) for displayed node text
-  --colors {none,path,source,target}
-                        ANSI edge coloring mode: none (default), source, target, or path```
+  --colors {attr,none,path,source,target}
+                        ANSI edge coloring mode: none (default), source, target, path, or attr
+  --edge-color-rule RULE
+                        Attribute-driven edge color rule for --colors attr. Format:
+                        <attribute>:<value>=<color>[,<value>=<color>...] (repeatable)```
 ```
 
 ## Quick Start

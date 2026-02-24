@@ -122,10 +122,13 @@ class LayoutOptions:
     hpad: int = field(default=1)  # Horizontal inner padding for boxed nodes
     vpad: int = field(default=0)  # Vertical inner padding for boxed nodes
     uniform: bool = field(default=False)  # Use widest node text width for all boxes
-    edge_anchor_mode: str = field(default="center")  # center or ports
+    edge_anchor_mode: str = field(default="auto")  # auto, center, or ports
     use_labels: bool = field(default=False)  # Prefer node labels for display text
     ansi_colors: bool = field(default=False)  # ANSI colorized render output (unicode)
-    edge_color_mode: str = field(default="source")  # target, source, or path
+    edge_color_mode: str = field(default="source")  # target, source, path, or attr
+    edge_color_rules: Dict[str, Dict[str, str]] = field(
+        default_factory=dict
+    )  # attr mode rules: {"attr_name": {"attr_value": "color_spec"}}
 
     # Instance-specific ID (unchanged)
     instance_id: int = field(init=False)
@@ -217,8 +220,8 @@ class LayoutOptions:
 
         if isinstance(self.edge_anchor_mode, str):
             self.edge_anchor_mode = self.edge_anchor_mode.strip().lower()
-        if self.edge_anchor_mode not in {"center", "ports"}:
-            raise ValueError("edge_anchor_mode must be one of: center, ports")
+        if self.edge_anchor_mode not in {"auto", "center", "ports"}:
+            raise ValueError("edge_anchor_mode must be one of: auto, center, ports")
 
         if isinstance(self.layout_strategy, str):
             self.layout_strategy = (
@@ -245,8 +248,45 @@ class LayoutOptions:
 
         if isinstance(self.edge_color_mode, str):
             self.edge_color_mode = self.edge_color_mode.strip().lower()
-        if self.edge_color_mode not in {"target", "source", "path"}:
-            raise ValueError("edge_color_mode must be one of: target, source, path")
+        if self.edge_color_mode not in {"target", "source", "path", "attr"}:
+            raise ValueError(
+                "edge_color_mode must be one of: target, source, path, attr"
+            )
+
+        if not isinstance(self.edge_color_rules, dict):
+            raise ValueError("edge_color_rules must be a dict of dicts")
+
+        normalized_rules: Dict[str, Dict[str, str]] = {}
+        for attr_name, value_map in self.edge_color_rules.items():
+            attr_key = str(attr_name).strip().lower()
+            if not attr_key:
+                raise ValueError("edge_color_rules attribute names cannot be empty")
+            if not isinstance(value_map, dict):
+                raise ValueError("edge_color_rules values must be dicts")
+
+            normalized_value_map: Dict[str, str] = {}
+            for attr_value, color_spec in value_map.items():
+                value_key = self._normalize_edge_color_rule_value(attr_value)
+                color_text = str(color_spec).strip()
+                if not value_key:
+                    raise ValueError(
+                        "edge_color_rules attribute values cannot be empty"
+                    )
+                if not color_text:
+                    raise ValueError("edge_color_rules color values cannot be empty")
+                normalized_value_map.setdefault(value_key, color_text)
+
+            if normalized_value_map:
+                normalized_rules[attr_key] = normalized_value_map
+        self.edge_color_rules = normalized_rules
+
+    @staticmethod
+    def _normalize_edge_color_rule_value(value: Any) -> str:
+        """Normalize edge attribute values for rule matching."""
+        text = str(value).strip()
+        if len(text) >= 2 and text[0] == text[-1] and text[0] in {"'", '"'}:
+            text = text[1:-1]
+        return text.strip().lower()
 
     def get_effective_node_spacing(self, has_edges: bool = True) -> int:
         """Calculate effective node spacing considering edge requirements.

@@ -35,6 +35,14 @@ class TestCLI(unittest.TestCase):
         }
         """
         self.labeled_dot_file.write_text(labeled_dot, encoding="utf-8")
+        self.edge_attr_dot_file = Path(self.temp_dir) / "edge_attr.dot"
+        edge_attr_dot = """
+        digraph {
+            Alice -> Bob [relationship="friend"];
+            Bob -> Charlie [relationship="enemy"];
+        }
+        """
+        self.edge_attr_dot_file.write_text(edge_attr_dot, encoding="utf-8")
         # Create test Python file with main() function
         self.py_main_file = Path(self.temp_dir) / "test_main.py"
         main_content = """
@@ -303,6 +311,59 @@ def demonstrate_graph():
         exit_code = main()
         self.assertEqual(exit_code, 0)
         self.assertNotIn("Error", self.stderr.getvalue())
+
+    def test_edge_anchor_mode_auto_flag(self):
+        sys.argv = [
+            "phart",
+            "--bboxes",
+            "--edge-anchors",
+            "auto",
+            str(self.test_text_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        self.assertNotIn("Error", self.stderr.getvalue())
+
+    def test_colors_attr_mode_with_edge_color_rules(self):
+        sys.argv = [
+            "phart",
+            "--colors",
+            "attr",
+            "--edge-color-rule",
+            "relationship:friend=bright_green,enemy=red",
+            str(self.edge_attr_dot_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertIn("\x1b[", output)
+        self.assertNotIn("Error", self.stderr.getvalue())
+
+    def test_edge_color_rule_requires_attr_mode(self):
+        sys.argv = [
+            "phart",
+            "--colors",
+            "source",
+            "--edge-color-rule",
+            "relationship:friend=green",
+            str(self.test_text_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 1)
+        self.assertIn("--edge-color-rule requires --colors attr", self.stderr.getvalue())
+
+    def test_invalid_edge_color_rule_format(self):
+        sys.argv = [
+            "phart",
+            "--colors",
+            "attr",
+            "--edge-color-rule",
+            "relationship",
+            str(self.test_text_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 1)
+        self.assertIn("Invalid --edge-color-rule", self.stderr.getvalue())
 
     def test_colors_none_matches_omitted_colors(self):
         sys.argv = ["phart", str(self.test_text_file)]
