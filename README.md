@@ -77,7 +77,7 @@ Basic Directed Graph:
 ```
 
 phart also comes as a handy **CLI tool**, set up for you when you `pip install` phart.
-The phart CLI can read graphs in **graphml** or **dot** format. Additionally, the phart CLI
+The phart **CLI** can read graphs in **graphml** or **dot** format. Additionally, the phart CLI
 can reaad *python code* that itseslf makes use of phart such as that above, so that it can be tested from the command-line, allowing you to try out various display options without having to edit your code repeatedly to see what works best.
 
 phart supports ASCII and Unicode, and will try to use the sensible default for your 
@@ -114,7 +114,7 @@ $ python balanced_tree.py
 
 ### Output options
 
-phart has lots of output options. Here's a good use for the cli as I described above. 
+phart has lots of output options. Here's a good use for the **cli** as I described above. 
 We can test other options, without having to edit that python script we just wrote.
 
 Let's see how the balanced tree looks with the nodes in bounding boxes:
@@ -179,7 +179,7 @@ $ phart balanced_tree.py --bbox --hpad 0 --style round --layer-spacing 4 --edge-
 
 Let's look a slightly more interesting graph, courtesy of phart user @deostroll, in the [Discussions](https://github.com/scottvr/phart/discussions/15).
 
-His script generates a Collatz Tree, and takes an argument for the depth for which you wish to calculate terms. As you will see, we can pass arguments for the phart cli to use as 
+His script generates a Collatz Tree, and takes an argument for the depth for which you wish to calculate terms. As you will see, we can pass arguments for the **phart cli** to use as 
 arguments for the script you've given it as an input file.  We will just separate the
 switches meant for phart from any switches meant for the script it is loading by an extra
  `--`, like so:
