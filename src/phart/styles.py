@@ -99,7 +99,7 @@ class LayoutOptions:
     # Core parameters (existing)
     node_spacing: int = field(default=4)
     margin: int = field(default=1)
-    layer_spacing: int = field(default=3)
+    layer_spacing: int = field(default=2)
     node_style: Union[NodeStyle, str, None] = None
     show_arrows: bool = True
     use_ascii: Optional[bool] = None
@@ -140,8 +140,10 @@ class LayoutOptions:
     edge_cross = EdgeChar("+", "┼")
     edge_vertical = EdgeChar("|", "│")
     edge_horizontal = EdgeChar("-", "─")
-    edge_arrow_r = EdgeChar(">", "→")
-    edge_arrow_l = EdgeChar("<", "←")
+#    edge_arrow_r = EdgeChar(">", "→")
+#    edge_arrow_l = EdgeChar("<", "←")
+    edge_arrow_r = EdgeChar(">", ">")
+    edge_arrow_l = EdgeChar("<", "<")
 #    edge_arrow_up = EdgeChar("^", "↑")
 #    edge_arrow_down = EdgeChar("v", "↓")
     edge_arrow_up = EdgeChar("^", "^")
@@ -204,8 +206,8 @@ class LayoutOptions:
             raise ValueError("node_spacing must be at least 1")
         if self.layer_spacing < 0:
             raise ValueError("layer_spacing must be non-negative")
-        if self.layer_spacing < 3:
-            self.layer_spacing = 4
+        if self.layer_spacing <= 1:
+            self.layer_spacing = 1
         if self.margin < 1:
             raise ValueError("margin must be >= 1")
 
