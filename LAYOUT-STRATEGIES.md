@@ -168,7 +168,7 @@ how other options might be worth tweaking before changing the entire layout stra
 (Then again, ease of trying out different options is the reason I put so much time 
 into the phart cli. It's fun to experiment.) 
 
-So, take a look at this graph render:
+So, take a look at this graph render, using **phart**'s original "legacy" layout engine:
 
 <img width="400" height="160" alt="sempath-1" src="https://github.com/user-attachments/assets/67ad1ea4-5986-4656-8a6d-d36e2ad7cc08" />
 
