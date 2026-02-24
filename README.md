@@ -36,7 +36,7 @@ Take a look at this **Unix Family Tree** (also from a .dot file); I think it's g
 
 ### ANSI color edge paths
 
-ANSI color support turned out more interesting than I expected. Not completely satisfied with it, I ended up enabling three modes to the feature: color by source, color by target, and color by path. Here's an example of `edge_anchors=ports`, `color_mode=true`, and `edge_color_mode=source`, using a graph of Golang package dependencies. 
+ANSI color support turned out more interesting than I expected. Not completely satisfied with it, I ended up enabling three modes to the feature: color by source, color by target, and color by path. Here's an example of `edge_anchors=ports`, `colors=source`, using a graph of Golang package dependencies. 
 
 <img width="700" height="600" alt="go-package-dependencies" src="https://github.com/user-attachments/assets/932ce0db-cc4e-42ce-b77e-895ecf80fb56" />
 
@@ -292,13 +292,13 @@ pip install .
 
 ## The CLI
 ```bash
-% phart % phart --help
 usage: phart [-h] [--output OUTPUT] [--style {minimal,square,round,diamond,custom,bbox}]
              [--node-spacing NODE_SPACING] [--layer-spacing LAYER_SPACING]
              [--charset {ascii,unicode}] [--ascii] [--function FUNCTION] [--binary-tree]
+             [--layout {arf,auto,bfs,bipartite,circular,kamada-kawai,multipartite,planar,random,shell,spiral,spring}]
              [--flow-direction {down,up,left,right}] [--bboxes] [--hpad HPAD] [--vpad VPAD]
-             [--uniform] [--edge-anchors {center,ports}] [--labels] [--colors]
-             [--edge-color-mode {target,source,path}]
+             [--uniform] [--edge-anchors {center,ports}] [--labels]
+             [--colors {none,path,source,target}]
              input
 
 PHART: Python Hierarchical ASCII Rendering Tool
@@ -321,20 +321,22 @@ options:
   --function, -f FUNCTION
                         Function to call in Python file (default: main)
   --binary-tree         Enable binary tree layout (respects edge 'side' attributes)
+  --layout, --layout-strategy {arf,auto,bfs,bipartite,circular,kamada-kawai,multipartite,planar,random,shell,spiral,spring}
+                        Node positioning strategy (default: auto)
   --flow-direction, --flow {down,up,left,right}
-                        Layout flow direction: down (default, root at top), up (root at bottom),
-                        left (root at right), right (root at left)
+                        Layout flow direction: down (default, root at top), up (root at
+                        bottom), left (root at right), right (root at left)
   --bboxes              Draw line-art boxes around nodes
   --hpad HPAD           Horizontal padding inside node boxes (default: 1)
   --vpad VPAD           Vertical padding inside node boxes (default: 0)
   --uniform, --size-to-widest
                         Use widest node text as the width baseline for all node boxes
   --edge-anchors {center,ports}
-                        Edge anchor strategy: center (default) or ports (distributed on box edges)
+                        Edge anchor strategy: center (default) or ports (distributed on box
+                        edges)
   --labels              Use node labels (if present) for displayed node text
-  --colors              Enable ANSI color output (unicode mode only)
-  --edge-color-mode {target,source,path}
-                        Edge coloring model when --colors is enabled (default: target)
+  --colors {none,path,source,target}
+                        ANSI edge coloring mode: none (default), source, target, or path```
 ```
 
 ## Developer Quick Start
