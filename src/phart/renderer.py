@@ -1045,13 +1045,13 @@ class ASCIIRenderer:
                         self._paint_edge_cell(
                             min_x,
                             y,
-                            self.options.get_arrow_for_direction("right"),
+                            self.options.get_arrow_for_direction("left"),
                             edge_color,
                         )
                         self._paint_edge_cell(
                             max_x,
                             y,
-                            self.options.get_arrow_for_direction("left"),
+                            self.options.get_arrow_for_direction("right"),
                             edge_color,
                         )
                 elif min_x <= max_x:

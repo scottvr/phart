@@ -320,6 +320,40 @@ class TestASCIIRenderer(unittest.TestCase):
         self.assertIn("^", lines[top_idx + 1])
         self.assertIn("v", lines[bottom_idx - 1])
 
+    def test_bidirectional_horizontal_arrows_point_toward_terminals(self):
+        graph = nx.DiGraph([("A", "B"), ("B", "A")])
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                bboxes=True,
+                hpad=1,
+                vpad=1,
+                use_ascii=True,
+            ),
+        )
+
+        positions = {"A": (0, 0), "B": (18, 0)}
+        width = 32
+        height = 8
+        renderer._init_canvas(width, height, positions)  # noqa: SLF001
+        renderer._edge_color_map = {}  # noqa: SLF001
+        renderer._draw_edge("A", "B", positions)  # noqa: SLF001
+
+        start_anchor, end_anchor = renderer._get_edge_anchor_points("A", "B", positions)  # noqa: SLF001
+        y = start_anchor[1]
+        min_x = min(start_anchor[0], end_anchor[0]) + 1
+        max_x = max(start_anchor[0], end_anchor[0]) - 1
+
+        self.assertEqual(
+            renderer.canvas[y][min_x],  # noqa: SLF001
+            renderer.options.get_arrow_for_direction("left"),
+        )
+        self.assertEqual(
+            renderer.canvas[y][max_x],  # noqa: SLF001
+            renderer.options.get_arrow_for_direction("right"),
+        )
+
     def test_overlapping_paths_do_not_erase_terminal_arrow(self):
         graph = nx.DiGraph()
         graph.add_edge("package_a", "package_b")
