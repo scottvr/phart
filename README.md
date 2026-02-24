@@ -26,8 +26,8 @@ See [LAYOUT-STRATEGIES.md](https://github.com/scottvr/phart/blob/main/LAYOUT-STR
  * binary_tree sort mode
  * binary_tree sort can respect "side" properties ("left", 'right")
  * bounding box mode (line art rectangles with configurable inner padding)
- *(optionally) use labels instead of node names when rendering diagram.
- *(optionally) color edges with ANSI colors to help discern edge paths in dense complex diagrams
+ * (optionally) use labels instead of node names when rendering diagram.
+ * (optionally) color edges with ANSI colors to help discern edge paths in dense complex diagrams
  * and several **new layout strategies** including `circular`, `bfs`, `shell`, `Kamada-Kawai`, and others.
 
 
