@@ -47,6 +47,18 @@ setting `layer_spacing=4`, and `colors=source`:
 
 That is clearer. But maybe this graph is a good case for 
 using one of the new layout algorithms. 
+
+Speaking of **new**.. I know I've already embedded these in the README, but here's these two again, just because I find them so nice to look at. And they're screenshots of my plain text terminal from within vscode:
+
+<img width="400" height="400" alt="unix-family-tree" src="https://github.com/user-attachments/assets/1475614f-0f6b-425e-b088-7f121bef27d9" />
+
+and...
+
+<img width="400" height="400" alt="go-package-dependencies" src="https://github.com/user-attachments/assets/932ce0db-cc4e-42ce-b77e-895ecf80fb56" />
+
+OK. **Now back to our circular dependency graph** with a few different new strategies.
+
+
 Let's see how it looks with the `bipartite` strategy:
 
 ### bipartite
