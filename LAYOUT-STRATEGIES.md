@@ -187,9 +187,10 @@ And still confusing. We'll increases the `layer_spacing` further:
 <img width="400" height="80" alt="sempath-5" src="https://github.com/user-attachments/assets/9e4d9c89-4d01-4d1c-9a9c-d180c05ff58a" />
 
 
-OK, so maybe one of the other layouts (see above) is better for 
-this graph after all, but it was fun experimenting.
+OK, so maybe one of the other layouts demonstrates why it is useful to have these additional options available for placing the nodes in a 2D plane for visualization. This one is just too hard to follow in the hierarchical layout with orthogonal edges. 
+
+I hope you enjoyed taking a look at how different layouts effect legibility of the information conveyed by your ascii visualization of a graph using **phart**.
 
 ## Other layouts
-Let me know by opening an Issue or starting a Discussion thread 
-if you wan't to discuss implementing another layout strategy. Cheers!
+Let me know if you wan't to discuss implementing another layout strategy
+by opening an Issue or starting a Discussion thread. Cheers!
