@@ -186,7 +186,10 @@ class ASCIIRenderer:
             return text.encode("ascii", errors="replace").decode("ascii")
 
     def _use_ansi_colors(self) -> bool:
-        return bool(self.options.ansi_colors and not self.options.use_ascii)
+        return bool(
+            self.options.ansi_colors
+            and (not self.options.use_ascii or self.options.allow_ansi_in_ascii)
+        )
 
     @staticmethod
     def _normalize_edge_attr_value(value: Any) -> str:
@@ -1270,6 +1273,7 @@ def merge_layout_options(
         "edge_anchor_mode",
         "use_labels",
         "ansi_colors",
+        "allow_ansi_in_ascii",
         "edge_color_mode",
         "edge_color_rules",
     }

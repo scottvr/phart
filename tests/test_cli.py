@@ -4,6 +4,7 @@
 import unittest
 import tempfile
 import shutil
+import re
 from pathlib import Path
 import sys
 from io import StringIO
@@ -145,6 +146,24 @@ def demonstrate_graph():
         self.assertTrue(all(ord(c) < 128 for c in output))
         self.assertNotIn("Error", self.stderr.getvalue())
 
+    def test_charset_ansi_with_colors_uses_ascii_glyphs_and_ansi_escapes(self):
+        sys.argv = [
+            "phart",
+            "--charset",
+            "ansi",
+            "--colors",
+            "source",
+            str(self.test_text_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertIn("\x1b[", output)
+        stripped = output.replace("\x1b[0m", "")
+        stripped = re.sub(r"\x1b\[[0-9;]*m", "", stripped)
+        self.assertTrue(all(ord(c) < 128 for c in stripped))
+        self.assertNotIn("Error", self.stderr.getvalue())
+
     def test_legacy_ascii_flag(self):
         """Test that legacy --ascii flag still works."""
         sys.argv = ["phart", "--ascii", str(self.test_text_file)]
@@ -171,6 +190,21 @@ def demonstrate_graph():
         # Should still be ASCII-only despite unicode charset
         self.assertTrue(all(ord(c) < 128 for c in output))
         self.assertNotIn("Error", self.stderr.getvalue())
+
+    def test_legacy_ascii_overrides_charset_ansi_color_support(self):
+        sys.argv = [
+            "phart",
+            "--charset",
+            "ansi",
+            "--ascii",
+            "--colors",
+            "source",
+            str(self.test_text_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertNotIn("\x1b[", output)
 
     def test_invalid_file(self):
         """Test handling of invalid file."""

@@ -124,7 +124,10 @@ class LayoutOptions:
     uniform: bool = field(default=False)  # Use widest node text width for all boxes
     edge_anchor_mode: str = field(default="auto")  # auto, center, or ports
     use_labels: bool = field(default=False)  # Prefer node labels for display text
-    ansi_colors: bool = field(default=False)  # ANSI colorized render output (unicode)
+    ansi_colors: bool = field(default=False)  # ANSI colorized render output
+    allow_ansi_in_ascii: bool = field(
+        default=False
+    )  # Allow ANSI color escapes even when glyphs are ASCII
     edge_color_mode: str = field(default="source")  # target, source, path, or attr
     edge_color_rules: Dict[str, Dict[str, str]] = field(
         default_factory=dict

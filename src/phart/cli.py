@@ -279,11 +279,13 @@ def create_layout_options(args: argparse.Namespace) -> LayoutOptions:
     edge_color_rules = _parse_edge_color_rules(args.edge_color_rule)
     if edge_color_rules and color_mode != "attr":
         raise ValueError("--edge-color-rule requires --colors attr")
+    use_ascii = args.charset in {CharSet.ASCII, CharSet.ANSI} or args.use_legacy_ascii
+    allow_ansi_in_ascii = args.charset == CharSet.ANSI and not args.use_legacy_ascii
     return LayoutOptions(
         node_style=node_style,
         node_spacing=args.node_spacing,
         layer_spacing=args.layer_spacing,
-        use_ascii=(args.charset == CharSet.ASCII or args.use_legacy_ascii),
+        use_ascii=use_ascii,
         binary_tree_layout=args.binary_tree,
         layout_strategy=layout_strategy,
         flow_direction=args.flow_direction,
@@ -294,6 +296,7 @@ def create_layout_options(args: argparse.Namespace) -> LayoutOptions:
         edge_anchor_mode=args.edge_anchors,
         use_labels=args.labels,
         ansi_colors=(color_mode != "none"),
+        allow_ansi_in_ascii=allow_ansi_in_ascii,
         edge_color_mode="source" if color_mode == "none" else color_mode,
         edge_color_rules=edge_color_rules,
     )

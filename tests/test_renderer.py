@@ -589,6 +589,21 @@ class TestASCIIRenderer(unittest.TestCase):
         result = renderer.render()
         self.assertNotIn("\x1b[", result)
 
+    def test_ansi_colors_are_enabled_for_ascii_glyphs_when_allowed(self):
+        renderer = ASCIIRenderer(
+            self.chain,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=True,
+                ansi_colors=True,
+                allow_ansi_in_ascii=True,
+            ),
+        )
+        result = renderer.render()
+        self.assertIn("\x1b[", result)
+        stripped = re.sub(r"\x1b\[[0-9;]*m", "", result)
+        self.assertTrue(all(ord(c) < 128 for c in stripped))
+
     def test_stripping_ansi_matches_plain_render_output(self):
         base_options = dict(
             node_style=NodeStyle.MINIMAL,
