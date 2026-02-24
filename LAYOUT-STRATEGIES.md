@@ -68,8 +68,10 @@ Let's see how it looks with the `bipartite` strategy:
 It is different. It *is* actually clearer as you can 
 plainly see the circular inter-dependencies indicated 
 by the layout, colors and edge connection indicators.
+We could also have instructed phart to draw all of the bounding boxes to be the size of the widest one, 
+which would have the effect of making the two columns look more uniform and obviously straight vertical lines.
 
-How about that new circular layout, since it's a circular dependency graph:
+How about that new **circular** layout, since it's a _circular_ dependency graph:
 
 ### circular
 
