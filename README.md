@@ -14,6 +14,13 @@
 - Bidirectional edge support
 - Orthogonal (yet correct, though perhaps unexpected) Triad Layout
 
+## New Layout Strategies
+
+See [LAYOUT-STRATEGIES.md](https://github.com/scottvr/phart/blob/457246eec877517cbbdc9b344c6667bf92b5e5ba/LAYOUT-STRATEGIES.md) in the repo for demos.
+   
+Binary Tree with "side"-steering examples are shown throughout below. I've finally updated to show phart's cosmetic enhancements.
+Same with bounding-box mode, which is demonstrated below on a couple of different tree-type graphs.
+
 ## NEW Features Feb 2026
  * binary_tree sort mode
  * binary_tree sort can respect "side" properties ("left", 'right")
@@ -21,13 +28,6 @@
  *(optionally) use labels instead of node names when rendering diagram.
  *(optionally) color edges with ANSI colors to help discern edge paths in dense complex diagrams
  * and several **new layout strategies** including `circular`, `bfs`, `shell`, `Kamada-Kawai`, and others.
-
-## New Layout Strategies
-
-See [LAYOUT-STRATEGIES.md](https://github.com/scottvr/phart/blob/457246eec877517cbbdc9b344c6667bf92b5e5ba/LAYOUT-STRATEGIES.md) in the repo for demos.
-   
-Binary Tree with "side"-steering examples are shown throughout below. I've finally updated to show phart's cosmetic enhancements.
-Same with bounding-box mode, which is demonstrated below on a couple of different tree-type graphs.
 
 
 ### Labelling with label properties
