@@ -4,8 +4,9 @@ import sys
 import ast
 import argparse
 import importlib.util
+from contextlib import nullcontext, redirect_stdout
 from pathlib import Path
-from typing import Optional, Any
+from typing import Optional, Any, ContextManager
 
 from .renderer import ASCIIRenderer
 from .styles import NodeStyle, LayoutOptions
@@ -347,26 +348,36 @@ def main() -> Optional[int]:
             try:
                 cli_options = create_layout_options(args)
                 ASCIIRenderer.default_options = cli_options
+                output_ctx: ContextManager[Any] = nullcontext()
+                out_file = None
+                if args.output:
+                    out_file = args.output.open("w", encoding="utf-8")
+                    output_ctx = redirect_stdout(out_file)
 
-                if args.function != "main":
-                    module = _load_python_module(args.input)
-                    try:
-                        func = getattr(module, args.function)
-                    except AttributeError:
-                        print(
-                            f"Error: Function '{args.function}' not found in {args.input}",
-                            file=sys.stderr,
-                        )
-                        return 1
-                    func()
-                    return 0
+                try:
+                    with output_ctx:
+                        if args.function != "main":
+                            module = _load_python_module(args.input)
+                            try:
+                                func = getattr(module, args.function)
+                            except AttributeError:
+                                print(
+                                    f"Error: Function '{args.function}' not found in {args.input}",
+                                    file=sys.stderr,
+                                )
+                                return 1
+                            func()
+                            return 0
 
-                if _module_defines_function(args.input, "main"):
-                    module = _load_python_module(args.input)
-                    module.main()
-                else:
-                    _run_python_as_main(args.input)
-                return 0
+                        if _module_defines_function(args.input, "main"):
+                            module = _load_python_module(args.input)
+                            module.main()
+                        else:
+                            _run_python_as_main(args.input)
+                        return 0
+                finally:
+                    if out_file is not None:
+                        out_file.close()
 
             finally:
                 sys.argv = old_argv

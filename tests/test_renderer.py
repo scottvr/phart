@@ -71,12 +71,16 @@ class TestASCIIRenderer(unittest.TestCase):
 
     def test_basic_chain(self):
         """Test rendering of a simple chain graph."""
-        renderer = ASCIIRenderer(self.chain, layer_spacing=3)
+        renderer = ASCIIRenderer(self.chain, 
+                options=LayoutOptions(
+                bboxes=True,
+                use_ascii=False,
+                layer_spacing=4,
+            ),
+        )
         result = renderer.render(print_config=True)
         lines = result.split("\n")
 
-        for line in lines:
-            print(f"DBG: xxx: line={line}")
         # Verify nodes appear in correct order
         self.assertTrue(any("A" in line and "B" not in line for line in lines))
         self.assertTrue(
@@ -260,8 +264,13 @@ class TestASCIIRenderer(unittest.TestCase):
 
     def test_unicode_mode(self):
         """Test Unicode mode."""
-        renderer = ASCIIRenderer(self.chain, use_ascii=False)
-        result = renderer.render()
+        result = ASCIIRenderer(self.chain,
+            options=LayoutOptions(
+                bboxes=True,
+                use_ascii=False,
+            ),
+        ).render()
+        print(f"RESULT: {result}")
         self.assertTrue(any(ord(c) > 127 for c in result))
 
     def test_flow_direction_changes_layout_not_arrow_mapping(self):

@@ -247,6 +247,19 @@ def demonstrate_graph():
         self.assertIn("C", output)
         self.assertNotIn("Error", self.stderr.getvalue())
 
+    def test_python_with_output_file_writes_render_to_file(self):
+        output_file = Path(self.temp_dir) / "python_output.txt"
+        sys.argv = ["phart", str(self.py_main_file), "--output", str(output_file)]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(self.stdout.getvalue(), "")
+        self.assertTrue(output_file.exists())
+        content = output_file.read_text(encoding="utf-8")
+        self.assertIn("A", content)
+        self.assertIn("B", content)
+        self.assertIn("C", content)
+        self.assertNotIn("Error", self.stderr.getvalue())
+
     def test_python_with_main_block(self):
         """Test executing Python file with __main__ block."""
         sys.argv = ["phart", str(self.py_block_file)]
