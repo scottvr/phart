@@ -533,6 +533,29 @@ class TestASCIIRenderer(unittest.TestCase):
 
         self.assertEqual(len(set(starts)), 1)
 
+    def test_edge_anchor_ports_separates_reciprocal_horizontal_edges(self):
+        graph = nx.DiGraph([("A", "B"), ("B", "A")])
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                bboxes=True,
+                hpad=1,
+                vpad=1,
+                edge_anchor_mode="ports",
+                use_ascii=True,
+                layer_spacing=4,
+            ),
+        )
+        positions = {"A": (0, 0), "B": (16, 0)}
+        renderer._edge_anchor_map = renderer._compute_edge_anchor_map(positions)  # noqa: SLF001
+
+        a_to_b_start, a_to_b_end = renderer._get_edge_anchor_points("A", "B", positions)  # noqa: SLF001
+        b_to_a_start, b_to_a_end = renderer._get_edge_anchor_points("B", "A", positions)  # noqa: SLF001
+
+        self.assertNotEqual(a_to_b_start[1], b_to_a_end[1])
+        self.assertNotEqual(a_to_b_end[1], b_to_a_start[1])
+
     def test_unicode_boxed_edges_use_line_junction_glyphs(self):
         graph = nx.DiGraph([("Root", "Left"), ("Root", "Right")])
         renderer = ASCIIRenderer(

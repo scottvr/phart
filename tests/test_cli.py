@@ -384,7 +384,9 @@ def demonstrate_graph():
         ]
         exit_code = main()
         self.assertEqual(exit_code, 1)
-        self.assertIn("--edge-color-rule requires --colors attr", self.stderr.getvalue())
+        self.assertIn(
+            "--edge-color-rule requires --colors attr", self.stderr.getvalue()
+        )
 
     def test_invalid_edge_color_rule_format(self):
         sys.argv = [

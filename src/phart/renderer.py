@@ -235,9 +235,10 @@ class ASCIIRenderer:
         self, edge: Tuple[Any, Any], idx: int
     ) -> Optional[str]:
         """Resolve edge color from configured attribute rules."""
-        fallback = self._node_color_map.get(edge[0]) or ANSI_SUBWAY_PALETTE[
-            idx % len(ANSI_SUBWAY_PALETTE)
-        ]
+        fallback = (
+            self._node_color_map.get(edge[0])
+            or ANSI_SUBWAY_PALETTE[idx % len(ANSI_SUBWAY_PALETTE)]
+        )
         edge_data = self.graph.get_edge_data(edge[0], edge[1]) or {}
         normalized_data = {
             str(key).strip().lower(): self._normalize_edge_attr_value(value)
@@ -513,7 +514,8 @@ class ASCIIRenderer:
             if bounds["right"] - bounds["left"] > 1:
                 return list(range(bounds["left"] + 1, bounds["right"]))
             return [bounds["center_x"]]
-        # Keep left/right anchored at center row for now to avoid extra jog complexity.
+        if bounds["bottom"] - bounds["top"] > 1:
+            return list(range(bounds["top"] + 1, bounds["bottom"]))
         return [bounds["center_y"]]
 
     def _port_value_to_xy(
@@ -662,7 +664,9 @@ class ASCIIRenderer:
 
         # Only dedupe when both directed edges resolve to the same color;
         # otherwise keep separate draws so color semantics remain visible.
-        if self._edge_color_map.get((start, end)) != self._edge_color_map.get((end, start)):
+        if self._edge_color_map.get((start, end)) != self._edge_color_map.get(
+            (end, start)
+        ):
             return False
 
         pair_key = frozenset((start, end))
