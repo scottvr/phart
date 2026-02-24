@@ -6,13 +6,16 @@
 
 ## Features
 
-- Render using 7-bit ASCII or unicode characters
+- Render using ASCII (7-bit) or Unicode characters
+- Optional ANSI color for either charset
 - Multiple node styles (square, round, diamond, custom)
 - Customizable edge characters
 - Support for directed and undirected graphs
 - Handles cycles and complex layouts
 - Bidirectional edge support
-- Orthogonal (yet correct, though perhaps unexpected) Triad Layout
+- Edge attribute support (and attribute-based coloring of edges)
+- Over ten layout strategies
+- Orthogonal edge paths (all 90 degree turns, "Manhattan" style)
 
 ## New Layout Strategies
 
