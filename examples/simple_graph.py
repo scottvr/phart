@@ -1,14 +1,11 @@
 """
 Simple examples demonstrating basic PHART usage.
 """
-# src path: examples\simple_graph.py
 
 import networkx as nx
 from phart import ASCIIRenderer, NodeStyle
 
-
 def demonstrate_basic_graph():
-    """Simple directed graph example."""
     print("\nBasic Directed Graph:")
     G = nx.DiGraph()
     G.add_edges_from([("A", "B"), ("A", "C"), ("B", "D"), ("C", "D")])
