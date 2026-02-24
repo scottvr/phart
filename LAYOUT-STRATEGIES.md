@@ -1,18 +1,18 @@
 # Layout Strategy Examples
 
 Supported modes are:
-- auto (default) - This is the original PHART orthogonal/hierarchical layout method.
-- bfs - Breadth-First Search
-- bipartite - Arrange the node in two straight lines.
-- circular - Arrange the nodes in a circular layout.
-- kamada-kawai - Positions nodes using Kamada-Kawai path-length cost function. (requires scipy)
-- spring - Position nodes using Fruchterman-Reingold force-directed algorithm. (fallback for kamada-kawai if scipy not available.)
-- arf - Position nodes using an attractive-repulsive force model.
-- spiral - Position nodes along a spiral.
-- shell - Position nodes in concentric shells (rings), using BFS-derived rings by default.
-- multipartite - Position nodes in layers of straight lines.
-- planar - Minimize edge (path) intersections.
-- random - Positions nodes uniformly at random within the unit square.
+- **auto** (default) - This is the original PHART orthogonal/hierarchical layout method.
+- **bfs** - Breadth-First Search
+- **bipartite** - Arrange the node in two straight lines.
+- **circular** - Arrange the nodes in a circular layout.
+- **kamada-kawai** - Positions nodes using Kamada-Kawai path-length cost function. (requires scipy)
+- **spring** - Position nodes using Fruchterman-Reingold force-directed algorithm. (fallback for kamada-kawai if scipy not available.)
+- **arf** - Position nodes using an attractive-repulsive force model.
+- **spiral** - Position nodes along a spiral.
+- **shell** - Position nodes in concentric shells (rings), using BFS-derived rings by default.
+- **multipartite** - Position nodes in layers of straight lines.
+- **planar** - Minimize edge (path) intersections.
+- **random** - Positions nodes uniformly at random within the unit square.
 
 ## Default/Original (Orthogonal/Hierarchical) Layout
 Here's an example of a Graph of circular software dependencies:
