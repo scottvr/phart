@@ -255,7 +255,7 @@ that includes the output of a very early release of phart.
 ## NEW! Feb 2026 - Layout Strategies
 
 Now, explicitly exposed and selectable by the user, phart's layout_strategy is now configurable.
-
+See [LAYOUT-STRATEGIES.md](https://github.com/scottvr/phart/blob/main/LAYOUT-STRATEGIES.md) in the repo for demos.
 
 ## Why PHART?
 
