@@ -83,9 +83,9 @@ can reaad *python code* that itseslf makes use of phart such as that above, so t
 phart supports ASCII and Unicode, and will try to use the sensible default for your 
 terminal environment.
 
-### How to phart?
+### Let's try another one
 
-Let's make a simple graph in Python using NetworkX and phart:
+Let's make a simple balanced tree:
 ```bash
 $ cat > balanced_tree.py
 ```
@@ -111,6 +111,8 @@ $ python balanced_tree.py
 ```
 
 ----
+
+### Output options
 
 phart has lots of output options. Here's a good use for the cli as I described above. 
 We can test other options, without having to edit that python script we just wrote.
@@ -257,7 +259,7 @@ that includes the output of a very early release of phart.
 Now, explicitly exposed and selectable by the user, phart's layout_strategy is now configurable.
 See [LAYOUT-STRATEGIES.md](https://github.com/scottvr/phart/blob/main/LAYOUT-STRATEGIES.md) in the repo for demos.
 
-## Why PHART?
+## Why "PHART"?
 
 The acronym was a fortuitous accident from the non-abbreviated words that the letters represent: **Python Hierarchical ASCII Rendering Tool**.
 
@@ -343,7 +345,7 @@ options:
                         ANSI edge coloring mode: none (default), source, target, or path```
 ```
 
-## Developer Quick Start
+## Quick Start
 
 ```python
 import networkx as nx
@@ -390,6 +392,9 @@ Circular Dependencies:
     ↓             │             ↓
 [certifi]    [package_c]    [urllib3]
 ```
+
+You can also run `phart yourscript.py` and tweak the output variables via command-line arguments.
+
 We might want to tweak the spacing, the character set, add some bounding boxes, etc. The phart cli is your friend for experimenting with styling.
 
 The renderer shows edge direction using arrows:
@@ -397,6 +402,12 @@ The renderer shows edge direction using arrows:
 - v : downward flow
 - ^ : upward flow
 - &gt; or < : horizontal flow
+
+Speaking of "circular", there's a bunch of exampels of the Circular Layout strategy, among with many others in a documented dedicated to that purpose.
+
+See [LAYOUT-STRATEGIES.md](https://github.com/scottvr/phart/blob/main/LAYOUT-STRATEGIES.md) in the repo for these demos.
+   
+
 
 # Extras
 
