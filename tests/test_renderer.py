@@ -4,6 +4,7 @@
 import unittest
 import sys
 import re
+from collections import Counter
 
 import networkx as nx  # type: ignore
 
@@ -805,6 +806,45 @@ class TestASCIIRenderer(unittest.TestCase):
 
         self.assertFalse(renderer._should_use_ports_for_edge("Alice", "Bob"))  # noqa: SLF001
         self.assertTrue(renderer._should_use_ports_for_edge("Bob", "Charlie"))  # noqa: SLF001
+
+    def test_bidirectional_edge_dedupes_when_colors_match(self):
+        class CountingRenderer(ASCIIRenderer):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.drawn_edges: list[tuple[str, str]] = []
+
+            def _draw_edge(self, start, end, positions):
+                self.drawn_edges.append((str(start), str(end)))
+                return super()._draw_edge(start, end, positions)
+
+        graph = nx.DiGraph()
+        graph.add_edge("Alice", "Bob", relationship="friend")
+        graph.add_edge("Bob", "Alice", relationship="friend")
+        graph.add_edge("Bob", "Charlie", relationship="friend")
+        graph.add_edge("Charlie", "Bob", relationship="enemy")
+
+        renderer = CountingRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=False,
+                ansi_colors=True,
+                edge_color_mode="attr",
+                edge_color_rules={
+                    "relationship": {"friend": "bright_green", "enemy": "red"}
+                },
+                bboxes=True,
+                edge_anchor_mode="auto",
+                layer_spacing=4,
+            ),
+        )
+        renderer.render()
+        counts = Counter(frozenset(edge) for edge in renderer.drawn_edges)
+
+        # Matching reciprocal attrs should share a single rendered route.
+        self.assertEqual(counts[frozenset(("Alice", "Bob"))], 1)
+        # Mismatched reciprocal attrs should remain separate draws.
+        self.assertEqual(counts[frozenset(("Bob", "Charlie"))], 2)
 
     def test_file_writing(self):
         """Test writing to file with proper encoding."""

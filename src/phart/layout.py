@@ -778,6 +778,62 @@ class LayoutManager:
         except Exception:
             return 0.0, 0.0
 
+    def _compact_positions_axis(
+        self,
+        positions: Dict[Any, Tuple[int, int]],
+        *,
+        axis: str,
+        min_gap: int,
+        node_height: int,
+    ) -> Dict[Any, Tuple[int, int]]:
+        """Compact whitespace between disjoint node bands on one axis."""
+        if not positions:
+            return {}
+
+        intervals: List[Tuple[int, int, Any]] = []
+        for node, (x, y) in positions.items():
+            if axis == "x":
+                start = x
+                end = x + self._get_node_width(node) - 1
+            else:
+                start = y
+                end = y + node_height - 1
+            intervals.append((start, end, node))
+
+        intervals.sort(key=lambda item: (item[0], item[1], str(item[2])))
+        if not intervals:
+            return dict(positions)
+
+        bands: List[Tuple[int, int, List[Any]]] = []
+        band_start, band_end, first_node = intervals[0]
+        band_nodes: List[Any] = [first_node]
+
+        for start, end, node in intervals[1:]:
+            if start <= band_end:
+                band_end = max(band_end, end)
+                band_nodes.append(node)
+            else:
+                bands.append((band_start, band_end, band_nodes))
+                band_start, band_end = start, end
+                band_nodes = [node]
+        bands.append((band_start, band_end, band_nodes))
+
+        compacted = dict(positions)
+        next_start = 0
+        axis_gap = max(1, min_gap)
+        for start, end, nodes in bands:
+            shift = start - next_start
+            for node in nodes:
+                x, y = compacted[node]
+                if axis == "x":
+                    compacted[node] = (x - shift, y)
+                else:
+                    compacted[node] = (x, y - shift)
+            new_end = end - shift
+            next_start = new_end + axis_gap + 1
+
+        return compacted
+
     def _layout_from_coordinate_map(
         self, coord_map: Dict[Any, Any], spacing: int
     ) -> Dict[str, Tuple[int, int]]:
@@ -844,6 +900,19 @@ class LayoutManager:
 
             positions[node] = (candidate_x, candidate_y)
             placed_rects.append(candidate_rect)
+
+        positions = self._compact_positions_axis(
+            positions,
+            axis="x",
+            min_gap=spacing,
+            node_height=node_height,
+        )
+        positions = self._compact_positions_axis(
+            positions,
+            axis="y",
+            min_gap=max(1, self.options.layer_spacing),
+            node_height=node_height,
+        )
 
         return self._normalize_positions_to_origin(positions)
 

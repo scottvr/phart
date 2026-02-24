@@ -648,6 +648,30 @@ class ASCIIRenderer:
         for i, char in enumerate(label):
             self._paint_cell(inner_start_x + i, label_y, char, node_color)
 
+    def _should_skip_edge_draw(
+        self,
+        start: Any,
+        end: Any,
+        drawn_bidirectional_pairs: Set[frozenset[Any]],
+    ) -> bool:
+        """Skip second pass when a reciprocal edge can share one route."""
+        if not self._is_bidirectional_edge(start, end):
+            return False
+        if (end, start) not in self.graph.edges():
+            return False
+
+        # Only dedupe when both directed edges resolve to the same color;
+        # otherwise keep separate draws so color semantics remain visible.
+        if self._edge_color_map.get((start, end)) != self._edge_color_map.get((end, start)):
+            return False
+
+        pair_key = frozenset((start, end))
+        if pair_key in drawn_bidirectional_pairs:
+            return True
+
+        drawn_bidirectional_pairs.add(pair_key)
+        return False
+
     def render(self, print_config: Optional[bool] = False) -> str:
         """Render the graph as ASCII art."""
         positions, width, height = self.layout_manager.calculate_layout()
@@ -661,8 +685,13 @@ class ASCIIRenderer:
 
         # Only try to draw edges if we have any
         if self.graph.edges():
+            drawn_bidirectional_pairs: Set[frozenset[Any]] = set()
             for start, end in self.graph.edges():
                 if start in positions and end in positions:
+                    if self._should_skip_edge_draw(
+                        start, end, drawn_bidirectional_pairs
+                    ):
+                        continue
                     try:
                         self._draw_edge(start, end, positions)
                     except IndexError as e:

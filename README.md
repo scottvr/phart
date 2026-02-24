@@ -298,7 +298,7 @@ pip install .
 ```bash
 usage: phart [-h] [--output OUTPUT] [--style {minimal,square,round,diamond,custom,bbox}]
              [--node-spacing NODE_SPACING] [--layer-spacing LAYER_SPACING]
-             [--charset {ascii,unicode}] [--ascii] [--function FUNCTION] [--binary-tree]
+             [--charset {ascii,ansi,unicode}] [--ascii] [--function FUNCTION] [--binary-tree]
              [--layout {arf,auto,bfs,bipartite,circular,kamada-kawai,multipartite,planar,random,shell,spiral,spring}]
              [--flow-direction {down,up,left,right}] [--bboxes] [--hpad HPAD] [--vpad VPAD]
              [--uniform] [--edge-anchors {auto,center,ports}] [--labels]
@@ -319,7 +319,7 @@ options:
                         Horizontal space between nodes (default: 4)
   --layer-spacing LAYER_SPACING
                         Vertical space between layers (default: 3)
-  --charset {ascii,unicode}
+  --charset {ascii,ansi,unicode}
                         Character set to use for rendering (default: unicode)
   --ascii               Force ASCII output (deprecated, use --charset ascii instead)
   --function, -f FUNCTION
@@ -418,6 +418,8 @@ See [LAYOUT-STRATEGIES.md](https://github.com/scottvr/phart/blob/main/LAYOUT-STR
   cleaner visualization
 - `--charset ascii`: Uses only 7-bit ASCII characters, ensuring maximum compatibility
   with all terminals
+- `--charset ansi`: Uses ASCII glyphs while allowing ANSI color escapes (good for
+  older terminals that support ANSI colors but not Unicode line-art)
 
 ## File Format Support
 ### DOT Files

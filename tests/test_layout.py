@@ -314,6 +314,36 @@ class TestLayoutManager(unittest.TestCase):
         self.assertGreaterEqual(len({x for x, _ in positions.values()}), 2)
         self.assertGreaterEqual(len({y for _, y in positions.values()}), 2)
 
+    def test_coordinate_layout_strategies_compact_three_node_graph(self):
+        graph = nx.DiGraph([("A", "B"), ("B", "C"), ("C", "A")])
+        strategies = (
+            "random",
+            "spring",
+            "kamada_kawai",
+            "planar",
+            "arf",
+            "spiral",
+            "shell",
+        )
+
+        for strategy in strategies:
+            with self.subTest(strategy=strategy):
+                manager = LayoutManager(
+                    graph,
+                    LayoutOptions(
+                        node_style=NodeStyle.MINIMAL,
+                        layout_strategy=strategy,
+                        node_spacing=4,
+                        layer_spacing=4,
+                        use_ascii=True,
+                    ),
+                )
+                positions, _, _ = manager.calculate_layout()
+                xs = [x for x, _ in positions.values()]
+                ys = [y for _, y in positions.values()]
+                self.assertLessEqual(max(xs) - min(xs), 15)
+                self.assertLessEqual(max(ys) - min(ys), 15)
+
     def test_multipartite_layout_strategy_uses_subset_attributes(self):
         graph = nx.DiGraph()
         graph.add_node("A", subset=0)
