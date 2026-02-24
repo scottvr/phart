@@ -18,8 +18,6 @@
 
 See [LAYOUT-STRATEGIES.md](https://github.com/scottvr/phart/blob/main/LAYOUT-STRATEGIES.md) in the repo for demos.
    
-Binary Tree with "side"-steering examples are shown throughout below. I've finally updated to show phart's cosmetic enhancements.
-Same with bounding-box mode, which is demonstrated below on a couple of different tree-type graphs.
 
 ## NEW Features Feb 2026
  * binary_tree sort mode
