@@ -102,7 +102,7 @@ Yeah, it is clear what connects to what now.
 Speaking of **circular**... Sometimes  when there are many nodes, setting `colors=target` 
 can give quick and useful visual information. 
 
-Here's a different graph in colored circular layout:
+Here's a different graph in colored circular layout, with the edge paths colored to match their destination edge for easier visual tracing:
 
 <img width="400" height="400" alt="sem-circular-color-target" src="https://github.com/user-attachments/assets/094ebf83-2cdd-4019-a945-b1179deb4ed8" />
 
