@@ -763,7 +763,7 @@ class LayoutManager:
     @staticmethod
     def _to_ordered_undirected_graph(graph: nx.DiGraph) -> nx.Graph:
         """Create a deterministic undirected graph preserving stable node order."""
-        ordered_graph: nx.Graph  = nx.Graph()
+        ordered_graph: nx.Graph = nx.Graph()
         ordered_graph.add_nodes_from(sorted(graph.nodes(), key=lambda n: str(n)))
         ordered_graph.add_edges_from(
             sorted(graph.edges(), key=lambda edge: (str(edge[0]), str(edge[1])))
