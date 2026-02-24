@@ -26,8 +26,8 @@ See [LAYOUT-STRATEGIES.md](https://github.com/scottvr/phart/blob/main/LAYOUT-STR
  * binary_tree sort mode
  * binary_tree sort can respect "side" properties ("left", 'right")
  * bounding box mode (line art rectangles with configurable inner padding)
- *(optionally) use labels instead of node names when rendering diagram.
- *(optionally) color edges with ANSI colors to help discern edge paths in dense complex diagrams
+ * (optionally) use labels instead of node names when rendering diagram.
+ * (optionally) color edges with ANSI colors to help discern edge paths in dense complex diagrams
  * and several **new layout strategies** including `circular`, `bfs`, `shell`, `Kamada-Kawai`, and others.
 
 
@@ -79,7 +79,7 @@ Basic Directed Graph:
 
 phart also comes as a handy **CLI tool**, set up for you when you `pip install` phart.
 The phart **CLI** can read graphs in **graphml** or **dot** format. Additionally, the phart CLI
-can reaad *python code* that itseslf makes use of phart such as that above, so that it can be tested from the command-line, allowing you to try out various display options without having to edit your code repeatedly to see what works best.
+can read *python code* that itseslf makes use of phart such as that above, so that it can be tested from the command-line, allowing you to try out various display options without having to edit your code repeatedly to see what works best.
 
 phart supports ASCII and Unicode, and will try to use the sensible default for your 
 terminal environment.
