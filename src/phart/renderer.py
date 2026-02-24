@@ -630,7 +630,9 @@ class ASCIIRenderer:
 
         right_x = x + node_width - 1
         bottom_y = y + node_height - 1
-        inner_start_x = x + 1 + self.options.hpad
+        inner_width = max(0, node_width - 2 - (2 * self.options.hpad))
+        label_offset = max(0, (inner_width - len(label)) // 2) if self.options.uniform else 0
+        inner_start_x = x + 1 + self.options.hpad + label_offset
         label_y = y + 1 + self.options.vpad
 
         self._paint_cell(x, y, self.options.box_top_left, node_color)

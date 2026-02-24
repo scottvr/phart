@@ -521,6 +521,30 @@ class TestASCIIRenderer(unittest.TestCase):
         wide_width = wide_line.rindex("|") - wide_line.index("|") + 1
         self.assertEqual(a_width, wide_width)
 
+    def test_uniform_box_labels_are_centered(self):
+        graph = nx.DiGraph([("A", "WIDE_NODE")])
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                bboxes=True,
+                hpad=1,
+                vpad=0,
+                uniform=True,
+                use_ascii=True,
+                layer_spacing=4,
+            ),
+        )
+        result = renderer.render()
+        lines = result.splitlines()
+
+        a_line = next(line for line in lines if "A" in line and "WIDE_NODE" not in line)
+        left_pipe = a_line.index("|")
+        right_pipe = a_line.rindex("|")
+        left_spaces = a_line[left_pipe + 1 : a_line.index("A")]
+        right_spaces = a_line[a_line.index("A") + 1 : right_pipe]
+        self.assertLessEqual(abs(len(left_spaces) - len(right_spaces)), 1)
+
     def test_edge_anchor_ports_distribute_parent_connections(self):
         """Ports mode should spread parent-child edge starts along the box side."""
         graph = nx.DiGraph([("Root", "Left"), ("Root", "Mid"), ("Root", "Right")])
