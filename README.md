@@ -79,7 +79,7 @@ Basic Directed Graph:
 
 phart also comes as a handy **CLI tool**, set up for you when you `pip install` phart.
 The phart **CLI** can read graphs in **graphml** or **dot** format. Additionally, the phart CLI
-can reaad *python code* that itseslf makes use of phart such as that above, so that it can be tested from the command-line, allowing you to try out various display options without having to edit your code repeatedly to see what works best.
+can read *python code* that itseslf makes use of phart such as that above, so that it can be tested from the command-line, allowing you to try out various display options without having to edit your code repeatedly to see what works best.
 
 phart supports ASCII and Unicode, and will try to use the sensible default for your 
 terminal environment.
