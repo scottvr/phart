@@ -746,6 +746,28 @@ class TestASCIIRenderer(unittest.TestCase):
             (f1_bounds["center_x"], f1_bounds["top"]),
         )  # noqa: SLF001
 
+    def test_edge_anchor_ports_assigns_monotone_face_ports_for_ordered_targets(self):
+        graph = nx.DiGraph([("P", "L"), ("P", "R")])
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                bboxes=True,
+                hpad=1,
+                vpad=1,
+                edge_anchor_mode="ports",
+                use_ascii=True,
+                layer_spacing=4,
+            ),
+        )
+        # This geometry previously produced inverted source-port ordering.
+        positions = {"P": (0, 0), "L": (1, 8), "R": (6, 8)}
+        renderer._edge_anchor_map = renderer._compute_edge_anchor_map(positions)  # noqa: SLF001
+
+        start_l = renderer._edge_anchor_map[("P", "L")]["start"][0]  # noqa: SLF001
+        start_r = renderer._edge_anchor_map[("P", "R")]["start"][0]  # noqa: SLF001
+        self.assertLessEqual(start_l, start_r)
+
     def test_unicode_boxed_edges_use_line_junction_glyphs(self):
         graph = nx.DiGraph([("Root", "Left"), ("Root", "Right")])
         renderer = ASCIIRenderer(

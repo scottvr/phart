@@ -621,6 +621,71 @@ class ASCIIRenderer:
             return start_counter, end_counter
         return best_pair
 
+    def _assign_monotone_port_values(
+        self, counters: List[int], candidates: List[int]
+    ) -> List[int]:
+        """Assign candidate ports monotonically to ordered counters.
+
+        Preserves left-to-right/top-to-bottom ordering to minimize surprising
+        edge crossings on a shared node face.
+        """
+        if not counters:
+            return []
+        if not candidates:
+            return list(counters)
+
+        ordered_candidates = sorted(set(candidates))
+        ordered_counters = list(counters)
+        n = len(ordered_counters)
+        m = len(ordered_candidates)
+
+        if n == 1:
+            center = ordered_counters[0]
+            return [self._nearest_candidate_to_center(ordered_candidates, center)]
+
+        # If there are fewer candidate slots than edges, keep monotonicity by
+        # reusing slots in order.
+        if m < n:
+            max_index = m - 1
+            return [
+                ordered_candidates[round((i * max_index) / max(n - 1, 1))]
+                for i in range(n)
+            ]
+
+        # Dynamic programming: choose strictly increasing candidate indices
+        # that minimize total absolute deviation from desired counters.
+        inf = float("inf")
+        dp: List[List[float]] = [[inf for _ in range(m)] for _ in range(n)]
+        prev: List[List[int]] = [[-1 for _ in range(m)] for _ in range(n)]
+
+        for j in range(m):
+            dp[0][j] = abs(ordered_counters[0] - ordered_candidates[j])
+
+        for i in range(1, n):
+            for j in range(i, m):
+                local_cost = abs(ordered_counters[i] - ordered_candidates[j])
+                best_prev_idx = -1
+                best_prev_cost = inf
+                for k in range(i - 1, j):
+                    cand_cost = dp[i - 1][k]
+                    if cand_cost < best_prev_cost:
+                        best_prev_cost = cand_cost
+                        best_prev_idx = k
+                dp[i][j] = best_prev_cost + local_cost
+                prev[i][j] = best_prev_idx
+
+        best_last_idx = min(
+            range(n - 1, m),
+            key=lambda j: (dp[n - 1][j], j),
+        )
+
+        chosen_indices = [0 for _ in range(n)]
+        chosen_indices[n - 1] = best_last_idx
+        for i in range(n - 1, 0, -1):
+            chosen_indices[i - 1] = prev[i][chosen_indices[i]]
+
+        return [ordered_candidates[idx] for idx in chosen_indices]
+
     def _compute_edge_anchor_map(
         self, positions: Dict[Any, Tuple[int, int]]
     ) -> Dict[Tuple[Any, Any], Dict[str, Tuple[int, int]]]:
@@ -690,25 +755,51 @@ class ASCIIRenderer:
         edge_anchor_map: Dict[Tuple[Any, Any], Dict[str, Tuple[int, int]]] = {}
         used_by_side: Dict[Tuple[Any, str], List[int]] = {}
         min_port_separation = 1
-        side_demand: Dict[Tuple[Any, str], int] = {}
+        face_assignments: Dict[Tuple[Tuple[Any, Any], str], int] = {}
+        face_requirements: Dict[
+            Tuple[Any, str], List[Tuple[Tuple[Any, Any], str, int, str]]
+        ] = {}
         for (
-            _edge_key,
+            edge_key,
             start_node,
             start_side,
-            _start_counter,
-            _start_candidates,
+            start_counter,
+            _start_candidates_unused,
             end_node,
             end_side,
-            _end_counter,
-            _end_candidates,
+            end_counter,
+            _end_candidates_unused,
             _axis_delta,
         ) in edge_specs:
-            side_demand[(start_node, start_side)] = (
-                side_demand.get((start_node, start_side), 0) + 1
+            face_requirements.setdefault((start_node, start_side), []).append(
+                (edge_key, "start", start_counter, str(end_node))
             )
-            side_demand[(end_node, end_side)] = (
-                side_demand.get((end_node, end_side), 0) + 1
+            face_requirements.setdefault((end_node, end_side), []).append(
+                (edge_key, "end", end_counter, str(start_node))
             )
+
+        for (node, side), items in face_requirements.items():
+            node_bounds = self._get_node_bounds(node, positions)
+            candidates = self._get_side_port_values(node_bounds, side)
+            if not candidates:
+                candidates = [self._side_center_value(node_bounds, side)]
+
+            sorted_items = sorted(items, key=lambda item: (item[2], item[3]))
+            if len(sorted_items) == 1:
+                center = self._side_center_value(node_bounds, side)
+                assigned_values = [
+                    self._nearest_candidate_to_center(candidates, center)
+                ]
+            else:
+                counters = [item[2] for item in sorted_items]
+                assigned_values = self._assign_monotone_port_values(
+                    counters, candidates
+                )
+
+            for (edge_key, role, _counter, _peer), assigned in zip(
+                sorted_items, assigned_values
+            ):
+                face_assignments[(edge_key, role)] = assigned
 
         edge_specs_sorted = sorted(
             edge_specs,
@@ -740,25 +831,23 @@ class ASCIIRenderer:
             used_start_values = used_by_side.get(start_key, [])
             used_end_values = used_by_side.get(end_key, [])
 
-            start_pool = self._values_with_min_separation(
-                start_candidates, used_start_values, min_port_separation
-            )
-            end_pool = self._values_with_min_separation(
-                end_candidates, used_end_values, min_port_separation
-            )
-
             start_bounds = self._get_node_bounds(start_node, positions)
             end_bounds = self._get_node_bounds(end_node, positions)
+            preferred_start = face_assignments.get((edge_key, "start"))
+            preferred_end = face_assignments.get((edge_key, "end"))
 
-            # If a face is used by only one edge, prefer a centered local port.
-            if side_demand.get(start_key, 0) <= 1 and start_pool:
-                start_center = self._side_center_value(start_bounds, start_side)
-                start_pool = [
-                    self._nearest_candidate_to_center(start_pool, start_center)
-                ]
-            if side_demand.get(end_key, 0) <= 1 and end_pool:
-                end_center = self._side_center_value(end_bounds, end_side)
-                end_pool = [self._nearest_candidate_to_center(end_pool, end_center)]
+            if preferred_start is not None:
+                start_pool = [preferred_start]
+            else:
+                start_pool = self._values_with_min_separation(
+                    start_candidates, used_start_values, min_port_separation
+                )
+            if preferred_end is not None:
+                end_pool = [preferred_end]
+            else:
+                end_pool = self._values_with_min_separation(
+                    end_candidates, used_end_values, min_port_separation
+                )
 
             start_value, end_value = self._choose_port_pair(
                 start_candidates=start_pool,
