@@ -2,7 +2,7 @@
 
 **PHART:** The Python Hierarchical ASCII Representation Tool - A Pure Python graph visualization in ASCII, no external dependencies\*
 
-*\*except NetworkX, which should be mentioned prominently, as rendering NX digraphs as ASCII was the entire reason for phart's creation. but **phart** will **not** require you to stand up a webserver to run PHP and install Perl and some libraries just to render a Graph in 7-bit text (or UTF-8 or Unicode) from Python.*
+_\*except NetworkX, which should be mentioned prominently, as rendering NX digraphs as ASCII was the entire reason for phart's creation. but **phart** will **not** require you to stand up a webserver to run PHP and install Perl and some libraries just to render a Graph in 7-bit text (or UTF-8 or Unicode) from Python._
 
 ## Features
 
@@ -20,38 +20,37 @@
 ## New Layout Strategies
 
 See [LAYOUT-STRATEGIES.md](https://github.com/scottvr/phart/blob/main/LAYOUT-STRATEGIES.md) in the repo for demos.
-   
 
 ## NEW Features Feb 2026
- * binary_tree sort mode
- * binary_tree sort can respect "side" properties ("left", 'right")
- * bounding box mode (line art rectangles with configurable inner padding)
- * (optionally) use labels instead of node names when rendering diagram.
- * (optionally) color edges with ANSI colors to help discern edge paths in dense complex diagrams
- * and several **new layout strategies** including `circular`, `bfs`, `shell`, `Kamada-Kawai`, and others.
 
+- binary_tree sort mode
+- binary_tree sort can respect "side" properties ("left", 'right")
+- bounding box mode (line art rectangles with configurable inner padding)
+- (optionally) use labels instead of node names when rendering diagram.
+- (optionally) color edges with ANSI colors to help discern edge paths in dense complex diagrams
+- and several **new layout strategies** including `circular`, `bfs`, `shell`, `Kamada-Kawai`, and others.
 
 ### Labelling with label properties
 
-The label support can make an interesting but uninformative diagram suddenly more meaningful, and beautiful IMHO. 
+The label support can make an interesting but uninformative diagram suddenly more meaningful, and beautiful IMHO.
 Take a look at this **Unix Family Tree** (also from a .dot file); I think it's gorgeous.
 
 <img width="700" height="600" alt="unix-family-tree" src="https://github.com/user-attachments/assets/1475614f-0f6b-425e-b088-7f121bef27d9" />
 
-
 ### ANSI color edge paths
 
-ANSI color support turned out more interesting than I expected. Not completely satisfied with it, I ended up enabling four modes to the feature: color by source, color by target, color by path, and color by edge attributes. Here's an example of `edge_anchors=ports`, `colors=source`, using a graph of Golang package dependencies. 
+ANSI color support turned out more interesting than I expected. Not completely satisfied with it, I ended up enabling four modes to the feature: color by source, color by target, color by path, and color by edge attributes. Here's an example of `edge_anchors=ports`, `colors=source`, using a graph of Golang package dependencies.
 
 <img width="700" height="600" alt="go-package-dependencies" src="https://github.com/user-attachments/assets/932ce0db-cc4e-42ce-b77e-895ecf80fb56" />
 
-I'm  not sure it's all *that* much easier to discern what goes to where, but it sure is fun to look at.
+I'm not sure it's all _that_ much easier to discern what goes to where, but it sure is fun to look at.
 
-----
+---
 
 ## Usage Examples
 
 phart can be used **programmatically**:
+
 ```python
 import networkx as nx
 from phart import ASCIIRenderer, NodeStyle
@@ -64,7 +63,9 @@ def demonstrate_basic_graph():
     renderer = ASCIIRenderer(G)
     print(renderer.render())
 ```
+
 which will output this very underwhelming diagram:
+
 ```
 Basic Directed Graph:
 
@@ -79,28 +80,33 @@ Basic Directed Graph:
 
 phart also comes as a handy **CLI tool**, set up for you when you `pip install` phart.
 The phart **CLI** can read graphs in **graphml** or **dot** format. Additionally, the phart CLI
-can read *python code* that itseslf makes use of phart such as that above, so that it can be tested from the command-line, allowing you to try out various display options without having to edit your code repeatedly to see what works best.
+can read _python code_ that itseslf makes use of phart such as that above, so that it can be tested from the command-line, allowing you to try out various display options without having to edit your code repeatedly to see what works best.
 
-phart supports ASCII and Unicode, and will try to use the sensible default for your 
+phart supports ASCII and Unicode, and will try to use the sensible default for your
 terminal environment.
 
 ### Let's try another one
 
 Let's make a simple balanced tree:
+
 ```bash
 $ cat > balanced_tree.py
 ```
+
 ```python
 import networkx as nx
 from phart import ASCIIRenderer, NodeStyle
 G = nx.balanced_tree(2, 2, create_using=nx.DiGraph)
-renderer = ASCIIRenderer(G, inode_style=NodeStyle.SQUARE)
+renderer = ASCIIRenderer(G, node_style=NodeStyle.SQUARE)
 print(renderer.render())
 ```
+
 and when we run that tiny script, we see:
+
 ```bash
 $ python balanced_tree.py
 ```
+
 ```
           [0]
     ┌──────┴──────┐
@@ -111,14 +117,15 @@ $ python balanced_tree.py
 [3]    [4]    [5]    [6]
 ```
 
-----
+---
 
 ### Output options
 
-phart has lots of output options. Here's a good use for the **cli** as I described above. 
+phart has lots of output options. Here's a good use for the **cli** as I described above.
 We can test other options, without having to edit that python script we just wrote.
 
 Let's see how the balanced tree looks with the nodes in bounding boxes:
+
 ```bash
 $ phart balanced_tree.py --bbox --hpad 2 --style minimal --layer-spacing 3  --ascii
                 +-----+
@@ -139,7 +146,7 @@ $ phart balanced_tree.py --bbox --hpad 2 --style minimal --layer-spacing 3  --as
 We can increasae the space between "layers" of nodes, we can move the edges to connect to/from "ports" on the most efficient side of the nodes, and we can render in unicode, using the same script, by passing the options via the command-line until we find what we like:
 
 ```
-$ phart balanced_tree.py --bbox --hpad 2 --style minimal --layer-spacing 4 --edge-anchors ports    
+$ phart balanced_tree.py --bbox --hpad 2 --style minimal --layer-spacing 4 --edge-anchors ports
                 ┌─────┐
                 │  0  │
                 └─────┘
@@ -156,7 +163,8 @@ $ phart balanced_tree.py --bbox --hpad 2 --style minimal --layer-spacing 4 --edg
 │  3  │    │  4  │    │  5  │    │  6  │
 └─────┘    └─────┘    └─────┘    └─────┘
 ```
-We can put a NodeStyle around our label, and put a bounding box around that, and have all 
+
+We can put a NodeStyle around our label, and put a bounding box around that, and have all
 edges come out of the center of the boxes.
 
 ```
@@ -180,16 +188,17 @@ $ phart balanced_tree.py --bbox --hpad 0 --style round --layer-spacing 4 --edge-
 
 Let's look a slightly more interesting graph, courtesy of phart user @deostroll, in the [Discussions](https://github.com/scottvr/phart/discussions/15).
 
-His script generates a Collatz Tree, and takes an argument for the depth for which you wish to calculate terms. As you will see, we can pass arguments for the **phart cli** to use as 
-arguments for the script you've given it as an input file.  We will just separate the
+His script generates a Collatz Tree, and takes an argument for the depth for which you wish to calculate terms. As you will see, we can pass arguments for the **phart cli** to use as
+arguments for the script you've given it as an input file. We will just separate the
 switches meant for phart from any switches meant for the script it is loading by an extra
- `--`, like so:
+`--`, like so:
 
-`phart --charset unicode --style minimal  --hpad 1 --binary-tree 
-  --node-spacing 1 --layer-spacing 4  --vpad 0  --edge-anchors ports --bboxes 
+`phart --charset unicode --style minimal  --hpad 1 --binary-tree
+  --node-spacing 1 --layer-spacing 4  --vpad 0  --edge-anchors ports --bboxes
   deostroll/collatz.py -- 3`
 
 This results in the following graph:
+
 ```
                     ┌───┐
                     │ 1 │
@@ -219,13 +228,15 @@ This results in the following graph:
 │ L1 │    │ L2 │
 └────┘    └────┘
 ```
-You can see that all of the number terms are on the left, while Leaves, Zero, Fractals, 
-etc  are to the right (and also the terminal Leaves at the bottom of the tree.)
+
+You can see that all of the number terms are on the left, while Leaves, Zero, Fractals,
+etc are to the right (and also the terminal Leaves at the bottom of the tree.)
 
 We can see what this graph would look like without the binary-tree sorting (which respects "side" properties such as "left" and "right" in your graph.) We'll pass a `4` to deostroll's `collatz.py`, this time with ascii output, and a simple "diamond" styling, without the "left/right" properties being read:
 
 `phart --charset unicode --layer-spacing 4  --vpad 0 --style diamond  --charset ascii deostroll/collatz.py -- 4`
 This gives us:
+
 ```
                       <001>
                         +----+
@@ -253,7 +264,7 @@ This gives us:
 There are plenty more examples in the repo, along with a README in the examples/ directory
 that includes the output of a very early release of phart.
 
-----
+---
 
 ## NEW! Feb 2026 - Layout Strategies
 
@@ -267,13 +278,13 @@ The acronym was a fortuitous accident from the non-abbreviated words that the le
 ### Really, why?
 
 When I point out that phart is not a Perl or a PHP webapp, it may appear that I am
-*throwing shade* at the existing solutions, but it is meant in a good-hearted way. 
-Wrapping the OG perl Graph::Easy is a straightforward way to go about it, and a web interface to the same is a project I might create have created as well, but it is no 
-longer a certainty that a system you are working on will have Perl installed these days, 
-and spinning up a Docker container in order to add ascii line art graph visualizations to 
-a python tool seemed a bit excessive, *even for me.*
+_throwing shade_ at the existing solutions, but it is meant in a good-hearted way.
+Wrapping the OG perl Graph::Easy is a straightforward way to go about it, and a web interface to the same is a project I might create have created as well, but it is no
+longer a certainty that a system you are working on will have Perl installed these days,
+and spinning up a Docker container in order to add ascii line art graph visualizations to
+a python tool seemed a bit excessive, _even for me._
 
-Also, I'm not sure how I didn't find *pydot2ascii* - which is native python - when I first
+Also, I'm not sure how I didn't find _pydot2ascii_ - which is native python - when I first
 looked for a solution, but even if I had, it may not have obvious to me that I could have
 exported my NX DAG to DOT, and then used pydot2ascii to go from DOT to an ascii diagram.
 
@@ -284,10 +295,13 @@ So, for better or worse, we have PHART, and the ability to render a NX digraph i
 requires Python >= 3.10 and NetworkX >= 3.3
 
 From PyPi (the phart package there is out of date at the moment):
+
 ```bash
 pip install phart
 ```
+
 Or for the latest version:
+
 ```
 git clone https://github.com/scottvr/phart
 cd phart
@@ -298,11 +312,12 @@ pip install .
 ```
 
 ## The CLI
-```bash
+
+````bash
 usage: phart [-h] [--output OUTPUT] [--style {minimal,square,round,diamond,custom,bbox}]
              [--node-spacing NODE_SPACING] [--layer-spacing LAYER_SPACING]
              [--charset {ascii,ansi,unicode}] [--ascii] [--function FUNCTION] [--binary-tree]
-             [--layout {arf,auto,bfs,bipartite,circular,hierarchical,kamada-kawai,multipartite,planar,random,shell,spiral,spring,vertical}]
+             [--layout {arf,auto,bfs,bipartite,btree,circular,hierarchical,kamada-kawai,layered,multipartite,planar,random,shell,spiral,spring,vertical}]
              [--flow-direction {down,up,left,right}] [--bboxes] [--hpad HPAD] [--vpad VPAD]
              [--uniform] [--edge-anchors {auto,center,ports}] [--labels]
              [--colors {attr,none,path,source,target}] [--edge-color-rule RULE]
@@ -327,8 +342,8 @@ options:
   --ascii               Force ASCII output (deprecated, use --charset ascii instead)
   --function, -f FUNCTION
                         Function to call in Python file (default: main)
-  --binary-tree         Enable binary tree layout (respects edge 'side' attributes)
-  --layout, --layout-strategy {auto,arf,bfs,bipartite,circular,hierarchical,kamada-kawai,multipartite,planar,random,shell,spiral,spring,vertical}
+  --binary-tree         Shortcut to enable binary tree layout (respects edge 'side' attributes for left/right)
+  --layout, --layout-strategy {auto,arf,bfs,bipartite,btree,circular,hierarchical,kamada-kawai,layered,multipartite,planar,random,shell,spiral,spring,vertical}
                         Node positioning strategy (default: auto - legacy hierarchical, vertical for triads)
   --flow-direction, --flow {down,up,left,right}
                         Layout flow direction: down (default, root at top), up (root at
@@ -347,7 +362,7 @@ options:
   --edge-color-rule RULE
                         Attribute-driven edge color rule for --colors attr. Format:
                         <attribute>:<value>=<color>[,<value>=<color>...] (repeatable)```
-```
+````
 
 ## Quick Start
 
@@ -372,14 +387,14 @@ def create_circular_deps():
             G.add_edge(package, dep)
 
     return G
-     
+
 def main():
     # Circular dependencies
     print("\nCircular Dependencies:")
     G = create_circular_deps()
     renderer = ASCIIRenderer(G)
-    print(renderer.render())     
-     
+    print(renderer.render())
+
 if __name__ == "__main__":
     main()
 ```
@@ -410,8 +425,6 @@ The renderer shows edge direction using arrows:
 Speaking of "circular", there's a bunch of exampels of the Circular Layout strategy, among with many others in a documented dedicated to that purpose.
 
 See [LAYOUT-STRATEGIES.md](https://github.com/scottvr/phart/blob/main/LAYOUT-STRATEGIES.md) in the repo for these demos.
-   
-
 
 # Extras
 
@@ -425,6 +438,7 @@ See [LAYOUT-STRATEGIES.md](https://github.com/scottvr/phart/blob/main/LAYOUT-STR
   older terminals that support ANSI colors but not Unicode line-art)
 
 ## File Format Support
+
 ### DOT Files
 
 - DOT file support
@@ -441,6 +455,7 @@ pip install -r requirements\extra.txt
 ```
 
 ### DOT Example
+
 ```bash
 $ python
 >>> from phart import ASCIIRenderer
@@ -508,7 +523,7 @@ phart graph.py --charset ascii --style round
 
 - Command-line options will override general settings (like --charset or --style)
 - Custom settings (like custom_decorators) are ~~never~~mostly never overridden by command-line defaults. Sometimes you can even combine multiple conflicting style options
-to interesting effect. (I will get around to fixing those things.)
+  to interesting effect. (I will get around to fixing those things.)
 
 This means you can set specific options in your code while still using command-line
 options to adjust general rendering settings.
