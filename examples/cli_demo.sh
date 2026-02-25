@@ -1,11 +1,11 @@
 #/bin/bash
 
-echo "### Demonstration of ALL layout strategies:"
+echo "### Demonstration of layout strategies:"
 read -n 1 -s -r -p "Press 'y' to proceed or any other to skip to next step" yn
 case "$yn" in
     [Yy])
-    echo;
-    echo "Using the Graph from GitHub Issue #7"
+    echo ""
+    echo " ALL layouts using Graph from GitHub Issue #7"
     for charset in ascii ansi unicode;
         do
             echo "## ${charset} demos";
@@ -15,28 +15,31 @@ case "$yn" in
                     for x in arf auto bfs bipartite btree circular hierarchical kamada-kawai layered multipartite planar random shell spiral spring vertical ;
                         do
                         echo "# ${x}";
-                        phart issue_7.py  --layout ${x} --hpad 0 --vpad 1 --layer-spacing 4 --node-spacing 3 --labels  --colors attr  --edge-anchors ports --edge-color-rule relationship:friend=green,enemy=red --bbox --uniform --charset ${charset} ;
+                        phart issue_7.py  --layout ${x} --hpad 1 --vpad 1 --layer-spacing 4 --node-spacing 3 --labels  --colors attr  --edge-anchors ports --edge-color-rule relationship:friend=green,enemy=red --bbox --uniform --charset ${charset} ;
                         done
             ;;
             *) echo;;
             esac
         done
-    echo;
-    echo "Using the Graph from GitHub Issue #8"
+    echo "";
+    echo "ALL layouts using the Graph from GitHub Issue #8"
     for charset in ascii ansi unicode;
         do
+            echo ""
             echo "## ${charset} demos";
             read -n 1 -s -r -p "Press 'y' to proceed or any other to skip to next step" yn
             case "$yn" in
-                [Yy]);;
-                *) break;;
-            esac
-            for x in arf auto bfs bipartite btree circular hierarchical kamada-kawai layered multipartite planar random shell spiral spring vertical ;
+                [Yy])
+                echo ""
+            for x in auto circular planar shell spring vertical ;
                 do
                     echo "# ${x}";
-                    phart issue_7.py  --layout ${x} --labels  --colors attr  --edge-anchors ports --edge-color-rule relationship:friend=green,enemy=red --bbox --uniform --charset ${charset} ;
+                    phart issue_8.py  --layout ${x} --hpad 2 --vpad 1 --layer-spacing 4 --node-spacing 3 --labels  --colors attr  --edge-anchors ports --edge-color-rule relationship:friend=green,enemy=red --bbox --uniform --charset ${charset} ;
                 done
-            done
+            ;;
+                *);;
+            esac
+        done
         ;;
     *) echo "";;
 esac
