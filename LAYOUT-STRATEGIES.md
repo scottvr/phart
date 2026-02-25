@@ -7,6 +7,7 @@ Supported modes are:
 - **layered** - Most strategies have this as a fallback. Nodes are assigned to topological layers (for DAGs) or BFS-like depth layers (for cyclic/non-DAG directed graphs), then centered per layer.
 - **bfs** - Breadth-First Search
 - **bipartite** - Arrange the node in two straight lines.
+- **btree** - Arrange the nodes as a tree, respecting left/right 'side' attributes on edges.
 - **circular** - Arrange the nodes in a circular layout.
 - **kamada-kawai** - Positions nodes using Kamada-Kawai path-length cost function. (requires scipy)
 - **spring** - Position nodes using Fruchterman-Reingold force-directed algorithm. (fallback for kamada-kawai if scipy not available.)

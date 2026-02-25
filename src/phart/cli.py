@@ -18,6 +18,7 @@ LAYOUT_STRATEGIES = {
     "auto",
     "bfs",
     "bipartite",
+    "btree",
     "circular",
     "planar",
     "kamada-kawai",
@@ -126,6 +127,7 @@ def parse_args() -> tuple[argparse.Namespace, list[str]]:
     )
     parser.add_argument(
         "--binary-tree",
+        "--btree",
         action="store_true",
         help="Enable binary tree layout (respects edge 'side' attributes)",
     )
@@ -284,6 +286,9 @@ def create_layout_options(args: argparse.Namespace) -> LayoutOptions:
     if edge_color_rules and color_mode != "attr":
         raise ValueError("--edge-color-rule requires --colors attr")
     use_ascii = args.charset in {CharSet.ASCII, CharSet.ANSI} or args.use_legacy_ascii
+    if args.layout_strategy == "btree":
+        args.binary_tree = True
+        args.layout_strategy == "auto"
     allow_ansi_in_ascii = args.charset == CharSet.ANSI and not args.use_legacy_ascii
     return LayoutOptions(
         node_style=node_style,
@@ -389,7 +394,7 @@ def main() -> Optional[int]:
         else:
             if unknown:
                 print(
-                    f"Error: unrecognized arguments: {' '.join(unknown)}",
+                    f"Error: unrecognized arguments: {' '.join(unknown)} (incorrect arg to option {''.join(sys.argv[:2][1:])} maybe?)",
                     file=sys.stderr,
                 )
                 return 2

@@ -238,6 +238,7 @@ class LayoutOptions:
             "auto",
             "bfs",
             "bipartite",
+            "btree",
             "circular",
             "planar",
             "kamada_kawai",
@@ -252,7 +253,7 @@ class LayoutOptions:
             "layered",
         }:
             raise ValueError(
-                "layout_strategy must be one of: legacy, bfs, bipartite, circular, hierarchical, layered, "
+                "layout_strategy must be one of: legacy, bfs, bipartite, btree, circular, hierarchical, layered, "
                 "planar, kamada_kawai, spring, arf, spiral, shell, random, multipartite, vertical"
             )
 
