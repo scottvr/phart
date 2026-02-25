@@ -165,6 +165,8 @@ class LayoutOptions:
         """Validate and normalize configuration values."""
         self.instance_id = LayoutOptions._instance_counter
         LayoutOptions._instance_counter += 1
+        # Track whether caller explicitly requested a non-default node style.
+        self._node_style_explicit = self.node_style is not None
 
         if self.node_style is None:
             # Keep boxed mode compact by default unless style is explicitly requested.
@@ -200,6 +202,8 @@ class LayoutOptions:
             )
         if self.node_style == NodeStyle.BBOX:
             self.bboxes = True
+            # "bbox" style alias means boxed nodes with minimal inner decorators.
+            self.node_style = NodeStyle.MINIMAL
 
         # Validate core spacing parameters
         if self.node_spacing < 1:

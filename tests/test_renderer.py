@@ -1137,6 +1137,11 @@ class TestLayoutOptions(unittest.TestCase):
         options = LayoutOptions(bboxes=True)
         self.assertEqual(options.node_style, NodeStyle.MINIMAL)
 
+    def test_style_bbox_alias_enables_boxes_with_minimal_inner_style(self):
+        options = LayoutOptions(node_style="bbox", use_ascii=True)
+        self.assertTrue(options.bboxes)
+        self.assertEqual(options.node_style, NodeStyle.MINIMAL)
+
     def test_invalid_box_padding(self):
         with self.assertRaises(ValueError):
             LayoutOptions(hpad=-1)
@@ -1204,6 +1209,24 @@ class TestLayoutOptions(unittest.TestCase):
         setattr(cli_options, "_explicit_cli_fields", {"use_ascii"})
         merged = merge_layout_options(script_options, cli_options)
         self.assertTrue(merged.binary_tree_layout)
+
+    def test_merge_layout_options_bboxes_cli_uses_minimal_when_script_style_implicit(
+        self,
+    ):
+        script_options = LayoutOptions(use_ascii=True)
+        cli_options = LayoutOptions(bboxes=True, use_ascii=True)
+        setattr(cli_options, "_explicit_cli_fields", {"bboxes"})
+        merged = merge_layout_options(script_options, cli_options)
+        self.assertTrue(merged.bboxes)
+        self.assertEqual(merged.node_style, NodeStyle.MINIMAL)
+
+    def test_merge_layout_options_bboxes_cli_preserves_explicit_script_style(self):
+        script_options = LayoutOptions(node_style=NodeStyle.ROUND, use_ascii=True)
+        cli_options = LayoutOptions(bboxes=True, use_ascii=True)
+        setattr(cli_options, "_explicit_cli_fields", {"bboxes"})
+        merged = merge_layout_options(script_options, cli_options)
+        self.assertTrue(merged.bboxes)
+        self.assertEqual(merged.node_style, NodeStyle.ROUND)
 
 
 if __name__ == "__main__":

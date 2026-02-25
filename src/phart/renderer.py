@@ -1535,9 +1535,26 @@ def merge_layout_options(
         # For rendering fields: CLI (override) takes precedence if not None
         if field_name in rendering_fields:
             if has_explicit_field_metadata:
-                merged_dict[field_name] = (
-                    override_val if field_name in explicit_cli_fields else base_val
-                )
+                if field_name == "node_style":
+                    if field_name in explicit_cli_fields:
+                        merged_dict[field_name] = override_val
+                    elif "bboxes" in explicit_cli_fields and bool(
+                        override_dict.get("bboxes")
+                    ):
+                        # When CLI explicitly enables bboxes but does not set style,
+                        # preserve explicit script styles, otherwise default to minimal.
+                        base_style_explicit = bool(
+                            getattr(base, "_node_style_explicit", False)
+                        )
+                        merged_dict[field_name] = (
+                            base_val if base_style_explicit else NodeStyle.MINIMAL
+                        )
+                    else:
+                        merged_dict[field_name] = base_val
+                else:
+                    merged_dict[field_name] = (
+                        override_val if field_name in explicit_cli_fields else base_val
+                    )
             else:
                 merged_dict[field_name] = (
                     override_val if override_val is not None else base_val

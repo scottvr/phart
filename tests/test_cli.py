@@ -121,14 +121,13 @@ def main():
         self.py_bbox_override_file = Path(self.temp_dir) / "test_bbox_override.py"
         bbox_override_content = """
 import networkx as nx
-from phart import ASCIIRenderer, LayoutOptions, NodeStyle
+from phart import ASCIIRenderer, LayoutOptions
 
 def main():
     G = nx.DiGraph()
     G.add_edge("A", "B")
     options = LayoutOptions(
         bboxes=False,
-        node_style=NodeStyle.MINIMAL,
         use_ascii=True,
     )
     renderer = ASCIIRenderer(G, options=options)
@@ -378,6 +377,8 @@ def main():
         self.assertEqual(exit_code, 0)
         output = self.stdout.getvalue()
         self.assertIn("+", output)
+        self.assertNotIn("[A]", output)
+        self.assertNotIn("[B]", output)
         self.assertNotIn("Error", self.stderr.getvalue())
 
     def test_bbox_flags(self):
