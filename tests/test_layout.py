@@ -26,6 +26,78 @@ class TestLayoutManager(unittest.TestCase):
 
         self.assertLess(positions["Z"][0], positions["A"][0])
 
+    def test_asymmetric_tree_top_layer_is_compact(self):
+        """Top siblings should not be pushed wider than required by overlap."""
+        graph = nx.DiGraph()
+        graph.add_edge("1", "2", side="left")
+        graph.add_edge("1", "Z1", side="right")
+        graph.add_edge("2", "4", side="left")
+        graph.add_edge("2", "F1", side="right")
+        graph.add_edge("4", "8", side="left")
+        graph.add_edge("4", "E1", side="right")
+        graph.add_edge("8", "L1", side="left")
+        graph.add_edge("8", "L2", side="right")
+
+        options = LayoutOptions(
+            binary_tree_layout=True,
+            layout_strategy="hierarchical",
+            node_style=NodeStyle.MINIMAL,
+            node_spacing=5,
+            use_ascii=True,
+        )
+        manager = LayoutManager(graph, options)
+        positions, _, _ = manager.calculate_layout()
+
+        top_gap = (
+            positions["Z1"][0]
+            - (positions["2"][0] + manager._get_node_width("2") - 1)  # noqa: SLF001
+            - 1
+        )
+        lower_gap = (
+            positions["L2"][0]
+            - (positions["L1"][0] + manager._get_node_width("L1") - 1)  # noqa: SLF001
+            - 1
+        )
+
+        self.assertEqual(top_gap, options.node_spacing)
+        self.assertEqual(lower_gap, options.node_spacing)
+
+    def test_subtree_compaction_expands_only_when_descendant_overlap_requires_it(self):
+        """Sibling gap can widen only when deeper descendant rows would collide."""
+        graph = nx.DiGraph()
+        graph.add_edge("ROOT", "LEFTLONG", side="left")
+        graph.add_edge("ROOT", "R", side="right")
+        graph.add_edge("LEFTLONG", "F1", side="right")
+        graph.add_edge("R", "ZLEFTLONG", side="left")
+
+        options = LayoutOptions(
+            binary_tree_layout=True,
+            layout_strategy="hierarchical",
+            node_style=NodeStyle.MINIMAL,
+            node_spacing=4,
+            use_ascii=True,
+        )
+        manager = LayoutManager(graph, options)
+        positions, _, _ = manager.calculate_layout()
+
+        depth_one_gap = (
+            positions["R"][0]
+            - (
+                positions["LEFTLONG"][0]
+                + manager._get_node_width("LEFTLONG")  # noqa: SLF001
+                - 1
+            )
+            - 1
+        )
+        depth_two_gap = (
+            positions["ZLEFTLONG"][0]
+            - (positions["F1"][0] + manager._get_node_width("F1") - 1)  # noqa: SLF001
+            - 1
+        )
+
+        self.assertGreater(depth_one_gap, options.node_spacing)
+        self.assertEqual(depth_two_gap, options.node_spacing)
+
     def test_dense_triad_uses_vertical_layout_path(self):
         """Dense 3-node digraphs should trigger vertical layout scoring path."""
         graph = nx.DiGraph(

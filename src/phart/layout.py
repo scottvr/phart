@@ -448,83 +448,142 @@ class LayoutManager:
 
         return transformed
 
-    def _get_subtree_width(
-        self,
-        graph: nx.DiGraph,
-        node: Any,
-        spacing: int,
-        cache: Dict,
-    ) -> int:
-        """Recursively compute the minimum x-width a subtree needs.
-
-        A leaf node needs exactly its own display width.
-        An internal node needs the sum of its children's subtree widths plus
-        the spacing gaps between them, with a minimum of its own display width
-        so the parent label is never wider than its allocated slot.
-        """
-        if node in cache:
-            return int(cache[node])
-
+    def _ordered_children_for_subtree(
+        self, graph: nx.DiGraph, node: Any
+    ) -> List[Any]:
+        """Get deterministic child order for subtree placement."""
         children = list(graph.successors(node))
         if not children:
-            w = self._get_node_width(node)
-        else:
-            total = sum(
-                self._get_subtree_width(graph, c, spacing, cache) for c in children
+            return []
+        if self.options.binary_tree_layout:
+            return self._binary_tree_node_sorter(
+                graph,
+                layer=0,
+                nodes=set(children),
+                positions={node: (0, 0)},
             )
-            total += spacing * (len(children) - 1)
-            w = max(total, self._get_node_width(node))
+        return sorted(children, key=lambda n: str(n))
 
-        cache[node] = w
-        return w
+    def _build_subtree_contours(
+        self, positions: Dict[Any, Tuple[int, int]], layer_height: int
+    ) -> Tuple[Dict[int, int], Dict[int, int]]:
+        """Build per-depth left/right contours for a subtree layout."""
+        left_contour: Dict[int, int] = {}
+        right_contour: Dict[int, int] = {}
+
+        for subtree_node, (x, y) in positions.items():
+            depth = y // layer_height if layer_height > 0 else 0
+            right_x = x + self._get_node_width(subtree_node) - 1
+            left_contour[depth] = min(left_contour.get(depth, x), x)
+            right_contour[depth] = max(right_contour.get(depth, right_x), right_x)
+
+        return left_contour, right_contour
+
+    @staticmethod
+    def _required_subtree_shift(
+        occupied_right_contour: Dict[int, int],
+        next_left_contour: Dict[int, int],
+        spacing: int,
+    ) -> int:
+        """Compute minimum x-shift needed to avoid overlap with prior siblings."""
+        shift = 0
+        for child_depth, child_left_x in next_left_contour.items():
+            parent_depth = child_depth + 1
+            occupied_right_x = occupied_right_contour.get(parent_depth)
+            if occupied_right_x is None:
+                continue
+            needed = occupied_right_x + spacing + 1 - child_left_x
+            shift = max(shift, needed)
+        return max(0, shift)
 
     def _layout_subtree(
         self,
         graph: nx.DiGraph,
         node: Any,
-        x_left: int,
-        y: int,
         spacing: int,
-        subtree_widths: Dict,
-        positions: Dict,
         layer_height: int,
-    ) -> None:
-        """Recursively assign positions so each node is centred over its subtree."""
+    ) -> Tuple[Dict[Any, Tuple[int, int]], Dict[int, int], Dict[int, int], int]:
+        """Recursively assign compact positions and depth contours for a subtree."""
+        children_sorted = self._ordered_children_for_subtree(graph, node)
         my_width = self._get_node_width(node)
-        slot_width = subtree_widths[node]
 
-        # Centre the node label within its allocated slot
-        node_x = x_left + (slot_width - my_width) // 2
-        positions[node] = (node_x, y)
+        if not children_sorted:
+            positions = {node: (0, 0)}
+            left_contour = {0: 0}
+            right_contour = {0: my_width - 1}
+            root_center = my_width // 2
+            return positions, left_contour, right_contour, root_center
 
-        children = list(graph.successors(node))
-        if not children:
-            return
-
-        # Sort children: respect left/right attributes when binary_tree_layout
-        # is enabled, otherwise sort alphabetically.
-        if self.options.binary_tree_layout:
-            children_sorted = self._binary_tree_node_sorter(
-                graph, y // layer_height, set(children), positions
-            )
-        else:
-            children_sorted = sorted(children, key=lambda n: str(n))
-
-        # Assign each child its slice of the horizontal space
-        cx = x_left
+        child_layouts: List[
+            Tuple[Any, Dict[Any, Tuple[int, int]], Dict[int, int], Dict[int, int], int]
+        ] = []
         for child in children_sorted:
-            child_slot = subtree_widths[child]
-            self._layout_subtree(
-                graph,
-                child,
-                cx,
-                y + layer_height,
-                spacing,
-                subtree_widths,
-                positions,
-                layer_height,
+            child_layouts.append(
+                (child, *self._layout_subtree(graph, child, spacing, layer_height))
             )
-            cx += child_slot + spacing
+
+        occupied_right_contour: Dict[int, int] = {}
+        placed_children: List[
+            Tuple[Any, Dict[Any, Tuple[int, int]], Dict[int, int], Dict[int, int], int, int]
+        ] = []
+        child_root_centers: List[int] = []
+
+        for idx, (
+            child,
+            child_positions,
+            child_left_contour,
+            child_right_contour,
+            child_root_center,
+        ) in enumerate(child_layouts):
+            if idx == 0:
+                child_offset = 0
+            else:
+                child_offset = self._required_subtree_shift(
+                    occupied_right_contour, child_left_contour, spacing
+                )
+
+            for child_depth, child_right_x in child_right_contour.items():
+                parent_depth = child_depth + 1
+                shifted_right_x = child_right_x + child_offset
+                occupied_right_contour[parent_depth] = max(
+                    occupied_right_contour.get(parent_depth, shifted_right_x),
+                    shifted_right_x,
+                )
+
+            child_root_centers.append(child_root_center + child_offset)
+            placed_children.append(
+                (
+                    child,
+                    child_positions,
+                    child_left_contour,
+                    child_right_contour,
+                    child_root_center,
+                    child_offset,
+                )
+            )
+
+        root_center = (child_root_centers[0] + child_root_centers[-1]) // 2
+        root_x = root_center - (my_width // 2)
+
+        positions: Dict[Any, Tuple[int, int]] = {node: (root_x, 0)}
+        for (
+            _child,
+            child_positions,
+            _child_left_contour,
+            _child_right_contour,
+            _child_root_center,
+            child_offset,
+        ) in placed_children:
+            for child_node, (child_x, child_y) in child_positions.items():
+                positions[child_node] = (
+                    child_x + child_offset,
+                    child_y + layer_height,
+                )
+
+        left_contour, right_contour = self._build_subtree_contours(
+            positions, layer_height
+        )
+        return positions, left_contour, right_contour, root_center
 
     def _layout_hierarchical(
         self, graph: nx.DiGraph, spacing: int
@@ -571,36 +630,33 @@ class LayoutManager:
                 graph, spacing, layer_height, layer_mode="auto"
             )
 
-        # Subtree-aware (Reingold-Tilford-style) layout.
-        #
-        # Every node is centred over its own subtree's horizontal territory,
-        # guaranteeing that sibling subtrees never share x-space and edge
-        # routing between layers cannot be confused with sibling connections.
-        #
-        # For directed graphs with a single root this is exact.
-        # For multi-root directed graphs or undirected graphs each root gets
-        # its own subtree block laid out left-to-right.
-        # For DAGs where a node has multiple parents the node's subtree width
-        # may be over-counted (once per parent path), resulting in extra
-        # horizontal whitespace — a harmless trade-off for unambiguous routing.
-        #
-        # binary_tree_layout controls only child *sort order*:
-        #   True  → respect 'side'/'position'/'dir'/'child' edge attributes
-        #   False → alphabetical
-
-        subtree_widths: Dict = {}
-        for root in roots:
-            self._get_subtree_width(graph, root, spacing, subtree_widths)
-
+        # Compact subtree layout:
+        # Place sibling subtrees with the minimum shift required to avoid
+        # overlap at shared depths, then center each parent over its children.
         positions: Dict[str, Tuple[int, int]] = {}
-        cx = 0
+        next_left_x = 0
         for root in roots:
-            self._layout_subtree(
-                graph, root, cx, 0, spacing, subtree_widths, positions, layer_height
+            (
+                subtree_positions,
+                left_contour,
+                right_contour,
+                _root_center,
+            ) = self._layout_subtree(
+                graph, root, spacing, layer_height
             )
-            cx += subtree_widths[root] + spacing
+            if not subtree_positions:
+                continue
 
-        return positions
+            subtree_left = min(left_contour.values(), default=0)
+            subtree_right = max(right_contour.values(), default=0)
+            shift_x = next_left_x - subtree_left
+
+            for subtree_node, (x, y) in subtree_positions.items():
+                positions[subtree_node] = (x + shift_x, y)
+
+            next_left_x = subtree_right + shift_x + spacing + 1
+
+        return self._normalize_positions_to_origin(positions)
 
     def _layout_bfs(
         self, graph: nx.DiGraph, spacing: int
