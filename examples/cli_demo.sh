@@ -11,15 +11,16 @@ case "$yn" in
             echo "## ${charset} demos";
             read -n 1 -s -r -p "Press 'y' to proceed or any other to skip to next step" yn
             case "$yn" in
-                [Yy]);;
-                *) break;;
+                [Yy])
+                    for x in arf auto bfs bipartite btree circular hierarchical kamada-kawai layered multipartite planar random shell spiral spring vertical ;
+                        do
+                        echo "# ${x}";
+                        phart issue_7.py  --layout ${x} --hpad 0 --vpad 1 --layer-spacing 4 --node-spacing 3 --labels  --colors attr  --edge-anchors ports --edge-color-rule relationship:friend=green,enemy=red --bbox --uniform --charset ${charset} ;
+                        done
+            ;;
+            *) echo;;
             esac
-            for x in arf auto bfs bipartite btree circular hierarchical kamada-kawai layered multipartite planar random shell spiral spring vertical ;
-                do
-                    echo "# ${x}";
-                    phart issue_7.py  --layout ${x} --labels  --colors attr  --edge-anchors ports --edge-color-rule relationship:friend=green,enemy=red --bbox --uniform --charset ${charset} ;
-                done
-            done
+        done
     echo;
     echo "Using the Graph from GitHub Issue #8"
     for charset in ascii ansi unicode;
@@ -43,6 +44,10 @@ esac
 
 echo ""
 echo "### Demonstration of various layout options using a Collatz tree."
+read -n 1 -s -r -p "Press 'y' to proceed or any other to skip to next step" yn
+case "$yn" in
+    [Yy])
+    echo;
 
     cmd="phart  --layer-spacing 4 --btree collatz.py -- 4"
     echo "${cmd}"
@@ -91,7 +96,7 @@ echo "### Demonstration of various layout options using a Collatz tree."
         *)
     esac
 
-    cmd="phart --colors attr --edge-color-rule side:left=bright_green,right=red --layout bfs --bbox --layer-spacing 4 --btree --edge-anchors ports --uniform  collatz.py -- 4"
+    cmd="phart --colors attr --edge-color-rule side:left=bright_green,right=red --bbox --layer-spacing 4 --btree --edge-anchors ports --uniform  collatz.py -- 4"
     echo
     echo "${cmd}"
     read -n 1 -s -r -p "Press 'y' to proceed or any other to skip to next step: " yn
@@ -102,6 +107,7 @@ echo "### Demonstration of various layout options using a Collatz tree."
         ;;
         *)
     esac
-
-   ;;
-   *);;
+    ;;
+    *)
+;;
+esac
