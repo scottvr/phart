@@ -623,6 +623,51 @@ class TestASCIIRenderer(unittest.TestCase):
         self.assertNotEqual(a_to_b_start[1], b_to_a_end[1])
         self.assertNotEqual(a_to_b_end[1], b_to_a_start[1])
 
+    def test_edge_anchor_center_prefers_horizontal_sides_for_near_aligned_boxes(self):
+        graph = nx.DiGraph([("A", "B")])
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                bboxes=True,
+                hpad=1,
+                vpad=1,
+                edge_anchor_mode="center",
+                use_ascii=True,
+                layer_spacing=4,
+            ),
+        )
+        positions = {"A": (0, 0), "B": (18, 1)}
+        start_anchor, end_anchor = renderer._get_edge_anchor_points("A", "B", positions)  # noqa: SLF001
+        a_bounds = renderer._get_node_bounds("A", positions)  # noqa: SLF001
+        b_bounds = renderer._get_node_bounds("B", positions)  # noqa: SLF001
+
+        self.assertEqual(start_anchor[0], a_bounds["right"])
+        self.assertEqual(end_anchor[0], b_bounds["left"])
+        self.assertEqual(start_anchor[1], end_anchor[1])
+        self.assertGreater(start_anchor[1], a_bounds["top"])
+        self.assertLess(start_anchor[1], a_bounds["bottom"])
+
+    def test_edge_anchor_ports_aligns_rows_for_near_aligned_boxes(self):
+        graph = nx.DiGraph([("A", "B")])
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                bboxes=True,
+                hpad=1,
+                vpad=1,
+                edge_anchor_mode="ports",
+                use_ascii=True,
+                layer_spacing=4,
+            ),
+        )
+        positions = {"A": (0, 0), "B": (18, 1)}
+        renderer._edge_anchor_map = renderer._compute_edge_anchor_map(positions)  # noqa: SLF001
+        start_anchor, end_anchor = renderer._get_edge_anchor_points("A", "B", positions)  # noqa: SLF001
+
+        self.assertEqual(start_anchor[1], end_anchor[1])
+
     def test_unicode_boxed_edges_use_line_junction_glyphs(self):
         graph = nx.DiGraph([("Root", "Left"), ("Root", "Right")])
         renderer = ASCIIRenderer(

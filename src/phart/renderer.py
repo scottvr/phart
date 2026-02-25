@@ -489,7 +489,13 @@ class ASCIIRenderer:
         self, start_bounds: Dict[str, int], end_bounds: Dict[str, int]
     ) -> Tuple[str, str]:
         """Choose source/target box sides for an edge based on relative geometry."""
-        if start_bounds["center_y"] == end_bounds["center_y"]:
+        vertical_overlap = max(start_bounds["top"], end_bounds["top"]) <= min(
+            start_bounds["bottom"], end_bounds["bottom"]
+        )
+        if (
+            vertical_overlap
+            and start_bounds["center_x"] != end_bounds["center_x"]
+        ) or (start_bounds["center_y"] == end_bounds["center_y"]):
             if start_bounds["center_x"] <= end_bounds["center_x"]:
                 return "right", "left"
             return "left", "right"
@@ -604,18 +610,43 @@ class ASCIIRenderer:
     ) -> Tuple[Tuple[int, int], Tuple[int, int]]:
         start_bounds = self._get_node_bounds(start, positions)
         end_bounds = self._get_node_bounds(end, positions)
+        start_side, end_side = self._get_edge_sides(start_bounds, end_bounds)
+
+        horizontal_sides = (start_side, end_side) in {
+            ("left", "right"),
+            ("right", "left"),
+        }
+        overlap_top = max(start_bounds["top"], end_bounds["top"])
+        overlap_bottom = min(start_bounds["bottom"], end_bounds["bottom"])
+        has_vertical_overlap = overlap_top <= overlap_bottom
+
+        def _clamp_to_overlap(y_val: int) -> int:
+            return min(max(y_val, overlap_top), overlap_bottom)
 
         if self._should_use_ports_for_edge(start, end):
             cached = self._edge_anchor_map.get((start, end), {})
             start_anchor = cached.get("start")
             end_anchor = cached.get("end")
             if start_anchor is not None and end_anchor is not None:
+                if (
+                    horizontal_sides
+                    and has_vertical_overlap
+                    and start_anchor[1] != end_anchor[1]
+                ):
+                    target_y = _clamp_to_overlap(start_anchor[1])
+                    start_anchor = (start_anchor[0], target_y)
+                    end_anchor = (end_anchor[0], target_y)
                 return start_anchor, end_anchor
 
-        start_side, end_side = self._get_edge_sides(start_bounds, end_bounds)
+        start_anchor = self._get_center_anchor_for_side(start_bounds, start_side)
+        end_anchor = self._get_center_anchor_for_side(end_bounds, end_side)
+        if horizontal_sides and has_vertical_overlap:
+            target_y = (overlap_top + overlap_bottom) // 2
+            start_anchor = (start_anchor[0], target_y)
+            end_anchor = (end_anchor[0], target_y)
         return (
-            self._get_center_anchor_for_side(start_bounds, start_side),
-            self._get_center_anchor_for_side(end_bounds, end_side),
+            start_anchor,
+            end_anchor,
         )
 
     def _draw_node(self, node: Any, x: int, y: int) -> None:
