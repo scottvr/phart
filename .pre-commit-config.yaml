@@ -39,14 +39,15 @@ repos:
     hooks:
       - id: mypy
         name: "mypy 1.19.1"
-        files: ^(src/phart|tests)/
+        files: ^src/phart/
+        exclude: ^examples/
         pass_filenames: true
 
   - repo: local
     hooks:
       - id: pytest-check
         name: pytest-check
-        entry: pytest
+        entry: ./.venv/bin/pytest
         language: system
         types: [python]
         files: ^.*.py

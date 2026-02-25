@@ -926,6 +926,31 @@ class TestASCIIRenderer(unittest.TestCase):
             renderer._node_color_map["C"],  # noqa: SLF001
         )
 
+    def test_edge_color_mode_source_without_node_coloring(self):
+        graph = nx.DiGraph([("A", "B"), ("A", "C"), ("D", "E")])
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=False,
+                ansi_colors=True,
+                edge_color_mode="source",
+                color_nodes=False,
+                bboxes=True,
+                layer_spacing=4,
+            ),
+        )
+        renderer.render()
+        self.assertEqual(renderer._node_color_map, {})  # noqa: SLF001
+        self.assertEqual(
+            renderer._edge_color_map[("A", "B")],  # noqa: SLF001
+            renderer._edge_color_map[("A", "C")],  # noqa: SLF001
+        )
+        self.assertNotEqual(
+            renderer._edge_color_map[("A", "B")],  # noqa: SLF001
+            renderer._edge_color_map[("D", "E")],  # noqa: SLF001
+        )
+
     def test_edge_color_mode_path(self):
         graph = nx.DiGraph([("A", "B"), ("A", "C"), ("B", "D")])
         renderer = ASCIIRenderer(
@@ -985,6 +1010,27 @@ class TestASCIIRenderer(unittest.TestCase):
             renderer._edge_color_map[("Alice", "Bob")],  # noqa: SLF001
             renderer._node_color_map["Alice"],  # noqa: SLF001
         )
+
+    def test_edge_color_mode_attr_fallback_works_without_node_coloring(self):
+        graph = nx.DiGraph()
+        graph.add_edge("Alice", "Bob", relationship="ally")
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=False,
+                ansi_colors=True,
+                edge_color_mode="attr",
+                edge_color_rules={"relationship": {"enemy": "red"}},
+                color_nodes=False,
+                bboxes=True,
+                layer_spacing=4,
+            ),
+        )
+        renderer.render()
+        self.assertEqual(renderer._node_color_map, {})  # noqa: SLF001
+        self.assertIn(("Alice", "Bob"), renderer._edge_color_map)  # noqa: SLF001
+        self.assertIsNotNone(renderer._edge_color_map[("Alice", "Bob")])  # noqa: SLF001
 
     def test_attr_mode_bidirectional_requires_rule_attribute_agreement(self):
         graph = nx.DiGraph()
@@ -1231,6 +1277,13 @@ class TestLayoutOptions(unittest.TestCase):
         setattr(cli_options, "_explicit_cli_fields", {"use_ascii"})
         merged = merge_layout_options(script_options, cli_options)
         self.assertTrue(merged.binary_tree_layout)
+
+    def test_merge_layout_options_respects_explicit_color_nodes_field(self):
+        script_options = LayoutOptions(color_nodes=True, use_ascii=True)
+        cli_options = LayoutOptions(color_nodes=False, use_ascii=True)
+        setattr(cli_options, "_explicit_cli_fields", {"color_nodes"})
+        merged = merge_layout_options(script_options, cli_options)
+        self.assertFalse(merged.color_nodes)
 
     def test_merge_layout_options_bboxes_cli_uses_minimal_when_script_style_implicit(
         self,
