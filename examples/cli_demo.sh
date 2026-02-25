@@ -1,14 +1,107 @@
+#/bin/bash
+
 echo "### Demonstration of ALL layout strategies:"
+read -n 1 -s -r -p "Press 'y' to proceed or any other to skip to next step" yn
+case "$yn" in
+    [Yy])
+    echo;
+    echo "Using the Graph from GitHub Issue #7"
+    for charset in ascii ansi unicode;
+        do
+            echo "## ${charset} demos";
+            read -n 1 -s -r -p "Press 'y' to proceed or any other to skip to next step" yn
+            case "$yn" in
+                [Yy]);;
+                *) break;;
+            esac
+            for x in arf auto bfs bipartite btree circular hierarchical kamada-kawai layered multipartite planar random shell spiral spring vertical ;
+                do
+                    echo "# ${x}";
+                    phart issue_7.py  --layout ${x} --labels  --colors attr  --edge-anchors ports --edge-color-rule relationship:friend=green,enemy=red --bbox --uniform --charset ${charset} ;
+                done
+            done
+    echo;
+    echo "Using the Graph from GitHub Issue #8"
+    for charset in ascii ansi unicode;
+        do
+            echo "## ${charset} demos";
+            read -n 1 -s -r -p "Press 'y' to proceed or any other to skip to next step" yn
+            case "$yn" in
+                [Yy]);;
+                *) break;;
+            esac
+            for x in arf auto bfs bipartite btree circular hierarchical kamada-kawai layered multipartite planar random shell spiral spring vertical ;
+                do
+                    echo "# ${x}";
+                    phart issue_7.py  --layout ${x} --labels  --colors attr  --edge-anchors ports --edge-color-rule relationship:friend=green,enemy=red --bbox --uniform --charset ${charset} ;
+                done
+            done
+        ;;
+    *) echo "";;
+esac
 
-echo "Using the Graph from GitHub Issue #7
-for charset in ascii ansi unicode; do echo "## ${charset}"; for x in arf auto bfs bipartite circular hierarchical kamada-kawai layered multipartite planar random shell spiral spring vertical ; do echo "# ${x}"; phart issue_7.py  --layout ${x} --labels  --colors attr  --edge-anchors ports --edge-color-rule relationship:friend=green,enemy=red --bbox --uniform --charset ${charset} ; done; done
 
-echo "Using the Graph from GitHub Issue #8:"
-for charset in ascii ansi unicode; do for x in arf auto bfs bipartite circular hierarchical kamada-kawai layered multipartite planar random shell spiral spring vertical ; do echo "# ${x}"; phart issue_8.py  --layout ${x} --labels  --colors attr  --edge-anchors ports --edge-color-rule relationship:friend=green,enemy=red --bbox --uniform --charset ${charset} ; done; done
+echo ""
+echo "### Demonstration of various layout options using a Collatz tree."
 
-echo "### Using the Graph from GitHub Discussion #15:"
-for charset in ascii ansi unicode; do for x in arf auto bfs bipartite circular hierarchical kamada-kawai layered multipartite planar random shell spiral spring vertical ; do echo "# ${x}"; phart collatz.py  --layout ${x} --labels  --colors attr  --edge-anchors ports --edge-color-rule relationship:friend=green,enemy=red --bbox --uniform --charset ${charset} ; done; done
+    cmd="phart  --layer-spacing 4 --btree collatz.py -- 4"
+    echo "${cmd}"
+    read -n 1 -s -r -p "Press 'y' to proceed or any other to skip to next step: " yn
+    case "$yn" in
+        [Yy])
+        echo
+        ${cmd}
+        ;;
+        *)
+    esac
 
-echo "########"
+    cmd="phart  --layer-spacing 4 --btree --bbox collatz.py -- 4"
+    echo
+    echo "${cmd}"
+    read -n 1 -s -r -p "Press 'y' to proceed or any other to skip to next step: " yn
+    case "$yn" in
+        [Yy])
+        echo
+        ${cmd}
+        ;;
+        *)
+    esac
 
-echo "### Demonstration of effect of various options:"
+    cmd="phart  --bbox --layer-spacing 4 --btree --edge-anchors ports --uniform collatz.py -- 4"
+    echo
+    echo "${cmd}"
+    read -n 1 -s -r -p "Press 'y' to proceed or any other to skip to next step: " yn
+    case "$yn" in
+        [Yy])
+        echo
+        ${cmd}
+        ;;
+        *)
+    esac
+
+    cmd="phart --layout bfs --bbox --layer-spacing 4 --btree --edge-anchors ports --uniform  collatz.py -- 4"
+    echo
+    echo "${cmd}"
+    read -n 1 -s -r -p "Press 'y' to proceed or any other to skip to next step: " yn
+    case "$yn" in
+        [Yy])
+        echo
+        ${cmd}
+        ;;
+        *)
+    esac
+
+    cmd="phart --colors attr --edge-color-rule side:left=bright_green,right=red --layout bfs --bbox --layer-spacing 4 --btree --edge-anchors ports --uniform  collatz.py -- 4"
+    echo
+    echo "${cmd}"
+    read -n 1 -s -r -p "Press 'y' to proceed or any other to skip to next step: " yn
+    case "$yn" in
+        [Yy])
+        echo
+        ${cmd}
+        ;;
+        *)
+    esac
+
+   ;;
+   *);;
