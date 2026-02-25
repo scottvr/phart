@@ -94,7 +94,7 @@ class LayoutOptions:
         triangle_height_ratio: Height to width ratio for triangles (default 0.866)
     """
 
-    _instance_counter = 0  # Class variable for counting instances
+    _instance_counter: int = 0  # Class variable for counting instances
 
     # Core parameters (existing)
     node_spacing: int = field(default=4)

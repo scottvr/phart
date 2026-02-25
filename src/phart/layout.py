@@ -571,7 +571,7 @@ class LayoutManager:
         root_center = (child_root_centers[0] + child_root_centers[-1]) // 2
         root_x = root_center - (my_width // 2)
 
-        positions: Dict[Any, Tuple[int, int]] = {node: (root_x, 0)}
+        positions = {node: (root_x, 0)}
         for (
             _child,
             child_positions,
