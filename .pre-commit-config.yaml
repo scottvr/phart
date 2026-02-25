@@ -47,6 +47,6 @@ repos:
         entry: pytest
         language: system
         types: [python]
+        files: ^.*.py
         pass_filenames: true
-        files: "src/phart/*.py"
         always_run: true
