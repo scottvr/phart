@@ -27,6 +27,9 @@ LAYOUT_STRATEGIES = {
     "shell",
     "random",
     "multipartite",
+    "hierarchical",
+    "vertical",
+    "layered",
 }
 
 

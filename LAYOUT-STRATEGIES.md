@@ -1,7 +1,10 @@
 # Layout Strategy Examples
 
 Supported modes are:
-- **auto** (default) - This is the original PHART orthogonal/hierarchical layout method.
+- **auto** (default) - This is the original PHART hierarchical layout method with explicit handling of triads vertically.
+- **hierarchical** - This is the legacy hierarchical layout. Falls back to "layered" if cycle detected.
+- **vertical** - This is the legacy "vertical" strategy implemented for explicit handling of triangle graphs.
+- **layered** - Most strategies have this as a fallback. Nodes are assigned to topological layers (for DAGs) or BFS-like depth layers (for cyclic/non-DAG directed graphs), then centered per layer.
 - **bfs** - Breadth-First Search
 - **bipartite** - Arrange the node in two straight lines.
 - **circular** - Arrange the nodes in a circular layout.

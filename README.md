@@ -302,7 +302,7 @@ pip install .
 usage: phart [-h] [--output OUTPUT] [--style {minimal,square,round,diamond,custom,bbox}]
              [--node-spacing NODE_SPACING] [--layer-spacing LAYER_SPACING]
              [--charset {ascii,ansi,unicode}] [--ascii] [--function FUNCTION] [--binary-tree]
-             [--layout {arf,auto,bfs,bipartite,circular,kamada-kawai,multipartite,planar,random,shell,spiral,spring}]
+             [--layout {arf,auto,bfs,bipartite,circular,hierarchical,kamada-kawai,multipartite,planar,random,shell,spiral,spring,vertical}]
              [--flow-direction {down,up,left,right}] [--bboxes] [--hpad HPAD] [--vpad VPAD]
              [--uniform] [--edge-anchors {auto,center,ports}] [--labels]
              [--colors {attr,none,path,source,target}] [--edge-color-rule RULE]
@@ -328,8 +328,8 @@ options:
   --function, -f FUNCTION
                         Function to call in Python file (default: main)
   --binary-tree         Enable binary tree layout (respects edge 'side' attributes)
-  --layout, --layout-strategy {arf,auto,bfs,bipartite,circular,kamada-kawai,multipartite,planar,random,shell,spiral,spring}
-                        Node positioning strategy (default: auto)
+  --layout, --layout-strategy {auto,arf,bfs,bipartite,circular,hierarchical,kamada-kawai,multipartite,planar,random,shell,spiral,spring,vertical}
+                        Node positioning strategy (default: auto - legacy hierarchical, vertical for triads)
   --flow-direction, --flow {down,up,left,right}
                         Layout flow direction: down (default, root at top), up (root at
                         bottom), left (root at right), right (root at left)

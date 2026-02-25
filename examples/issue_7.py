@@ -8,7 +8,5 @@ g.add_edge("Bob", "Alice", relationship="friend")
 g.add_edge("Bob", "Charlie", relationship="friend")  
 g.add_edge("Charlie", "Bob", relationship="enemy")  
 
-#print(g.edges)
-
 renderer = ASCIIRenderer(g)
 print(renderer.render())

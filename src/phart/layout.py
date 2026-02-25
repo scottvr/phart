@@ -368,12 +368,19 @@ class LayoutManager:
             positions = self._layout_random(self.graph, effective_spacing)
         elif strategy == "multipartite":
             positions = self._layout_multipartite(self.graph, effective_spacing)
+        elif strategy == "hierarchical":
+            positions = self._layout_hierarchical(self.graph, effective_spacing)
+        elif strategy == "vertical":
+            positions = self._layout_vertical(self.graph, effective_spacing)
+        elif strategy == "layered":
+            positions = self._layout_layered_fallback(self.graph, effective_spacing, layer_height=self._get_layer_step())
+
         else:
-            # Auto mode preserves the original heuristics.
+            # Auto mode preserves the legacy heuristics.
             if (
                 isinstance(self.graph, nx.DiGraph)
                 and len(self.graph) == 3
-                and self._should_use_vertical_layout(self.graph)
+#                and self._should_use_vertical_layout(self.graph)
             ):
                 positions = self._layout_vertical(self.graph, effective_spacing)
             else:
@@ -594,9 +601,6 @@ class LayoutManager:
             cx += subtree_widths[root] + spacing
 
         return positions
-
-        # (The old centred-layer layout has been superseded by the subtree-aware
-        #  layout above and is intentionally removed.)
 
     def _layout_bfs(
         self, graph: nx.DiGraph, spacing: int
@@ -1028,7 +1032,7 @@ class LayoutManager:
         self,
         graph: nx.DiGraph,
         spacing: int,
-        layer_height: int,
+        layer_height: int = 3,
         layer_mode: str = "auto",
     ) -> Dict[str, Tuple[int, int]]:
         """Fallback layered layout for general DAGs and non-tree graphs.
