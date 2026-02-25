@@ -52,7 +52,7 @@ case "$yn" in
     [Yy])
     echo;
 
-    cmd="phart  --layer-spacing 4 --btree collatz.py -- 4"
+    cmd="phart --ascii --layer-spacing 3 --node-spacing 3 --btree collatz.py -- 3"
     echo "${cmd}"
     read -n 1 -s -r -p "Press 'y' to proceed or any other to skip to next step: " yn
     case "$yn" in
@@ -63,7 +63,7 @@ case "$yn" in
         *)
     esac
 
-    cmd="phart  --layer-spacing 4 --btree --bbox collatz.py -- 4"
+    cmd="phart  --layer-spacing 4 --btree --bbox collatz.py -- 5"
     echo
     echo "${cmd}"
     read -n 1 -s -r -p "Press 'y' to proceed or any other to skip to next step: " yn
@@ -87,29 +87,29 @@ case "$yn" in
         *)
     esac
 
-    cmd="phart --layout bfs --bbox --layer-spacing 4 --btree --edge-anchors ports --uniform  collatz.py -- 4"
-    echo
-    echo "${cmd}"
+    echo ""
+    echo "######################"
+    echo ""
+    echo "# the following command demonstrates how using '--colors source'"
+    echo "# can help clear up where an edge path comes from in the event of"
+    echo "# a confusing or condensed diagram. It also shows that since our "
+    echo "# diagrams are plain text, we can use the 'tail' command to limit"
+    echo "# our output to the last n rows (17 in this case) of phart's output."
+    echo ""
+    cmd="phart --layout bfs --bbox --layer-spacing 4 --btree --edge-anchors center --uniform  --colors source   collatz.py -- 7"
+    echo ""
+    echo "${cmd} | tail -17"
+    echo ""
+    echo "######################"
     read -n 1 -s -r -p "Press 'y' to proceed or any other to skip to next step: " yn
     case "$yn" in
         [Yy])
         echo
-        ${cmd}
+        ${cmd} | tail -17
         ;;
         *)
     esac
 
-    cmd="phart --colors attr --edge-color-rule side:left=bright_green,right=red --bbox --layer-spacing 4 --btree --edge-anchors ports --uniform  collatz.py -- 4"
-    echo
-    echo "${cmd}"
-    read -n 1 -s -r -p "Press 'y' to proceed or any other to skip to next step: " yn
-    case "$yn" in
-        [Yy])
-        echo
-        ${cmd}
-        ;;
-        *)
-    esac
     ;;
     *)
 ;;
