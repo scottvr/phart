@@ -53,6 +53,7 @@ CLI_LAYOUT_FIELD_MAP = {
     "--edge-anchors": {"edge_anchor_mode"},
     "--labels": {"use_labels"},
     "--colors": {"ansi_colors", "edge_color_mode"},
+    "--no-color-nodes": {"color_nodes"},
     "--edge-color-rule": {"edge_color_rules"},
 }
 

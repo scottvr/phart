@@ -473,7 +473,7 @@ def main():
         self.assertIn("\x1b[", output)
         self.assertNotIn("Error", self.stderr.getvalue())
 
-    def test_edge_color_rule_requires_attr_mode(self):
+    def test_edge_color_rule_is_ignored_outside_attr_mode(self):
         sys.argv = [
             "phart",
             "--colors",
@@ -483,10 +483,8 @@ def main():
             str(self.test_text_file),
         ]
         exit_code = main()
-        self.assertEqual(exit_code, 1)
-        self.assertIn(
-            "--edge-color-rule requires --colors attr", self.stderr.getvalue()
-        )
+        self.assertEqual(exit_code, 0)
+        self.assertNotIn("Error", self.stderr.getvalue())
 
     def test_invalid_edge_color_rule_format(self):
         sys.argv = [

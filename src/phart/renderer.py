@@ -233,11 +233,16 @@ class ASCIIRenderer:
         return None
 
     def _resolve_attr_edge_color(
-        self, edge: Tuple[Any, Any], idx: int
+        self,
+        edge: Tuple[Any, Any],
+        idx: int,
+        node_palette_map: Optional[Dict[Any, str]] = None,
     ) -> Optional[str]:
         """Resolve edge color from configured attribute rules."""
+        node_palette = node_palette_map if node_palette_map is not None else {}
         fallback = (
-            self._node_color_map.get(edge[0])
+            node_palette.get(edge[0])
+            or self._node_color_map.get(edge[0])
             or ANSI_SUBWAY_PALETTE[idx % len(ANSI_SUBWAY_PALETTE)]
         )
         edge_data = self.graph.get_edge_data(edge[0], edge[1]) or {}
@@ -314,14 +319,12 @@ class ASCIIRenderer:
             positions.items(),
             key=lambda item: (item[1][1], item[1][0], str(item[0])),
         )
-        print(f"COLOR_NODES: {self.options.color_nodes}")
+        node_palette_map: Dict[Any, str] = {}
         for idx, (node, _) in enumerate(sorted_nodes):
-            if self.options.color_nodes:
-                self._node_color_map[node] = ANSI_SUBWAY_PALETTE[
-                    idx % len(ANSI_SUBWAY_PALETTE)
-                ]
-            else:
-                self._node_color_map[node] = ANSI_NAMED_COLORS["white"]
+            node_palette_map[node] = ANSI_SUBWAY_PALETTE[idx % len(ANSI_SUBWAY_PALETTE)]
+
+        if self.options.color_nodes:
+            self._node_color_map = node_palette_map.copy()
 
         sorted_edges = sorted(
             (
@@ -342,11 +345,11 @@ class ASCIIRenderer:
         edge_mode = self.options.edge_color_mode
         for idx, edge in enumerate(sorted_edges):
             if edge_mode == "target":
-                color = self._node_color_map.get(edge[1])
+                color = node_palette_map.get(edge[1])
             elif edge_mode == "source":
-                color = self._node_color_map.get(edge[0])
+                color = node_palette_map.get(edge[0])
             elif edge_mode == "attr":
-                color = self._resolve_attr_edge_color(edge, idx)
+                color = self._resolve_attr_edge_color(edge, idx, node_palette_map)
             else:  # path
                 color = ANSI_SUBWAY_PALETTE[idx % len(ANSI_SUBWAY_PALETTE)]
 
@@ -1008,28 +1011,22 @@ class ASCIIRenderer:
         inner_start_x = x + 1 + self.options.hpad + label_offset
         label_y = y + 1 + self.options.vpad
 
-        ###HERE nopaint test
-        if self.options.color_nodes:
-            self._paint_cell(x, y, self.options.box_top_left, node_color)
-            self._paint_cell(right_x, y, self.options.box_top_right, node_color)
-            for col in range(x + 1, right_x):
-                self._paint_cell(col, y, self.options.edge_horizontal, node_color)
+        self._paint_cell(x, y, self.options.box_top_left, node_color)
+        self._paint_cell(right_x, y, self.options.box_top_right, node_color)
+        for col in range(x + 1, right_x):
+            self._paint_cell(col, y, self.options.edge_horizontal, node_color)
 
-            self._paint_cell(x, bottom_y, self.options.box_bottom_left, node_color)
-            self._paint_cell(
-                right_x, bottom_y, self.options.box_bottom_right, node_color
-            )
-            for col in range(x + 1, right_x):
-                self._paint_cell(
-                    col, bottom_y, self.options.edge_horizontal, node_color
-                )
+        self._paint_cell(x, bottom_y, self.options.box_bottom_left, node_color)
+        self._paint_cell(right_x, bottom_y, self.options.box_bottom_right, node_color)
+        for col in range(x + 1, right_x):
+            self._paint_cell(col, bottom_y, self.options.edge_horizontal, node_color)
 
-            for row in range(y + 1, bottom_y):
-                self._paint_cell(x, row, self.options.edge_vertical, node_color)
-                self._paint_cell(right_x, row, self.options.edge_vertical, node_color)
+        for row in range(y + 1, bottom_y):
+            self._paint_cell(x, row, self.options.edge_vertical, node_color)
+            self._paint_cell(right_x, row, self.options.edge_vertical, node_color)
 
-            for i, char in enumerate(label):
-                self._paint_cell(inner_start_x + i, label_y, char, node_color)
+        for i, char in enumerate(label):
+            self._paint_cell(inner_start_x + i, label_y, char, node_color)
 
     def _should_skip_edge_draw(
         self,
@@ -1664,13 +1661,14 @@ def merge_layout_options(
 ) -> LayoutOptions:
     from dataclasses import asdict, fields
 
-    if base is not None:
-        base_dict = asdict(base)
-    if overrides is not None:
-        override_dict = asdict(overrides)
+    base_dict = asdict(base)
+    override_dict = asdict(overrides)
     merged_dict: dict[str, Any] = {}
-    explicit_cli_fields = getattr(overrides, "_explicit_cli_fields", None)
-    has_explicit_field_metadata = explicit_cli_fields is not None
+    explicit_cli_fields_raw = getattr(overrides, "_explicit_cli_fields", None)
+    explicit_cli_fields: set[str] = (
+        set(explicit_cli_fields_raw) if explicit_cli_fields_raw is not None else set()
+    )
+    has_explicit_field_metadata = explicit_cli_fields_raw is not None
 
     # Define which fields are "rendering" vs "semantic"
     rendering_fields = {
@@ -1709,29 +1707,25 @@ def merge_layout_options(
         if field_name in rendering_fields:
             if has_explicit_field_metadata:
                 if field_name == "node_style":
-                    if explicit_cli_fields is not None:
-                        if field_name in explicit_cli_fields:
-                            merged_dict[field_name] = override_val
-                        elif "bboxes" in explicit_cli_fields and bool(
-                            override_dict.get("bboxes")
-                        ):
-                            # When CLI explicitly enables bboxes but does not set style,
-                            # preserve explicit script styles, otherwise default to minimal.
-                            base_style_explicit = bool(
-                                getattr(base, "_node_style_explicit", False)
-                            )
-                            merged_dict[field_name] = (
-                                base_val if base_style_explicit else NodeStyle.MINIMAL
-                            )
+                    if field_name in explicit_cli_fields:
+                        merged_dict[field_name] = override_val
+                    elif "bboxes" in explicit_cli_fields and bool(
+                        override_dict.get("bboxes")
+                    ):
+                        # When CLI explicitly enables bboxes but does not set style,
+                        # preserve explicit script styles, otherwise default to minimal.
+                        base_style_explicit = bool(
+                            getattr(base, "_node_style_explicit", False)
+                        )
+                        merged_dict[field_name] = (
+                            base_val if base_style_explicit else NodeStyle.MINIMAL
+                        )
                     else:
                         merged_dict[field_name] = base_val
                 else:
-                    if explicit_cli_fields is not None:
-                        merged_dict[field_name] = (
-                            override_val
-                            if field_name in explicit_cli_fields
-                            else base_val
-                        )
+                    merged_dict[field_name] = (
+                        override_val if field_name in explicit_cli_fields else base_val
+                    )
             else:
                 merged_dict[field_name] = (
                     override_val if override_val is not None else base_val
