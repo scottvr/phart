@@ -493,8 +493,7 @@ class ASCIIRenderer:
             start_bounds["bottom"], end_bounds["bottom"]
         )
         if (
-            vertical_overlap
-            and start_bounds["center_x"] != end_bounds["center_x"]
+            vertical_overlap and start_bounds["center_x"] != end_bounds["center_x"]
         ) or (start_bounds["center_y"] == end_bounds["center_y"]):
             if start_bounds["center_x"] <= end_bounds["center_x"]:
                 return "right", "left"
@@ -595,10 +594,9 @@ class ASCIIRenderer:
                 jog_cost = self._port_pair_jog_cost(start_value, end_value)
 
                 # Preserve spread unless route simplification is compelling.
-                crowding = (
-                    self._crowding_cost(start_value, used_start_values)
-                    + self._crowding_cost(end_value, used_end_values)
-                )
+                crowding = self._crowding_cost(
+                    start_value, used_start_values
+                ) + self._crowding_cost(end_value, used_end_values)
 
                 straight_bonus = 3.0 if jog_cost == 0 else 0.0
                 score = (
@@ -608,7 +606,13 @@ class ASCIIRenderer:
                     + (2.0 * crowding)
                     - straight_bonus
                 )
-                pair_key = (score, start_cost + end_cost, jog_cost, start_value, end_value)
+                pair_key = (
+                    score,
+                    start_cost + end_cost,
+                    jog_cost,
+                    start_value,
+                    end_value,
+                )
                 if best_key is None or pair_key < best_key:
                     best_key = pair_key
                     best_pair = (start_value, end_value)
@@ -639,7 +643,9 @@ class ASCIIRenderer:
             ]
         ] = []
 
-        for start, end in sorted(self.graph.edges(), key=lambda edge: (str(edge[0]), str(edge[1]))):
+        for start, end in sorted(
+            self.graph.edges(), key=lambda edge: (str(edge[0]), str(edge[1]))
+        ):
             if start not in positions or end not in positions:
                 continue
             if not self._should_use_ports_for_edge(start, end):

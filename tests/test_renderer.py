@@ -71,8 +71,9 @@ class TestASCIIRenderer(unittest.TestCase):
 
     def test_basic_chain(self):
         """Test rendering of a simple chain graph."""
-        renderer = ASCIIRenderer(self.chain, 
-                options=LayoutOptions(
+        renderer = ASCIIRenderer(
+            self.chain,
+            options=LayoutOptions(
                 bboxes=True,
                 use_ascii=False,
                 layer_spacing=4,
@@ -264,7 +265,8 @@ class TestASCIIRenderer(unittest.TestCase):
 
     def test_unicode_mode(self):
         """Test Unicode mode."""
-        result = ASCIIRenderer(self.chain,
+        result = ASCIIRenderer(
+            self.chain,
             options=LayoutOptions(
                 bboxes=True,
                 use_ascii=False,
@@ -682,10 +684,18 @@ class TestASCIIRenderer(unittest.TestCase):
                 layer_spacing=4,
             ),
         )
-        positions = {"1": (8, 0), "2": (5, 7), "Z1": (17, 7), "4": (5, 14), "F1": (14, 14)}
+        positions = {
+            "1": (8, 0),
+            "2": (5, 7),
+            "Z1": (17, 7),
+            "4": (5, 14),
+            "F1": (14, 14),
+        }
         renderer._edge_anchor_map = renderer._compute_edge_anchor_map(positions)  # noqa: SLF001
 
-        two_to_four_start, two_to_four_end = renderer._get_edge_anchor_points("2", "4", positions)  # noqa: SLF001
+        two_to_four_start, two_to_four_end = renderer._get_edge_anchor_points(
+            "2", "4", positions
+        )  # noqa: SLF001
         two_to_f1_start, _ = renderer._get_edge_anchor_points("2", "F1", positions)  # noqa: SLF001
 
         self.assertEqual(two_to_four_start[0], two_to_four_end[0])
@@ -705,7 +715,13 @@ class TestASCIIRenderer(unittest.TestCase):
                 layer_spacing=4,
             ),
         )
-        positions = {"1": (8, 0), "2": (5, 7), "Z1": (17, 7), "4": (5, 14), "F1": (14, 14)}
+        positions = {
+            "1": (8, 0),
+            "2": (5, 7),
+            "Z1": (17, 7),
+            "4": (5, 14),
+            "F1": (14, 14),
+        }
         renderer._edge_anchor_map = renderer._compute_edge_anchor_map(positions)  # noqa: SLF001
 
         two_bounds = renderer._get_node_bounds("2", positions)  # noqa: SLF001
@@ -713,10 +729,22 @@ class TestASCIIRenderer(unittest.TestCase):
         four_bounds = renderer._get_node_bounds("4", positions)  # noqa: SLF001
         f1_bounds = renderer._get_node_bounds("F1", positions)  # noqa: SLF001
 
-        self.assertEqual(renderer._edge_anchor_map[("1", "2")]["end"], (two_bounds["center_x"], two_bounds["top"]))  # noqa: SLF001
-        self.assertEqual(renderer._edge_anchor_map[("1", "Z1")]["end"], (z1_bounds["center_x"], z1_bounds["top"]))  # noqa: SLF001
-        self.assertEqual(renderer._edge_anchor_map[("2", "4")]["end"], (four_bounds["center_x"], four_bounds["top"]))  # noqa: SLF001
-        self.assertEqual(renderer._edge_anchor_map[("2", "F1")]["end"], (f1_bounds["center_x"], f1_bounds["top"]))  # noqa: SLF001
+        self.assertEqual(
+            renderer._edge_anchor_map[("1", "2")]["end"],
+            (two_bounds["center_x"], two_bounds["top"]),
+        )  # noqa: SLF001
+        self.assertEqual(
+            renderer._edge_anchor_map[("1", "Z1")]["end"],
+            (z1_bounds["center_x"], z1_bounds["top"]),
+        )  # noqa: SLF001
+        self.assertEqual(
+            renderer._edge_anchor_map[("2", "4")]["end"],
+            (four_bounds["center_x"], four_bounds["top"]),
+        )  # noqa: SLF001
+        self.assertEqual(
+            renderer._edge_anchor_map[("2", "F1")]["end"],
+            (f1_bounds["center_x"], f1_bounds["top"]),
+        )  # noqa: SLF001
 
     def test_unicode_boxed_edges_use_line_junction_glyphs(self):
         graph = nx.DiGraph([("Root", "Left"), ("Root", "Right")])

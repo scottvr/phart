@@ -373,14 +373,15 @@ class LayoutManager:
         elif strategy == "vertical":
             positions = self._layout_vertical(self.graph, effective_spacing)
         elif strategy == "layered":
-            positions = self._layout_layered_fallback(self.graph, effective_spacing, layer_height=self._get_layer_step())
+            positions = self._layout_layered_fallback(
+                self.graph, effective_spacing, layer_height=self._get_layer_step()
+            )
 
         else:
             # Auto mode preserves the legacy heuristics.
             if (
-                isinstance(self.graph, nx.DiGraph)
-                and len(self.graph) == 3
-#                and self._should_use_vertical_layout(self.graph)
+                isinstance(self.graph, nx.DiGraph) and len(self.graph) == 3
+                #                and self._should_use_vertical_layout(self.graph)
             ):
                 positions = self._layout_vertical(self.graph, effective_spacing)
             else:
@@ -448,9 +449,7 @@ class LayoutManager:
 
         return transformed
 
-    def _ordered_children_for_subtree(
-        self, graph: nx.DiGraph, node: Any
-    ) -> List[Any]:
+    def _ordered_children_for_subtree(self, graph: nx.DiGraph, node: Any) -> List[Any]:
         """Get deterministic child order for subtree placement."""
         children = list(graph.successors(node))
         if not children:
@@ -524,7 +523,14 @@ class LayoutManager:
 
         occupied_right_contour: Dict[int, int] = {}
         placed_children: List[
-            Tuple[Any, Dict[Any, Tuple[int, int]], Dict[int, int], Dict[int, int], int, int]
+            Tuple[
+                Any,
+                Dict[Any, Tuple[int, int]],
+                Dict[int, int],
+                Dict[int, int],
+                int,
+                int,
+            ]
         ] = []
         child_root_centers: List[int] = []
 
@@ -641,9 +647,7 @@ class LayoutManager:
                 left_contour,
                 right_contour,
                 _root_center,
-            ) = self._layout_subtree(
-                graph, root, spacing, layer_height
-            )
+            ) = self._layout_subtree(graph, root, spacing, layer_height)
             if not subtree_positions:
                 continue
 
