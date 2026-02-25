@@ -12,7 +12,6 @@ from .renderer import ASCIIRenderer
 from .styles import NodeStyle, LayoutOptions
 from .charset import CharSet
 
-
 COLOR_MODES = {"none", "source", "target", "path", "attr"}
 LAYOUT_STRATEGIES = {
     "auto",

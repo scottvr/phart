@@ -167,6 +167,7 @@ class ASCIIRenderer:
         self._edge_conflict_cells: Set[Tuple[int, int]] = set()
         self._locked_arrow_cells: Set[Tuple[int, int]] = set()
 
+    @classmethod
     def _resolve_options(cls, options: Optional[LayoutOptions]) -> LayoutOptions:
         if cls.default_options is None:
             # no CLI overrides; if no options passed, create defaults however you do it
