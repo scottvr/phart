@@ -2,7 +2,7 @@
 fail_fast: true
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -13,14 +13,14 @@ repos:
   # pre-commit install
 
   - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: ffb6a759a979008c0e6dff86e39f4745a2d9eac4 # frozen: v3.1.0
+    rev: v4.0.0-alpha.8
     hooks:
       - id: prettier
         files: \.(html|md|toml|yml|yaml)
         args: [--prose-wrap=preserve]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 1dc9eb131c2ea4816c708e4d85820d2cc8542683 # frozen: v0.5.0
+    rev: v0.15.2
     hooks:
       - id: ruff
         args: ["--fix", "--show-fixes", "--exit-non-zero-on-fix"]
@@ -34,10 +34,19 @@ repos:
         entry: python tools/generate_requirements.py
         files: "pyproject.toml|requirements/.*\\.txt|tools/generate_requirements.py"
 
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: a66e98df7b4aeeb3724184b332785976d062b92e
+    hooks:
+      - id: mypy
+        name: "mypy 1.19.1"
+
+  - repo: local
+    hooks:
       - id: pytest-check
         name: pytest-check
         entry: pytest
         language: system
         types: [python]
-        pass_filenames: false
+        pass_filenames: true
+        files: "src/phart/*.py"
         always_run: true
