@@ -86,6 +86,56 @@ def demonstrate_graph():
 """
         self.py_custom_file.write_text(custom_content, encoding="utf-8")
 
+        # Create Python file with script-level binary tree options
+        self.py_script_options_file = Path(self.temp_dir) / "test_script_options.py"
+        script_options_content = """
+import networkx as nx
+from phart import ASCIIRenderer, LayoutOptions, NodeStyle
+
+def main():
+    G = nx.DiGraph()
+    G.add_edge("ROOT", "Z", side="left")
+    G.add_edge("ROOT", "A", side="right")
+    options = LayoutOptions(
+        binary_tree_layout=True,
+        node_style=NodeStyle.MINIMAL,
+        use_ascii=True,
+    )
+    renderer = ASCIIRenderer(G, options=options)
+    print(renderer.render())
+"""
+        self.py_script_options_file.write_text(script_options_content, encoding="utf-8")
+
+        # Create Python file to verify script argv forwarding
+        self.py_argv_file = Path(self.temp_dir) / "test_argv.py"
+        argv_content = """
+import sys
+
+def main():
+    depth = int(sys.argv[1]) if len(sys.argv) > 1 else 5
+    print(f"DEPTH:{depth}")
+"""
+        self.py_argv_file.write_text(argv_content, encoding="utf-8")
+
+        # Create Python file with script-level bbox disabled, for CLI override tests
+        self.py_bbox_override_file = Path(self.temp_dir) / "test_bbox_override.py"
+        bbox_override_content = """
+import networkx as nx
+from phart import ASCIIRenderer, LayoutOptions, NodeStyle
+
+def main():
+    G = nx.DiGraph()
+    G.add_edge("A", "B")
+    options = LayoutOptions(
+        bboxes=False,
+        node_style=NodeStyle.MINIMAL,
+        use_ascii=True,
+    )
+    renderer = ASCIIRenderer(G, options=options)
+    print(renderer.render())
+"""
+        self.py_bbox_override_file.write_text(bbox_override_content, encoding="utf-8")
+
         # Save original stdout/stderr
         self.old_stdout = sys.stdout
         self.old_stderr = sys.stderr
@@ -293,6 +343,42 @@ def demonstrate_graph():
         exit_code = main()
         self.assertEqual(exit_code, 1)
         self.assertIn("Error: Function 'nonexistent' not found", self.stderr.getvalue())
+
+    def test_python_respects_script_binary_tree_options_when_cli_omits_them(self):
+        sys.argv = ["phart", str(self.py_script_options_file)]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        implicit_output = self.stdout.getvalue()
+        self.assertNotIn("Error", self.stderr.getvalue())
+
+        self.stdout.truncate(0)
+        self.stdout.seek(0)
+        self.stderr.truncate(0)
+        self.stderr.seek(0)
+
+        sys.argv = ["phart", "--binary-tree", str(self.py_script_options_file)]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        explicit_output = self.stdout.getvalue()
+        self.assertNotIn("Error", self.stderr.getvalue())
+
+        self.assertEqual(implicit_output, explicit_output)
+
+    def test_python_script_args_are_forwarded_after_separator(self):
+        sys.argv = ["phart", str(self.py_argv_file), "--", "7"]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertIn("DEPTH:7", output)
+        self.assertNotIn("Error", self.stderr.getvalue())
+
+    def test_python_bbox_alias_overrides_script_bbox_option(self):
+        sys.argv = ["phart", "--bbox", str(self.py_bbox_override_file)]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertIn("+", output)
+        self.assertNotIn("Error", self.stderr.getvalue())
 
     def test_bbox_flags(self):
         """Test boxed node flags and widest-size alias."""

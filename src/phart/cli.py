@@ -33,6 +33,30 @@ LAYOUT_STRATEGIES = {
     "layered",
 }
 
+CLI_LAYOUT_FIELD_MAP = {
+    "--style": {"node_style"},
+    "--node-spacing": {"node_spacing"},
+    "--layer-spacing": {"layer_spacing"},
+    "--charset": {"use_ascii"},
+    "--ascii": {"use_ascii"},
+    "--binary-tree": {"binary_tree_layout"},
+    "--btree": {"binary_tree_layout"},
+    "--layout": {"layout_strategy"},
+    "--layout-strategy": {"layout_strategy"},
+    "--flow-direction": {"flow_direction"},
+    "--flow": {"flow_direction"},
+    "--bboxes": {"bboxes"},
+    "--bbox": {"bboxes"},
+    "--hpad": {"hpad"},
+    "--vpad": {"vpad"},
+    "--uniform": {"uniform"},
+    "--size-to-widest": {"uniform"},
+    "--edge-anchors": {"edge_anchor_mode"},
+    "--labels": {"use_labels"},
+    "--colors": {"ansi_colors", "edge_color_mode"},
+    "--edge-color-rule": {"edge_color_rules"},
+}
+
 
 def _normalize_color_args(argv: list[str]) -> list[str]:
     """Normalize bare --colors usage to avoid optional-value positional ambiguity.
@@ -70,9 +94,62 @@ def _normalize_color_args(argv: list[str]) -> list[str]:
     return normalized
 
 
-def parse_args() -> tuple[argparse.Namespace, list[str]]:
+def _fields_for_option_token(opt_name: str) -> set[str]:
+    """Map an option token to layout fields, including long-option abbreviations."""
+    if opt_name in CLI_LAYOUT_FIELD_MAP:
+        return set(CLI_LAYOUT_FIELD_MAP[opt_name])
+
+    if not opt_name.startswith("--"):
+        return set()
+
+    matches = [
+        fields
+        for key, fields in CLI_LAYOUT_FIELD_MAP.items()
+        if key.startswith(opt_name)
+    ]
+    if not matches:
+        return set()
+    if len(matches) == 1:
+        return set(matches[0])
+
+    # If ambiguous but all matches map to the same fields, keep them.
+    first = matches[0]
+    if all(match == first for match in matches):
+        return set(first)
+    return set()
+
+
+def _collect_explicit_layout_fields(
+    argv: list[str], args: argparse.Namespace
+) -> set[str]:
+    explicit_fields: set[str] = set()
+    for token in argv:
+        if token == "--":
+            break
+        if not token.startswith("-"):
+            continue
+        opt_name = token.split("=", 1)[0]
+        explicit_fields.update(_fields_for_option_token(opt_name))
+
+    # layout=btree implies binary-tree semantics, even without explicit --binary-tree.
+    if "layout_strategy" in explicit_fields and args.layout_strategy == "btree":
+        explicit_fields.add("binary_tree_layout")
+
+    return explicit_fields
+
+
+def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
     """Parse command line arguments."""
-    argv = _normalize_color_args(sys.argv[1:])
+    raw_argv = sys.argv[1:]
+    if "--" in raw_argv:
+        sep_index = raw_argv.index("--")
+        cli_raw_argv = raw_argv[:sep_index]
+        module_argv = raw_argv[sep_index + 1 :]
+    else:
+        cli_raw_argv = raw_argv
+        module_argv = []
+
+    argv = _normalize_color_args(cli_raw_argv)
 
     parser = argparse.ArgumentParser(
         description="PHART: Python Hierarchical ASCII Rendering Tool"
@@ -203,7 +280,8 @@ def parse_args() -> tuple[argparse.Namespace, list[str]]:
         ),
     )
     args, unknown = parser.parse_known_args(argv)
-    return args, unknown
+    explicit_layout_fields = _collect_explicit_layout_fields(argv, args)
+    return args, unknown, explicit_layout_fields, module_argv
 
 
 def _normalize_attr_match_value(value: str) -> str:
@@ -277,25 +355,28 @@ def _load_python_module(file_path: Path) -> Any:
     return module
 
 
-def create_layout_options(args: argparse.Namespace) -> LayoutOptions:
+def create_layout_options(
+    args: argparse.Namespace, explicit_layout_fields: Optional[set[str]] = None
+) -> LayoutOptions:
     """Create LayoutOptions from CLI arguments."""
     node_style = NodeStyle[args.style.upper()] if args.style is not None else None
     color_mode = args.colors
     layout_strategy = args.layout_strategy.replace("-", "_")
+    binary_tree_layout = args.binary_tree
     edge_color_rules = _parse_edge_color_rules(args.edge_color_rule)
     if edge_color_rules and color_mode != "attr":
         raise ValueError("--edge-color-rule requires --colors attr")
     use_ascii = args.charset in {CharSet.ASCII, CharSet.ANSI} or args.use_legacy_ascii
     if args.layout_strategy == "btree":
-        args.binary_tree = True
-        args.layout_strategy == "auto"
+        binary_tree_layout = True
+        layout_strategy = "auto"
     allow_ansi_in_ascii = args.charset == CharSet.ANSI and not args.use_legacy_ascii
-    return LayoutOptions(
+    options = LayoutOptions(
         node_style=node_style,
         node_spacing=args.node_spacing,
         layer_spacing=args.layer_spacing,
         use_ascii=use_ascii,
-        binary_tree_layout=args.binary_tree,
+        binary_tree_layout=binary_tree_layout,
         layout_strategy=layout_strategy,
         flow_direction=args.flow_direction,
         bboxes=args.bboxes,
@@ -309,6 +390,8 @@ def create_layout_options(args: argparse.Namespace) -> LayoutOptions:
         edge_color_mode="source" if color_mode == "none" else color_mode,
         edge_color_rules=edge_color_rules,
     )
+    setattr(options, "_explicit_cli_fields", set(explicit_layout_fields or set()))
+    return options
 
 
 def _run_python_as_main(file_path: Path) -> Any:
@@ -334,13 +417,11 @@ def _module_defines_function(file_path: Path, function_name: str) -> bool:
 
 def main() -> Optional[int]:
     """CLI entry point for PHART."""
-    args, unknown = parse_args()
-    has_script_separator = "--" in sys.argv[1:]
-    module_argv = unknown if has_script_separator else []
+    args, unknown, explicit_layout_fields, module_argv = parse_args()
 
     try:
         if args.input.suffix == ".py":
-            if unknown and not has_script_separator:
+            if unknown:
                 print(
                     "It looks like you passed arguments intended for the script.\n"
                     "Use '--' to separate phart options from script options.\n\n"
@@ -354,7 +435,7 @@ def main() -> Optional[int]:
             sys.argv = [str(args.input)] + module_argv
 
             try:
-                cli_options = create_layout_options(args)
+                cli_options = create_layout_options(args, explicit_layout_fields)
                 ASCIIRenderer.default_options = cli_options
                 output_ctx: ContextManager[Any] = nullcontext()
                 out_file = None
@@ -392,6 +473,12 @@ def main() -> Optional[int]:
                 ASCIIRenderer.default_options = old_default_options
 
         else:
+            if module_argv:
+                print(
+                    "Error: script arguments after '--' are only supported for .py input files",
+                    file=sys.stderr,
+                )
+                return 2
             if unknown:
                 print(
                     f"Error: unrecognized arguments: {' '.join(unknown)} (incorrect arg to option {''.join(sys.argv[:2][1:])} maybe?)",
@@ -402,7 +489,7 @@ def main() -> Optional[int]:
             with open(args.input, "r", encoding="utf-8") as f:
                 content = f.read()
 
-            cli_options = create_layout_options(args)
+            cli_options = create_layout_options(args, explicit_layout_fields)
 
             try:
                 if content.strip().startswith("<?xml") or content.strip().startswith(

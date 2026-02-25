@@ -1497,6 +1497,8 @@ def merge_layout_options(
     base_dict = asdict(base)
     override_dict = asdict(overrides)
     merged_dict: dict[str, Any] = {}
+    explicit_cli_fields = getattr(overrides, "_explicit_cli_fields", None)
+    has_explicit_field_metadata = explicit_cli_fields is not None
 
     # Define which fields are "rendering" vs "semantic"
     rendering_fields = {
@@ -1532,9 +1534,14 @@ def merge_layout_options(
 
         # For rendering fields: CLI (override) takes precedence if not None
         if field_name in rendering_fields:
-            merged_dict[field_name] = (
-                override_val if override_val is not None else base_val
-            )
+            if has_explicit_field_metadata:
+                merged_dict[field_name] = (
+                    override_val if field_name in explicit_cli_fields else base_val
+                )
+            else:
+                merged_dict[field_name] = (
+                    override_val if override_val is not None else base_val
+                )
         # For semantic fields: User (base) takes precedence if not None
         else:
             merged_dict[field_name] = base_val if base_val is not None else override_val

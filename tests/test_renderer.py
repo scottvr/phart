@@ -1198,6 +1198,13 @@ class TestLayoutOptions(unittest.TestCase):
         merged = merge_layout_options(script_options, cli_options)
         self.assertTrue(merged.binary_tree_layout)
 
+    def test_merge_layout_options_respects_explicit_cli_fields(self):
+        script_options = LayoutOptions(binary_tree_layout=True, use_ascii=True)
+        cli_options = LayoutOptions(binary_tree_layout=False, use_ascii=True)
+        setattr(cli_options, "_explicit_cli_fields", {"use_ascii"})
+        merged = merge_layout_options(script_options, cli_options)
+        self.assertTrue(merged.binary_tree_layout)
+
 
 if __name__ == "__main__":
     unittest.main()
