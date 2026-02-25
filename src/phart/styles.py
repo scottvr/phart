@@ -132,6 +132,7 @@ class LayoutOptions:
     edge_color_rules: Dict[str, Dict[str, str]] = field(
         default_factory=dict
     )  # attr mode rules: {"attr_name": {"attr_value": "color_spec"}}
+    color_nodes: bool = field(default=True)
 
     # Instance-specific ID (unchanged)
     instance_id: int = field(init=False)

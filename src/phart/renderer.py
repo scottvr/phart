@@ -314,10 +314,14 @@ class ASCIIRenderer:
             positions.items(),
             key=lambda item: (item[1][1], item[1][0], str(item[0])),
         )
+        print(f"COLOR_NODES: {self.options.color_nodes}")
         for idx, (node, _) in enumerate(sorted_nodes):
-            self._node_color_map[node] = ANSI_SUBWAY_PALETTE[
-                idx % len(ANSI_SUBWAY_PALETTE)
-            ]
+            if self.options.color_nodes:
+                self._node_color_map[node] = ANSI_SUBWAY_PALETTE[
+                    idx % len(ANSI_SUBWAY_PALETTE)
+                ]
+            else:
+                self._node_color_map[node] = ANSI_NAMED_COLORS["white"]
 
         sorted_edges = sorted(
             (
@@ -1004,22 +1008,28 @@ class ASCIIRenderer:
         inner_start_x = x + 1 + self.options.hpad + label_offset
         label_y = y + 1 + self.options.vpad
 
-        self._paint_cell(x, y, self.options.box_top_left, node_color)
-        self._paint_cell(right_x, y, self.options.box_top_right, node_color)
-        for col in range(x + 1, right_x):
-            self._paint_cell(col, y, self.options.edge_horizontal, node_color)
+        ###HERE nopaint test
+        if self.options.color_nodes:
+            self._paint_cell(x, y, self.options.box_top_left, node_color)
+            self._paint_cell(right_x, y, self.options.box_top_right, node_color)
+            for col in range(x + 1, right_x):
+                self._paint_cell(col, y, self.options.edge_horizontal, node_color)
 
-        self._paint_cell(x, bottom_y, self.options.box_bottom_left, node_color)
-        self._paint_cell(right_x, bottom_y, self.options.box_bottom_right, node_color)
-        for col in range(x + 1, right_x):
-            self._paint_cell(col, bottom_y, self.options.edge_horizontal, node_color)
+            self._paint_cell(x, bottom_y, self.options.box_bottom_left, node_color)
+            self._paint_cell(
+                right_x, bottom_y, self.options.box_bottom_right, node_color
+            )
+            for col in range(x + 1, right_x):
+                self._paint_cell(
+                    col, bottom_y, self.options.edge_horizontal, node_color
+                )
 
-        for row in range(y + 1, bottom_y):
-            self._paint_cell(x, row, self.options.edge_vertical, node_color)
-            self._paint_cell(right_x, row, self.options.edge_vertical, node_color)
+            for row in range(y + 1, bottom_y):
+                self._paint_cell(x, row, self.options.edge_vertical, node_color)
+                self._paint_cell(right_x, row, self.options.edge_vertical, node_color)
 
-        for i, char in enumerate(label):
-            self._paint_cell(inner_start_x + i, label_y, char, node_color)
+            for i, char in enumerate(label):
+                self._paint_cell(inner_start_x + i, label_y, char, node_color)
 
     def _should_skip_edge_draw(
         self,
@@ -1684,6 +1694,7 @@ def merge_layout_options(
         "allow_ansi_in_ascii",
         "edge_color_mode",
         "edge_color_rules",
+        "color_nodes",
     }
 
     for field in fields(LayoutOptions):

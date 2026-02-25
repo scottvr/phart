@@ -268,6 +268,9 @@ def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
         help="ANSI edge coloring mode: none (default), source, target, path, or attr",
     )
     parser.add_argument(
+        "--no-color-nodes", action="store_true", help="Color edges only, not nodes"
+    )
+    parser.add_argument(
         "--edge-color-rule",
         action="append",
         default=[],
@@ -363,8 +366,9 @@ def create_layout_options(
     layout_strategy = args.layout_strategy.replace("-", "_")
     binary_tree_layout = args.binary_tree
     edge_color_rules = _parse_edge_color_rules(args.edge_color_rule)
-    if edge_color_rules and color_mode != "attr":
-        raise ValueError("--edge-color-rule requires --colors attr")
+    color_nodes = not args.no_color_nodes
+    if color_mode == "attr" and not edge_color_rules:
+        raise ValueError("--colors attr requires --edge-color-rule")
     use_ascii = args.charset in {CharSet.ASCII, CharSet.ANSI} or args.use_legacy_ascii
     if args.layout_strategy == "btree":
         binary_tree_layout = True
@@ -388,6 +392,7 @@ def create_layout_options(
         allow_ansi_in_ascii=allow_ansi_in_ascii,
         edge_color_mode="source" if color_mode == "none" else color_mode,
         edge_color_rules=edge_color_rules,
+        color_nodes=color_nodes,
     )
     setattr(options, "_explicit_cli_fields", set(explicit_layout_fields or set()))
     return options
