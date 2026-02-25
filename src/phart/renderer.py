@@ -535,6 +535,88 @@ class ASCIIRenderer:
             return bounds["left"], value
         return bounds["right"], value
 
+    @staticmethod
+    def _crowding_cost(value: int, used_values: List[int]) -> float:
+        """Soft penalty for placing a port too close to existing ports."""
+        if not used_values:
+            return 0.0
+        return sum(1.0 / (abs(value - used) + 1.0) for used in used_values)
+
+    @staticmethod
+    def _values_with_min_separation(
+        candidates: List[int], used_values: List[int], min_sep: int
+    ) -> List[int]:
+        """Filter candidate values by minimum separation from existing values."""
+        if not used_values:
+            return list(candidates)
+
+        filtered = [
+            candidate
+            for candidate in candidates
+            if all(abs(candidate - used) >= min_sep for used in used_values)
+        ]
+        return filtered if filtered else list(candidates)
+
+    @staticmethod
+    def _port_pair_jog_cost(start_value: int, end_value: int) -> int:
+        """Orthogonal jog distance in the routing axis for a port pair."""
+        return abs(start_value - end_value)
+
+    @staticmethod
+    def _side_center_value(bounds: Dict[str, int], side: str) -> int:
+        """Get the center axis coordinate for a given node side."""
+        if side in ("top", "bottom"):
+            return bounds["center_x"]
+        return bounds["center_y"]
+
+    @staticmethod
+    def _nearest_candidate_to_center(candidates: List[int], center_value: int) -> int:
+        """Pick candidate nearest to local side center (deterministic ties)."""
+        return min(candidates, key=lambda value: (abs(value - center_value), value))
+
+    def _choose_port_pair(
+        self,
+        *,
+        start_candidates: List[int],
+        end_candidates: List[int],
+        start_counter: int,
+        end_counter: int,
+        used_start_values: List[int],
+        used_end_values: List[int],
+    ) -> Tuple[int, int]:
+        """Choose best (start,end) port pair using spacing + route-awareness."""
+        best_pair: Optional[Tuple[int, int]] = None
+        best_key: Optional[Tuple[float, int, int, int, int]] = None
+
+        for start_value in start_candidates:
+            for end_value in end_candidates:
+                start_cost = abs(start_value - start_counter)
+                end_cost = abs(end_value - end_counter)
+                jog_cost = self._port_pair_jog_cost(start_value, end_value)
+
+                # Preserve spread unless route simplification is compelling.
+                crowding = (
+                    self._crowding_cost(start_value, used_start_values)
+                    + self._crowding_cost(end_value, used_end_values)
+                )
+
+                straight_bonus = 3.0 if jog_cost == 0 else 0.0
+                score = (
+                    float(start_cost)
+                    + float(end_cost)
+                    + (0.75 * float(jog_cost))
+                    + (2.0 * crowding)
+                    - straight_bonus
+                )
+                pair_key = (score, start_cost + end_cost, jog_cost, start_value, end_value)
+                if best_key is None or pair_key < best_key:
+                    best_key = pair_key
+                    best_pair = (start_value, end_value)
+
+        if best_pair is None:
+            return start_counter, end_counter
+        return best_pair
+
     def _compute_edge_anchor_map(
         self, positions: Dict[Any, Tuple[int, int]]
     ) -> Dict[Tuple[Any, Any], Dict[str, Tuple[int, int]]]:
@@ -542,11 +624,22 @@ class ASCIIRenderer:
         if not self.options.bboxes:
             return {}
 
-        requirements: Dict[
-            Any, Dict[str, List[Tuple[Tuple[Any, Any], str, int, str]]]
-        ] = {}
+        edge_specs: List[
+            Tuple[
+                Tuple[Any, Any],
+                Any,
+                str,
+                int,
+                List[int],
+                Any,
+                str,
+                int,
+                List[int],
+                int,
+            ]
+        ] = []
 
-        for start, end in self.graph.edges():
+        for start, end in sorted(self.graph.edges(), key=lambda edge: (str(edge[0]), str(edge[1]))):
             if start not in positions or end not in positions:
                 continue
             if not self._should_use_ports_for_edge(start, end):
@@ -566,42 +659,119 @@ class ASCIIRenderer:
                 if end_side in ("top", "bottom")
                 else start_bounds["center_y"]
             )
+            start_candidates = self._get_side_port_values(start_bounds, start_side)
+            end_candidates = self._get_side_port_values(end_bounds, end_side)
+            if not start_candidates:
+                start_candidates = [start_counter]
+            if not end_candidates:
+                end_candidates = [end_counter]
 
-            requirements.setdefault(start, {}).setdefault(start_side, []).append(
-                ((start, end), "start", start_counter, str(end))
-            )
-            requirements.setdefault(end, {}).setdefault(end_side, []).append(
-                ((start, end), "end", end_counter, str(start))
+            edge_specs.append(
+                (
+                    (start, end),
+                    start,
+                    start_side,
+                    start_counter,
+                    start_candidates,
+                    end,
+                    end_side,
+                    end_counter,
+                    end_candidates,
+                    abs(start_counter - end_counter),
+                )
             )
 
         edge_anchor_map: Dict[Tuple[Any, Any], Dict[str, Tuple[int, int]]] = {}
-        for node, side_map in requirements.items():
-            node_bounds = self._get_node_bounds(node, positions)
+        used_by_side: Dict[Tuple[Any, str], List[int]] = {}
+        min_port_separation = 1
+        side_demand: Dict[Tuple[Any, str], int] = {}
+        for (
+            _edge_key,
+            start_node,
+            start_side,
+            _start_counter,
+            _start_candidates,
+            end_node,
+            end_side,
+            _end_counter,
+            _end_candidates,
+            _axis_delta,
+        ) in edge_specs:
+            side_demand[(start_node, start_side)] = (
+                side_demand.get((start_node, start_side), 0) + 1
+            )
+            side_demand[(end_node, end_side)] = (
+                side_demand.get((end_node, end_side), 0) + 1
+            )
 
-            for side, items in side_map.items():
-                sorted_items = sorted(items, key=lambda item: (item[2], item[3]))
-                candidates = self._get_side_port_values(node_bounds, side)
-                if not candidates:
-                    candidates = [
-                        node_bounds["center_x"]
-                        if side in ("top", "bottom")
-                        else node_bounds["center_y"]
-                    ]
+        edge_specs_sorted = sorted(
+            edge_specs,
+            key=lambda spec: (
+                spec[9],
+                str(spec[1]),
+                spec[2],
+                str(spec[5]),
+                spec[6],
+                str(spec[0][0]),
+                str(spec[0][1]),
+            ),
+        )
 
-                item_count = len(sorted_items)
-                max_index = len(candidates) - 1
+        for (
+            edge_key,
+            start_node,
+            start_side,
+            start_counter,
+            start_candidates,
+            end_node,
+            end_side,
+            end_counter,
+            end_candidates,
+            _axis_delta,
+        ) in edge_specs_sorted:
+            start_key = (start_node, start_side)
+            end_key = (end_node, end_side)
+            used_start_values = used_by_side.get(start_key, [])
+            used_end_values = used_by_side.get(end_key, [])
 
-                for idx, (edge_key, role, _, _) in enumerate(sorted_items):
-                    if item_count <= 1:
-                        candidate_idx = max_index // 2
-                    else:
-                        candidate_idx = round((idx * max_index) / (item_count - 1))
+            start_pool = self._values_with_min_separation(
+                start_candidates, used_start_values, min_port_separation
+            )
+            end_pool = self._values_with_min_separation(
+                end_candidates, used_end_values, min_port_separation
+            )
 
-                    candidate_value = candidates[candidate_idx]
-                    anchor_xy = self._port_value_to_xy(
-                        node_bounds, side, candidate_value
-                    )
-                    edge_anchor_map.setdefault(edge_key, {})[role] = anchor_xy
+            start_bounds = self._get_node_bounds(start_node, positions)
+            end_bounds = self._get_node_bounds(end_node, positions)
+
+            # If a face is used by only one edge, prefer a centered local port.
+            if side_demand.get(start_key, 0) <= 1 and start_pool:
+                start_center = self._side_center_value(start_bounds, start_side)
+                start_pool = [
+                    self._nearest_candidate_to_center(start_pool, start_center)
+                ]
+            if side_demand.get(end_key, 0) <= 1 and end_pool:
+                end_center = self._side_center_value(end_bounds, end_side)
+                end_pool = [self._nearest_candidate_to_center(end_pool, end_center)]
+
+            start_value, end_value = self._choose_port_pair(
+                start_candidates=start_pool,
+                end_candidates=end_pool,
+                start_counter=start_counter,
+                end_counter=end_counter,
+                used_start_values=used_start_values,
+                used_end_values=used_end_values,
+            )
+
+            used_by_side.setdefault(start_key, []).append(start_value)
+            used_by_side.setdefault(end_key, []).append(end_value)
+
+            edge_anchor_map.setdefault(edge_key, {})["start"] = self._port_value_to_xy(
+                start_bounds, start_side, start_value
+            )
+            edge_anchor_map.setdefault(edge_key, {})["end"] = self._port_value_to_xy(
+                end_bounds, end_side, end_value
+            )
 
         return edge_anchor_map
 

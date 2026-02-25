@@ -668,6 +668,56 @@ class TestASCIIRenderer(unittest.TestCase):
 
         self.assertEqual(start_anchor[1], end_anchor[1])
 
+    def test_edge_anchor_ports_prefers_straight_vertical_pair_when_available(self):
+        graph = nx.DiGraph([("1", "2"), ("1", "Z1"), ("2", "4"), ("2", "F1")])
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                bboxes=True,
+                hpad=1,
+                vpad=1,
+                edge_anchor_mode="ports",
+                use_ascii=True,
+                layer_spacing=4,
+            ),
+        )
+        positions = {"1": (8, 0), "2": (5, 7), "Z1": (17, 7), "4": (5, 14), "F1": (14, 14)}
+        renderer._edge_anchor_map = renderer._compute_edge_anchor_map(positions)  # noqa: SLF001
+
+        two_to_four_start, two_to_four_end = renderer._get_edge_anchor_points("2", "4", positions)  # noqa: SLF001
+        two_to_f1_start, _ = renderer._get_edge_anchor_points("2", "F1", positions)  # noqa: SLF001
+
+        self.assertEqual(two_to_four_start[0], two_to_four_end[0])
+        self.assertNotEqual(two_to_four_start, two_to_f1_start)
+
+    def test_edge_anchor_ports_prefers_center_for_single_use_surface(self):
+        graph = nx.DiGraph([("1", "2"), ("1", "Z1"), ("2", "4"), ("2", "F1")])
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                bboxes=True,
+                hpad=1,
+                vpad=1,
+                edge_anchor_mode="ports",
+                use_ascii=True,
+                layer_spacing=4,
+            ),
+        )
+        positions = {"1": (8, 0), "2": (5, 7), "Z1": (17, 7), "4": (5, 14), "F1": (14, 14)}
+        renderer._edge_anchor_map = renderer._compute_edge_anchor_map(positions)  # noqa: SLF001
+
+        two_bounds = renderer._get_node_bounds("2", positions)  # noqa: SLF001
+        z1_bounds = renderer._get_node_bounds("Z1", positions)  # noqa: SLF001
+        four_bounds = renderer._get_node_bounds("4", positions)  # noqa: SLF001
+        f1_bounds = renderer._get_node_bounds("F1", positions)  # noqa: SLF001
+
+        self.assertEqual(renderer._edge_anchor_map[("1", "2")]["end"], (two_bounds["center_x"], two_bounds["top"]))  # noqa: SLF001
+        self.assertEqual(renderer._edge_anchor_map[("1", "Z1")]["end"], (z1_bounds["center_x"], z1_bounds["top"]))  # noqa: SLF001
+        self.assertEqual(renderer._edge_anchor_map[("2", "4")]["end"], (four_bounds["center_x"], four_bounds["top"]))  # noqa: SLF001
+        self.assertEqual(renderer._edge_anchor_map[("2", "F1")]["end"], (f1_bounds["center_x"], f1_bounds["top"]))  # noqa: SLF001
+
     def test_unicode_boxed_edges_use_line_junction_glyphs(self):
         graph = nx.DiGraph([("Root", "Left"), ("Root", "Right")])
         renderer = ASCIIRenderer(
