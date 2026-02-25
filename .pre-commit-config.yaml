@@ -39,6 +39,8 @@ repos:
     hooks:
       - id: mypy
         name: "mypy 1.19.1"
+        types: [python]
+        pass_filenames: true
 
   - repo: local
     hooks:
@@ -48,5 +50,5 @@ repos:
         language: system
         types: [python]
         files: ^.*.py
-        pass_filenames: true
+        pass_filenames: false
         always_run: true
