@@ -39,7 +39,7 @@ repos:
     hooks:
       - id: mypy
         name: "mypy 1.19.1"
-        files: '(src|tests)/.*\\.py$'
+        files: ^(src/phart|tests)/
         pass_filenames: true
 
   - repo: local
