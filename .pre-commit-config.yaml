@@ -47,7 +47,7 @@ repos:
     hooks:
       - id: pytest-check
         name: pytest-check
-        entry: pytest
+        entry: ./.venv/bin/pytest
         language: system
         types: [python]
         files: ^.*.py
