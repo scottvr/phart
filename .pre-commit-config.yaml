@@ -39,7 +39,7 @@ repos:
     hooks:
       - id: mypy
         name: "mypy 1.19.1"
-        types: [python]
+        files: "src/phart/*.py"
         pass_filenames: true
 
   - repo: local

@@ -5,6 +5,7 @@ Simple examples demonstrating basic PHART usage.
 import networkx as nx
 from phart import ASCIIRenderer, NodeStyle
 
+
 def demonstrate_basic_graph():
     print("\nBasic Directed Graph:")
     G = nx.DiGraph()

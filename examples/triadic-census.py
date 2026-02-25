@@ -1,5 +1,15 @@
-from phart import ASCIIRenderer, NodeStyle
+from phart import ASCIIRenderer, LayoutOptions
 import networkx as nx
+
+options = LayoutOptions(
+    bboxes=True,
+    hpad=2,
+    vpad=1,
+    use_ascii=False,
+    node_spacing=3,
+    layer_spacing=3,
+    edge_anchor_mode="ports",
+)
 
 
 def generate_triads():
@@ -38,9 +48,7 @@ def render_all_triads():
     triads = generate_triads()
 
     # Calculate the width needed for each diagram to create a grid effect
-    sample_render = ASCIIRenderer(
-        next(iter(triads.values())), node_style=NodeStyle.SQUARE
-    ).render()
+    sample_render = ASCIIRenderer(next(iter(triads.values())), options=options).render()
     width = max(len(line) for line in sample_render.split("\n")) + 4  # Add padding
 
     # We'll create 4 rows of 4 diagrams each
@@ -48,7 +56,7 @@ def render_all_triads():
     current_row = []
 
     for name, graph in triads.items():
-        renderer = ASCIIRenderer(graph, node_style=NodeStyle.SQUARE)
+        renderer = ASCIIRenderer(graph, options=options)
         rendered = renderer.render()
 
         # Add title above the diagram
@@ -78,12 +86,3 @@ if __name__ == "__main__":
     G = nx.balanced_tree(2, 2, create_using=nx.DiGraph)
     mapping = {i: f"{i}" for i in G.nodes()}
     G = nx.relabel_nodes(G, mapping)
-
-    for style in NodeStyle:
-        print(f"\nUsing {style.name} style:")
-        renderer = ASCIIRenderer(
-            G,
-            node_style=style,
-            custom_decorators={"0": ("<<", ">>"), "6": ("[[", "]]")},
-        )
-        renderer.draw()
