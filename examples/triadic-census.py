@@ -1,5 +1,6 @@
-from phart import ASCIIRenderer, LayoutOptions
-import networkx as nx
+from phart import ASCIIRenderer, LayoutOptions  # type: ignore
+import networkx as nx  # type:ignore
+from typing import Dict
 
 options = LayoutOptions(
     bboxes=True,
@@ -12,7 +13,7 @@ options = LayoutOptions(
 )
 
 
-def generate_triads():
+def generate_triads() -> Dict:
     """Generate all 16 possible directed triads with their standard naming."""
     triads = {
         "003": [],  # Empty triad
@@ -43,7 +44,7 @@ def generate_triads():
     return graphs
 
 
-def render_all_triads():
+def render_all_triads() -> str:
     """Render all triads using PHART and output in a grid-like format."""
     triads = generate_triads()
 
