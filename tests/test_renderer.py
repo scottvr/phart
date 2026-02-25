@@ -729,22 +729,22 @@ class TestASCIIRenderer(unittest.TestCase):
         four_bounds = renderer._get_node_bounds("4", positions)  # noqa: SLF001
         f1_bounds = renderer._get_node_bounds("F1", positions)  # noqa: SLF001
 
-        self.assertEqual(
-            renderer._edge_anchor_map[("1", "2")]["end"],
-            (two_bounds["center_x"], two_bounds["top"]),
-        )  # noqa: SLF001
-        self.assertEqual(
-            renderer._edge_anchor_map[("1", "Z1")]["end"],
-            (z1_bounds["center_x"], z1_bounds["top"]),
-        )  # noqa: SLF001
-        self.assertEqual(
-            renderer._edge_anchor_map[("2", "4")]["end"],
-            (four_bounds["center_x"], four_bounds["top"]),
-        )  # noqa: SLF001
-        self.assertEqual(
-            renderer._edge_anchor_map[("2", "F1")]["end"],
-            (f1_bounds["center_x"], f1_bounds["top"]),
-        )  # noqa: SLF001
+        end_1_2 = renderer._edge_anchor_map[("1", "2")]["end"]  # noqa: SLF001
+        end_1_z1 = renderer._edge_anchor_map[("1", "Z1")]["end"]  # noqa: SLF001
+        end_2_4 = renderer._edge_anchor_map[("2", "4")]["end"]  # noqa: SLF001
+        end_2_f1 = renderer._edge_anchor_map[("2", "F1")]["end"]  # noqa: SLF001
+
+        self.assertEqual(end_1_2[1], two_bounds["top"])
+        self.assertEqual(end_1_z1[1], z1_bounds["top"])
+        self.assertEqual(end_2_4[1], four_bounds["top"])
+        self.assertEqual(end_2_f1[1], f1_bounds["top"])
+
+        # Single-use destination faces should stay center-biased, but may shift
+        # by one slot to preserve straighter routes when beneficial.
+        self.assertLessEqual(abs(end_1_2[0] - two_bounds["center_x"]), 1)
+        self.assertLessEqual(abs(end_1_z1[0] - z1_bounds["center_x"]), 1)
+        self.assertLessEqual(abs(end_2_4[0] - four_bounds["center_x"]), 1)
+        self.assertLessEqual(abs(end_2_f1[0] - f1_bounds["center_x"]), 1)
 
     def test_edge_anchor_ports_assigns_monotone_face_ports_for_ordered_targets(self):
         graph = nx.DiGraph([("P", "L"), ("P", "R")])

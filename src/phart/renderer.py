@@ -686,6 +686,60 @@ class ASCIIRenderer:
 
         return [ordered_candidates[idx] for idx in chosen_indices]
 
+    def _assign_monotone_port_indices(
+        self, counters: List[int], candidates: List[int]
+    ) -> List[int]:
+        """Assign monotonically ordered candidate indices to ordered counters."""
+        if not counters:
+            return []
+        ordered_candidates = sorted(set(candidates))
+        if not ordered_candidates:
+            return [0 for _ in counters]
+
+        n = len(counters)
+        m = len(ordered_candidates)
+        if n == 1:
+            target = counters[0]
+            best_idx = min(
+                range(m), key=lambda idx: (abs(ordered_candidates[idx] - target), idx)
+            )
+            return [best_idx]
+
+        if m < n:
+            max_index = m - 1
+            return [round((i * max_index) / max(n - 1, 1)) for i in range(n)]
+
+        # Dynamic programming: strictly increasing indices minimizing deviation.
+        inf = float("inf")
+        dp: List[List[float]] = [[inf for _ in range(m)] for _ in range(n)]
+        prev: List[List[int]] = [[-1 for _ in range(m)] for _ in range(n)]
+
+        for j in range(m):
+            dp[0][j] = abs(counters[0] - ordered_candidates[j])
+
+        for i in range(1, n):
+            for j in range(i, m):
+                local_cost = abs(counters[i] - ordered_candidates[j])
+                best_prev_idx = -1
+                best_prev_cost = inf
+                for k in range(i - 1, j):
+                    cand_cost = dp[i - 1][k]
+                    if cand_cost < best_prev_cost:
+                        best_prev_cost = cand_cost
+                        best_prev_idx = k
+                dp[i][j] = best_prev_cost + local_cost
+                prev[i][j] = best_prev_idx
+
+        best_last_idx = min(
+            range(n - 1, m),
+            key=lambda j: (dp[n - 1][j], j),
+        )
+        chosen = [0 for _ in range(n)]
+        chosen[n - 1] = best_last_idx
+        for i in range(n - 1, 0, -1):
+            chosen[i - 1] = prev[i][chosen[i]]
+        return chosen
+
     def _compute_edge_anchor_map(
         self, positions: Dict[Any, Tuple[int, int]]
     ) -> Dict[Tuple[Any, Any], Dict[str, Tuple[int, int]]]:
@@ -755,7 +809,8 @@ class ASCIIRenderer:
         edge_anchor_map: Dict[Tuple[Any, Any], Dict[str, Tuple[int, int]]] = {}
         used_by_side: Dict[Tuple[Any, str], List[int]] = {}
         min_port_separation = 1
-        face_assignments: Dict[Tuple[Tuple[Any, Any], str], int] = {}
+        wiggle_radius = 1
+        face_candidate_pools: Dict[Tuple[Tuple[Any, Any], str], List[int]] = {}
         face_requirements: Dict[
             Tuple[Any, str], List[Tuple[Tuple[Any, Any], str, int, str]]
         ] = {}
@@ -780,26 +835,47 @@ class ASCIIRenderer:
 
         for (node, side), items in face_requirements.items():
             node_bounds = self._get_node_bounds(node, positions)
-            candidates = self._get_side_port_values(node_bounds, side)
+            candidates = sorted(set(self._get_side_port_values(node_bounds, side)))
             if not candidates:
                 candidates = [self._side_center_value(node_bounds, side)]
+            max_idx = len(candidates) - 1
 
             sorted_items = sorted(items, key=lambda item: (item[2], item[3]))
             if len(sorted_items) == 1:
                 center = self._side_center_value(node_bounds, side)
-                assigned_values = [
-                    self._nearest_candidate_to_center(candidates, center)
+                center_idx = min(
+                    range(len(candidates)),
+                    key=lambda idx: (abs(candidates[idx] - center), idx),
+                )
+                low_idx = max(0, center_idx - wiggle_radius)
+                high_idx = min(max_idx, center_idx + wiggle_radius)
+                edge_key, role, _counter, _peer = sorted_items[0]
+                face_candidate_pools[(edge_key, role)] = candidates[
+                    low_idx : high_idx + 1
                 ]
             else:
                 counters = [item[2] for item in sorted_items]
-                assigned_values = self._assign_monotone_port_values(
-                    counters, candidates
-                )
-
-            for (edge_key, role, _counter, _peer), assigned in zip(
-                sorted_items, assigned_values
-            ):
-                face_assignments[(edge_key, role)] = assigned
+                base_indices = self._assign_monotone_port_indices(counters, candidates)
+                n = len(base_indices)
+                for idx, (edge_key, role, _counter, _peer) in enumerate(sorted_items):
+                    base_idx = base_indices[idx]
+                    left_limit = (
+                        (base_indices[idx - 1] + base_idx + 1) // 2 if idx > 0 else 0
+                    )
+                    right_limit = (
+                        (base_idx + base_indices[idx + 1] - 1) // 2
+                        if idx < n - 1
+                        else max_idx
+                    )
+                    if left_limit > right_limit:
+                        left_limit = right_limit = min(max(base_idx, 0), max_idx)
+                    low_idx = max(left_limit, base_idx - wiggle_radius)
+                    high_idx = min(right_limit, base_idx + wiggle_radius)
+                    if low_idx > high_idx:
+                        low_idx = high_idx = min(max(base_idx, left_limit), right_limit)
+                    face_candidate_pools[(edge_key, role)] = candidates[
+                        low_idx : high_idx + 1
+                    ]
 
         edge_specs_sorted = sorted(
             edge_specs,
@@ -833,21 +909,15 @@ class ASCIIRenderer:
 
             start_bounds = self._get_node_bounds(start_node, positions)
             end_bounds = self._get_node_bounds(end_node, positions)
-            preferred_start = face_assignments.get((edge_key, "start"))
-            preferred_end = face_assignments.get((edge_key, "end"))
+            start_pool = face_candidate_pools.get((edge_key, "start"), start_candidates)
+            end_pool = face_candidate_pools.get((edge_key, "end"), end_candidates)
 
-            if preferred_start is not None:
-                start_pool = [preferred_start]
-            else:
-                start_pool = self._values_with_min_separation(
-                    start_candidates, used_start_values, min_port_separation
-                )
-            if preferred_end is not None:
-                end_pool = [preferred_end]
-            else:
-                end_pool = self._values_with_min_separation(
-                    end_candidates, used_end_values, min_port_separation
-                )
+            start_pool = self._values_with_min_separation(
+                start_pool, used_start_values, min_port_separation
+            )
+            end_pool = self._values_with_min_separation(
+                end_pool, used_end_values, min_port_separation
+            )
 
             start_value, end_value = self._choose_port_pair(
                 start_candidates=start_pool,
