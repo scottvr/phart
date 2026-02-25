@@ -21,6 +21,25 @@ _\*except NetworkX, which should be mentioned prominently, as rendering NX digra
 
 See [LAYOUT-STRATEGIES.md](https://github.com/scottvr/phart/blob/main/LAYOUT-STRATEGIES.md) in the repo for demos.
 
+Anyone interested in representing potentially very dense and complex graphs with an ascii line-drawing generator
+such that they find themselves here reading this is probably someone with a fair likelyhood to find this next
+trick as amusing as I did.
+
+There is a Gallery of some of the visualization capabilities native(-ish) to NetworkX using matplotlib and GraphViz, 
+and  maybe some other tools. Among the things in that Gallery I found was this demonstration of ["Rainbow Coloring"](https://networkx.org/documentation/stable/auto_examples/drawing/plot_rainbow_coloring.html) that shows this neat image, which I will reproduce by way of a screenshot of their website, logo in full view.
+
+<img width="673" height="670" alt="nx-rainbow-graph-screenshot" src="https://github.com/user-attachments/assets/ce5aea65-c086-48ae-9c4d-b2dc324b1da7" />
+
+Pretty neat, huh? Well, one thing that was an early goal in the development of PHART wa to be able to go to websites like the one linked about, find demos and examples in code, and do as little as possible to that code, aside from importing phart, and having it render the graph object. It does a pretty good job most of the time, and gets better as I and others use phart to attempt things that it hasn't been made to do yet. 
+
+So, of course when I saw the code to generate that image above using NetworkX and matplotlib, I wanted to see if I could phart to handle it. Turns out that a lot of the work that had gone into getting ANSI colors to work needed to be undone and reworked so that phart could color paths while leaving nodes uncolored. But that is done now and I am pleased to show you phart's interpretation of the geometric design made by the colored edge paths between nodes as in the image above. While phart does have the ability to translate a circular layout graph to a terminal "canvas" rendered only in text, it is done using only orthogonal paths, 90 degree angles... "Manhattan routing", as it is sometimes called. So, with only 90 jogs possible to connect any node to another, and in this graph all 13 nodes are connected to all other nodes, which is precisely why a circular layout with distance-based coloring gives the pleasing looks that it does in the example above. Having rambled on long enough, let me show you phart's latest masterpiece of ASCII Art (ok, I used Unicode characters in this one, and phart colors them with ANSI color escape codes, but it's still plain text!). It's quite fetching in its own way I think.
+
+<img width="670" height="670" alt="NX-complete-graph" src="https://github.com/user-attachments/assets/ac28aa5c-b6b2-4a23-a03f-4a6839076c55" />
+
+Maybe someday phart will get official acknowledgement from the NetworkX team by way of displaying some of its better output in their Gallery, along with a mention in their list of visualization tools. Maybe.
+
+----
+
 ## NEW Features Feb 2026
 
 - binary_tree sort mode
@@ -195,38 +214,38 @@ switches meant for phart from any switches meant for the script it is loading by
 
 `phart --charset unicode --style minimal  --hpad 1 --binary-tree
   --node-spacing 1 --layer-spacing 4  --vpad 0  --edge-anchors ports --bboxes
-  deostroll/collatz.py -- 3`
+  deostroll/collatz.py -- `
 
 This results in the following graph:
 
 ```
-                    ┌───┐
-                    │ 1 │
-                    └───┘
-                 ┌────┤
-                 │    └────────────────────┐
-                 ↓                         ↓
-               ┌───┐                    ┌────┐
-               │ 2 │                    │ Z1 │
-               └───┘                    └────┘
-            ┌────┤
-            │    └───────────────┐
-            ↓                    ↓
-          ┌───┐               ┌────┐
-          │ 4 │               │ F1 │
-          └───┘               └────┘
-       ┌────┤
-       │    └──────────┐
-       ↓               ↓
-     ┌───┐          ┌────┐
-     │ 8 │          │ E1 │
-     └───┘          └────┘
-   ┌───┤
-   │   └─────┐
-   ↓         ↓
-┌────┐    ┌────┐
-│ L1 │    │ L2 │
-└────┘    └────┘
+                ┌────┐
+                │ 1  │
+                └────┘
+                ┌┘  └─┐
+                │     │
+                v     v
+            ┌────┐  ┌────┐
+            │ 2  │  │ Z1 │
+            └────┘  └────┘
+            ┌┘  └─┐
+            │     │
+            v     v
+        ┌────┐  ┌────┐
+        │ 4  │  │ F1 │
+        └────┘  └────┘
+        ┌┘  └─┐
+        │     │
+        v     v
+    ┌────┐  ┌────┐
+    │ 8  │  │ E1 │
+    └────┘  └────┘
+    ┌┘  └─┐
+    │     │
+    v     v
+┌────┐  ┌────┐
+│ L1 │  │ L2 │
+└────┘  └────┘
 ```
 
 You can see that all of the number terms are on the left, while Leaves, Zero, Fractals,
