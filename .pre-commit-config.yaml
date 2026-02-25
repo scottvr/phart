@@ -32,3 +32,11 @@ repos:
         language: system
         entry: python tools/generate_requirements.py
         files: "pyproject.toml|requirements/.*\\.txt|tools/generate_requirements.py"
+
+      - id: pytest-check
+        name: pytest-check
+        entry: pytest
+        language: system
+        types: [python]
+        pass_filenames: false
+        always_run: true
