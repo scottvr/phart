@@ -2,13 +2,16 @@
 
 import sys
 import ast
+import io
+import re
 import argparse
 import importlib.util
-from contextlib import nullcontext, redirect_stdout
+from contextlib import redirect_stdout
+from html import escape as html_escape
 from pathlib import Path
 from typing import Optional, Any, ContextManager
 
-from .renderer import ASCIIRenderer
+from .renderer import ASCIIRenderer, ANSI_ESCAPE_RE, UNICODE_DITAA_MAP
 from .styles import NodeStyle, LayoutOptions
 from .charset import CharSet
 
@@ -453,18 +456,140 @@ def _module_defines_function(file_path: Path, function_name: str) -> bool:
     )
 
 
+_ANSI_TOKEN_RE = re.compile(r"\x1b\[[0-9;]*m|.", re.DOTALL)
+
+
+def _rows_and_colors_from_ansi_text(
+    text: str,
+) -> tuple[list[str], list[list[Optional[str]]]]:
+    rows: list[list[str]] = []
+    color_rows: list[list[Optional[str]]] = []
+    for line in text.splitlines():
+        row_chars: list[str] = []
+        row_colors: list[Optional[str]] = []
+        active_ansi: Optional[str] = None
+        for token in _ANSI_TOKEN_RE.findall(line):
+            if token.startswith("\x1b["):
+                active_ansi = None if token == "\x1b[0m" else token
+                continue
+            row_chars.append(token)
+            row_colors.append(active_ansi)
+        rows.append(row_chars)
+        color_rows.append(row_colors)
+
+    width = max((len(r) for r in rows), default=0)
+    normalized_rows = ["".join(r).ljust(width) for r in rows]
+    normalized_colors: list[list[Optional[str]]] = []
+    for color_row in color_rows:
+        normalized_colors.append(color_row + [None] * (width - len(color_row)))
+    return normalized_rows, normalized_colors
+
+
+def _render_python_output(args: argparse.Namespace, raw_text: str) -> str:
+    if args.output_format == "text":
+        return raw_text
+
+    if args.output_format in {"ditaa", "ditaa-puml"}:
+        text = ANSI_ESCAPE_RE.sub("", raw_text)
+        text = "".join(UNICODE_DITAA_MAP.get(ch, ch) for ch in text)
+        lines = [line.rstrip() for line in text.splitlines()]
+        while lines and lines[-1] == "":
+            lines.pop()
+        body = "\n".join(lines)
+        if args.output_format == "ditaa-puml":
+            return f"@startditaa\n{body}\n@endditaa\n"
+        return body + ("\n" if body else "")
+
+    rows, color_canvas = _rows_and_colors_from_ansi_text(raw_text)
+    height = len(rows)
+    width = max((len(row) for row in rows), default=0)
+
+    if args.output_format == "svg":
+        cell_px = args.svg_cell_size
+        svg_w = width * cell_px
+        svg_h = height * cell_px
+        text_x = cell_px / 2
+        text_y0 = cell_px * 0.8
+        lines = []
+        lines.append('<?xml version="1.0" encoding="UTF-8"?>')
+        lines.append(
+            f'<svg xmlns="http://www.w3.org/2000/svg" width="{svg_w}" height="{svg_h}" '
+            f'viewBox="0 0 {svg_w} {svg_h}">'
+        )
+        lines.append(
+            f'  <rect x="0" y="0" width="{svg_w}" height="{svg_h}" fill="{html_escape(args.svg_bg)}" />'
+        )
+        lines.append(
+            "  <g "
+            f'font-family="{html_escape(args.svg_font_family)}" '
+            f'font-size="{cell_px}" fill="{html_escape(args.svg_fg)}" '
+            'text-anchor="middle" xml:space="preserve">'
+        )
+        for y, row in enumerate(rows):
+            for x, ch in enumerate(row):
+                if ch == " ":
+                    continue
+                cx = text_x + x * cell_px
+                cy = text_y0 + y * cell_px
+                fill = args.svg_fg
+                if y < len(color_canvas) and x < len(color_canvas[y]):
+                    ansi = color_canvas[y][x]
+                    parsed = ASCIIRenderer._ansi_to_hex(ansi) if ansi else None
+                    if parsed:
+                        fill = parsed
+                lines.append(
+                    f'    <text x="{cx:.2f}" y="{cy:.2f}" fill="{html_escape(fill)}">{html_escape(ch)}</text>'
+                )
+        lines.append("  </g>")
+        lines.append("</svg>")
+        return "\n".join(lines) + "\n"
+
+    if args.output_format == "html":
+        html_lines: list[str] = []
+        html_lines.append("<!DOCTYPE html>")
+        html_lines.append('<html><head><meta charset="utf-8"></head><body>')
+        html_lines.append(
+            "<pre style="
+            f'"background:{html_escape(args.svg_bg)};'
+            f"color:{html_escape(args.svg_fg)};"
+            f"font-family:{html_escape(args.svg_font_family)};"
+            'line-height:1.1;">'
+        )
+        for y, row in enumerate(rows):
+            current_color: Optional[str] = None
+            for x, ch in enumerate(row):
+                target_color = args.svg_fg
+                if y < len(color_canvas) and x < len(color_canvas[y]):
+                    ansi = color_canvas[y][x]
+                    parsed = ASCIIRenderer._ansi_to_hex(ansi) if ansi else None
+                    if parsed:
+                        target_color = parsed
+                if target_color != current_color:
+                    if current_color is not None:
+                        html_lines.append("</span>")
+                    if target_color != args.svg_fg:
+                        html_lines.append(
+                            f'<span style="color:{html_escape(target_color)}">'
+                        )
+                    else:
+                        html_lines.append("<span>")
+                    current_color = target_color
+                html_lines.append(html_escape(ch))
+            if current_color is not None:
+                html_lines.append("</span>")
+            html_lines.append("\n")
+        html_lines.append("</pre></body></html>\n")
+        return "".join(html_lines)
+
+    raise ValueError(f"Unsupported output format '{args.output_format}'")
+
+
 def main() -> Optional[int]:
     """CLI entry point for PHART."""
     args, unknown, explicit_layout_fields, module_argv = parse_args()
 
     try:
         if args.input.suffix == ".py":
-            if args.output_format != "text":
-                print(
-                    "Error: --output-format is only supported for non-.py inputs",
-                    file=sys.stderr,
-                )
-                return 2
             if unknown:
                 print(
                     "It looks like you passed arguments intended for the script.\n"
@@ -481,36 +606,33 @@ def main() -> Optional[int]:
             try:
                 cli_options = create_layout_options(args, explicit_layout_fields)
                 ASCIIRenderer.default_options = cli_options
-                output_ctx: ContextManager[Any] = nullcontext()
-                out_file = None
+                capture = io.StringIO()
+                output_ctx: ContextManager[Any] = redirect_stdout(capture)
+
+                with output_ctx:
+                    if args.function != "main":
+                        module = _load_python_module(args.input)
+                        try:
+                            func = getattr(module, args.function)
+                        except AttributeError:
+                            print(
+                                f"Error: Function '{args.function}' not found in {args.input}",
+                                file=sys.stderr,
+                            )
+                            return 1
+                        func()
+                    elif _module_defines_function(args.input, "main"):
+                        module = _load_python_module(args.input)
+                        module.main()
+                    else:
+                        _run_python_as_main(args.input)
+
+                rendered = _render_python_output(args, capture.getvalue())
                 if args.output:
-                    out_file = args.output.open("w", encoding="utf-8")
-                    output_ctx = redirect_stdout(out_file)
-
-                try:
-                    with output_ctx:
-                        if args.function != "main":
-                            module = _load_python_module(args.input)
-                            try:
-                                func = getattr(module, args.function)
-                            except AttributeError:
-                                print(
-                                    f"Error: Function '{args.function}' not found in {args.input}",
-                                    file=sys.stderr,
-                                )
-                                return 1
-                            func()
-                            return 0
-
-                        if _module_defines_function(args.input, "main"):
-                            module = _load_python_module(args.input)
-                            module.main()
-                        else:
-                            _run_python_as_main(args.input)
-                        return 0
-                finally:
-                    if out_file is not None:
-                        out_file.close()
+                    args.output.write_text(rendered, encoding="utf-8")
+                else:
+                    print(rendered, end="")
+                return 0
 
             finally:
                 sys.argv = old_argv

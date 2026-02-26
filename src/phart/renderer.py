@@ -1169,22 +1169,36 @@ class ASCIIRenderer:
         match = re.search(r"\x1b\[([0-9;]+)m", ansi)
         if not match:
             return None
-        parts = [p for p in match.group(1).split(";") if p]
-        if len(parts) >= 3 and parts[0] == "38" and parts[1] == "5":
-            try:
-                idx = int(parts[2])
-            except ValueError:
-                return None
-            return ASCIIRenderer._xterm_index_to_hex(idx)
-        if len(parts) >= 5 and parts[0] == "38" and parts[1] == "2":
-            try:
-                r = max(0, min(255, int(parts[2])))
-                g = max(0, min(255, int(parts[3])))
-                b = max(0, min(255, int(parts[4])))
-            except ValueError:
-                return None
-            return f"#{r:02x}{g:02x}{b:02x}"
-        return None
+        try:
+            codes = [int(p) for p in match.group(1).split(";") if p]
+        except ValueError:
+            return None
+
+        fg_color: Optional[str] = None
+        i = 0
+        while i < len(codes):
+            code = codes[i]
+
+            if code in {0, 39}:
+                fg_color = None
+            elif 30 <= code <= 37:
+                fg_color = ASCIIRenderer._xterm_index_to_hex(code - 30)
+            elif 90 <= code <= 97:
+                fg_color = ASCIIRenderer._xterm_index_to_hex(8 + (code - 90))
+            elif code == 38 and i + 1 < len(codes):
+                mode = codes[i + 1]
+                if mode == 5 and i + 2 < len(codes):
+                    fg_color = ASCIIRenderer._xterm_index_to_hex(codes[i + 2])
+                    i += 2
+                elif mode == 2 and i + 4 < len(codes):
+                    r = max(0, min(255, codes[i + 2]))
+                    g = max(0, min(255, codes[i + 3]))
+                    b = max(0, min(255, codes[i + 4]))
+                    fg_color = f"#{r:02x}{g:02x}{b:02x}"
+                    i += 4
+            i += 1
+
+        return fg_color
 
     @staticmethod
     def _xterm_index_to_hex(idx: int) -> str:
@@ -1300,14 +1314,14 @@ class ASCIIRenderer:
         self.render()
         rows = self._normalized_canvas_rows()
         html_lines: List[str] = []
-        html_lines.append('<!DOCTYPE html>')
-        html_lines.append("<html><head><meta charset=\"utf-8\"></head><body>")
+        html_lines.append("<!DOCTYPE html>")
+        html_lines.append('<html><head><meta charset="utf-8"></head><body>')
         html_lines.append(
             "<pre style="
-            f"\"background:{html_escape(bg_color)};"
+            f'"background:{html_escape(bg_color)};'
             f"color:{html_escape(fg_color)};"
             f"font-family:{html_escape(font_family)};"
-            "line-height:1.1;\">"
+            'line-height:1.1;">'
         )
         for y, row in enumerate(rows):
             current_color: Optional[str] = None

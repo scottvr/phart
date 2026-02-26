@@ -313,7 +313,7 @@ def main():
         output = self.stdout.getvalue()
         self.assertNotIn("\x1b[", output)
 
-    def test_output_format_rejected_for_py_input(self):
+    def test_output_format_svg_for_py_input(self):
         sys.argv = [
             "phart",
             "--output-format",
@@ -321,8 +321,11 @@ def main():
             str(self.py_main_file),
         ]
         exit_code = main()
-        self.assertEqual(exit_code, 2)
-        self.assertIn("only supported for non-.py inputs", self.stderr.getvalue())
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertIn("<svg", output)
+        self.assertIn("<text", output)
+        self.assertNotIn("Error", self.stderr.getvalue())
 
     def test_invalid_file(self):
         """Test handling of invalid file."""
@@ -339,7 +342,9 @@ def main():
         self.assertEqual(exit_code, 1)
         error_msg = self.stderr.getvalue()
         self.assertIn("Error", error_msg)
-        self.assertIn("Could not parse file as GraphML or DOT format", error_msg)
+        self.assertIn(
+            "Could not parse file as PlantUML, GraphML, or DOT format", error_msg
+        )
 
     def test_option_construction_errors_are_not_reported_as_parse_errors(self):
         sys.argv = ["phart", str(self.test_text_file)]
@@ -352,7 +357,9 @@ def main():
         self.assertEqual(exit_code, 1)
         error_msg = self.stderr.getvalue()
         self.assertIn("Error: synthetic options error", error_msg)
-        self.assertNotIn("Could not parse file as GraphML or DOT format", error_msg)
+        self.assertNotIn(
+            "Could not parse file as PlantUML, GraphML, or DOT format", error_msg
+        )
 
     def test_python_with_main(self):
         """Test executing Python file with main() function."""
