@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Dict, List, Optional, TextIO, Tuple, ClassVar, Set
+from typing import Any, Dict, List, Optional, TextIO, Tuple, ClassVar, Set, cast
 import re
 import warnings
 import os
@@ -1401,9 +1401,12 @@ class ASCIIRenderer:
                 "SVG path glyph mode needs either --svg-font-path or matplotlib for font lookup."
             ) from exc
 
-        resolved = font_manager.findfont(
+        resolved = cast(
+            str,
+            font_manager.findfont(
             font_family,
             fallback_to_default=False,
+            ),
         )
         if not resolved or not os.path.isfile(resolved):
             raise RuntimeError(
@@ -2019,7 +2022,7 @@ class ASCIIRenderer:
         - Optional edge labels using ``: label``
         """
 
-        graph = nx.DiGraph()
+        graph: nx.DiGraph[Any] = nx.DiGraph()
         alias_to_id: Dict[str, str] = {}
 
         declaration_kinds = (
