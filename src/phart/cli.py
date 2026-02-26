@@ -14,6 +14,7 @@ from typing import Optional, Any, ContextManager
 from .renderer import ASCIIRenderer, ANSI_ESCAPE_RE, UNICODE_DITAA_MAP
 from .styles import NodeStyle, LayoutOptions
 from .charset import CharSet
+from phart import __version__ as version
 
 COLOR_MODES = {"none", "source", "target", "path", "attr"}
 OUTPUT_FORMATS = {"text", "ditaa", "ditaa-puml", "svg", "html"}
@@ -168,6 +169,12 @@ def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
         "-o",
         type=Path,
         help="Output file (if not specified, prints to stdout)",
+    )
+    parser.add_argument(
+        "--version",
+        "-v",
+        action="version",
+        version=version,
     )
     parser.add_argument(
         "--output-format",
