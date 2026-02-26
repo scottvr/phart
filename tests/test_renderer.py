@@ -297,6 +297,13 @@ class TestASCIIRenderer(unittest.TestCase):
         self.assertIn("<!DOCTYPE html>", html)
         self.assertIn("<pre", html)
 
+    def test_ansi_to_hex_supports_named_and_bright_ansi_codes(self):
+        self.assertEqual(ASCIIRenderer._ansi_to_hex("\x1b[31m"), "#800000")
+        self.assertEqual(ASCIIRenderer._ansi_to_hex("\x1b[32m"), "#008000")
+        self.assertEqual(ASCIIRenderer._ansi_to_hex("\x1b[91m"), "#ff0000")
+        self.assertEqual(ASCIIRenderer._ansi_to_hex("\x1b[1;32m"), "#008000")
+        self.assertEqual(ASCIIRenderer._ansi_to_hex("\x1b[38;5;214m"), "#ffaf00")
+
     def test_render_svg_path_mode_dispatches_to_glyph_renderer(self):
         graph = nx.DiGraph([("A", "B")])
         renderer = ASCIIRenderer(
