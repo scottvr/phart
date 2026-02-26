@@ -1,6 +1,9 @@
 from __future__ import annotations
-from typing import Any, Dict, List, Optional, TextIO, Tuple, ClassVar, Set
+from typing import Any, Dict, List, Optional, TextIO, Tuple, ClassVar, Set, cast
+import re
 import warnings
+import os
+from html import escape as html_escape
 
 import networkx as nx  # type: ignore
 
@@ -11,6 +14,7 @@ import sys
 import io
 
 ANSI_RESET = "\x1b[0m"
+ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;]*m")
 ANSI_SUBWAY_PALETTE: Tuple[str, ...] = (
     "\x1b[38;5;45m",  # cyan
     "\x1b[38;5;214m",  # orange
@@ -41,6 +45,34 @@ ANSI_NAMED_COLORS: Dict[str, str] = {
     # Palette aliases used by existing subway colors.
     "orange": "\x1b[38;5;214m",
     "aqua": "\x1b[38;5;81m",
+}
+UNICODE_DITAA_MAP: Dict[str, str] = {
+    "─": "-",
+    "│": "|",
+    "┌": "+",
+    "┐": "+",
+    "└": "+",
+    "┘": "+",
+    "┬": "+",
+    "┴": "+",
+    "├": "+",
+    "┤": "+",
+    "┼": "+",
+    "═": "=",
+    "║": "|",
+    "╔": "+",
+    "╗": "+",
+    "╚": "+",
+    "╝": "+",
+    "╠": "+",
+    "╣": "+",
+    "╦": "+",
+    "╩": "+",
+    "╬": "+",
+    "→": ">",
+    "←": "<",
+    "↑": "^",
+    "↓": "v",
 }
 
 
@@ -1133,6 +1165,345 @@ class ASCIIRenderer:
         else:
             print(self.render(), file=file)
 
+    @staticmethod
+    def _ansi_to_hex(ansi: str) -> Optional[str]:
+        match = re.search(r"\x1b\[([0-9;]+)m", ansi)
+        if not match:
+            return None
+        try:
+            codes = [int(p) for p in match.group(1).split(";") if p]
+        except ValueError:
+            return None
+
+        fg_color: Optional[str] = None
+        i = 0
+        while i < len(codes):
+            code = codes[i]
+
+            if code in {0, 39}:
+                fg_color = None
+            elif 30 <= code <= 37:
+                fg_color = ASCIIRenderer._xterm_index_to_hex(code - 30)
+            elif 90 <= code <= 97:
+                fg_color = ASCIIRenderer._xterm_index_to_hex(8 + (code - 90))
+            elif code == 38 and i + 1 < len(codes):
+                mode = codes[i + 1]
+                if mode == 5 and i + 2 < len(codes):
+                    fg_color = ASCIIRenderer._xterm_index_to_hex(codes[i + 2])
+                    i += 2
+                elif mode == 2 and i + 4 < len(codes):
+                    r = max(0, min(255, codes[i + 2]))
+                    g = max(0, min(255, codes[i + 3]))
+                    b = max(0, min(255, codes[i + 4]))
+                    fg_color = f"#{r:02x}{g:02x}{b:02x}"
+                    i += 4
+            i += 1
+
+        return fg_color
+
+    @staticmethod
+    def _xterm_index_to_hex(idx: int) -> str:
+        idx = max(0, min(255, idx))
+        base16 = [
+            (0, 0, 0),
+            (128, 0, 0),
+            (0, 128, 0),
+            (128, 128, 0),
+            (0, 0, 128),
+            (128, 0, 128),
+            (0, 128, 128),
+            (192, 192, 192),
+            (128, 128, 128),
+            (255, 0, 0),
+            (0, 255, 0),
+            (255, 255, 0),
+            (0, 0, 255),
+            (255, 0, 255),
+            (0, 255, 255),
+            (255, 255, 255),
+        ]
+        if idx < 16:
+            r, g, b = base16[idx]
+            return f"#{r:02x}{g:02x}{b:02x}"
+        if idx < 232:
+            idx -= 16
+            r = idx // 36
+            g = (idx % 36) // 6
+            b = idx % 6
+            conv = [0, 95, 135, 175, 215, 255]
+            rr, gg, bb = conv[r], conv[g], conv[b]
+            return f"#{rr:02x}{gg:02x}{bb:02x}"
+        gray = 8 + (idx - 232) * 10
+        return f"#{gray:02x}{gray:02x}{gray:02x}"
+
+    def _normalized_canvas_rows(self) -> List[str]:
+        width = max((len(row) for row in self.canvas), default=0)
+        return ["".join(row).ljust(width) for row in self.canvas]
+
+    def render_ditaa(self, wrap_plantuml: bool = False) -> str:
+        self.render()
+        rows = self._normalized_canvas_rows()
+        text = "\n".join(rows)
+        text = ANSI_ESCAPE_RE.sub("", text)
+        text = "".join(UNICODE_DITAA_MAP.get(ch, ch) for ch in text)
+        lines = [line.rstrip() for line in text.splitlines()]
+        while lines and lines[-1] == "":
+            lines.pop()
+        body = "\n".join(lines)
+        if wrap_plantuml:
+            return f"@startditaa\n{body}\n@endditaa\n"
+        return body + ("\n" if body else "")
+
+    def render_svg(
+        self,
+        *,
+        cell_px: int = 12,
+        font_family: str = "monospace",
+        text_mode: str = "text",
+        font_path: Optional[str] = None,
+        fg_color: str = "#111111",
+        bg_color: str = "#ffffff",
+    ) -> str:
+        self.render()
+        rows = self._normalized_canvas_rows()
+        height = len(rows)
+        width = max((len(row) for row in rows), default=0)
+        svg_w = width * cell_px
+        svg_h = height * cell_px
+        text_x = cell_px / 2
+        text_y0 = cell_px * 0.8
+
+        lines: List[str] = []
+        lines.append('<?xml version="1.0" encoding="UTF-8"?>')
+        lines.append(
+            f'<svg xmlns="http://www.w3.org/2000/svg" width="{svg_w}" height="{svg_h}" '
+            f'viewBox="0 0 {svg_w} {svg_h}">'
+        )
+        lines.append(
+            f'  <rect x="0" y="0" width="{svg_w}" height="{svg_h}" fill="{html_escape(bg_color)}" />'
+        )
+        if text_mode == "text":
+            lines.append(
+                "  <g "
+                f'font-family="{html_escape(font_family)}" '
+                f'font-size="{cell_px}" fill="{html_escape(fg_color)}" '
+                'text-anchor="middle" xml:space="preserve">'
+            )
+            for y, row in enumerate(rows):
+                for x, ch in enumerate(row):
+                    if ch == " ":
+                        continue
+                    cx = text_x + x * cell_px
+                    cy = text_y0 + y * cell_px
+                    fill = fg_color
+                    if y < len(self._color_canvas) and x < len(self._color_canvas[y]):
+                        ansi = self._color_canvas[y][x]
+                        parsed = self._ansi_to_hex(ansi) if ansi else None
+                        if parsed:
+                            fill = parsed
+                    lines.append(
+                        f'    <text x="{cx:.2f}" y="{cy:.2f}" fill="{html_escape(fill)}">{html_escape(ch)}</text>'
+                    )
+            lines.append("  </g>")
+        elif text_mode == "path":
+            self._append_svg_glyph_paths(
+                lines=lines,
+                rows=rows,
+                cell_px=cell_px,
+                font_family=font_family,
+                font_path=font_path,
+                fg_color=fg_color,
+            )
+        else:
+            raise ValueError("text_mode must be one of: text, path")
+        lines.append("</svg>")
+        return "\n".join(lines) + "\n"
+
+    def _append_svg_glyph_paths(
+        self,
+        *,
+        lines: List[str],
+        rows: List[str],
+        cell_px: int,
+        font_family: str,
+        font_path: Optional[str],
+        fg_color: str,
+    ) -> None:
+        try:
+            from fontTools.ttLib import TTFont  # type: ignore
+            from fontTools.pens.svgPathPen import SVGPathPen  # type: ignore
+            from fontTools.pens.boundsPen import BoundsPen  # type: ignore
+        except ImportError as exc:
+            raise RuntimeError(
+                "SVG path glyph mode requires fonttools. Install it and retry."
+            ) from exc
+
+        resolved_font = self._resolve_svg_font_path(
+            font_family=font_family,
+            font_path=font_path,
+        )
+        font = TTFont(resolved_font)
+        glyph_set = font.getGlyphSet()
+        cmap = font.getBestCmap() or {}
+        units_per_em = max(1, int(font["head"].unitsPerEm))
+        scale = float(cell_px) / float(units_per_em)
+        glyph_cache: Dict[
+            str, Optional[Tuple[str, Tuple[float, float, float, float]]]
+        ] = {}
+
+        try:
+            lines.append(
+                "  <g "
+                f'fill="{html_escape(fg_color)}" '
+                f'data-svg-font-path="{html_escape(resolved_font)}" '
+                'xml:space="preserve">'
+            )
+            for y, row in enumerate(rows):
+                for x, ch in enumerate(row):
+                    if ch == " ":
+                        continue
+
+                    cache_item = glyph_cache.get(ch)
+                    if ch not in glyph_cache:
+                        cache_item = self._glyph_outline_for_char(
+                            ch=ch,
+                            cmap=cmap,
+                            glyph_set=glyph_set,
+                            svg_path_pen_cls=SVGPathPen,
+                            bounds_pen_cls=BoundsPen,
+                        )
+                        glyph_cache[ch] = cache_item
+                    if cache_item is None:
+                        continue
+
+                    path_data, bounds = cache_item
+                    x_min, y_min, x_max, y_max = bounds
+                    glyph_w_px = (x_max - x_min) * scale
+                    glyph_h_px = (y_max - y_min) * scale
+                    tx = (
+                        (x * cell_px) + ((cell_px - glyph_w_px) / 2.0) - (x_min * scale)
+                    )
+                    ty = (
+                        (y * cell_px) + ((cell_px - glyph_h_px) / 2.0) + (y_max * scale)
+                    )
+
+                    fill = fg_color
+                    if y < len(self._color_canvas) and x < len(self._color_canvas[y]):
+                        ansi = self._color_canvas[y][x]
+                        parsed = self._ansi_to_hex(ansi) if ansi else None
+                        if parsed:
+                            fill = parsed
+
+                    lines.append(
+                        f'    <path d="{html_escape(path_data)}" fill="{html_escape(fill)}" '
+                        f'transform="translate({tx:.2f} {ty:.2f}) scale({scale:.6f} {-scale:.6f})" />'
+                    )
+            lines.append("  </g>")
+        finally:
+            font.close()
+
+    @staticmethod
+    def _resolve_svg_font_path(*, font_family: str, font_path: Optional[str]) -> str:
+        if font_path:
+            if os.path.isfile(font_path):
+                return os.path.abspath(font_path)
+            raise ValueError(f"--svg-font-path not found: {font_path}")
+        try:
+            from matplotlib import font_manager  # type: ignore
+        except ImportError as exc:
+            raise RuntimeError(
+                "SVG path glyph mode needs either --svg-font-path or matplotlib for font lookup."
+            ) from exc
+
+        resolved = cast(
+            str,
+            font_manager.findfont(
+                font_family,
+                fallback_to_default=False,
+            ),
+        )
+        if not resolved or not os.path.isfile(resolved):
+            raise RuntimeError(
+                f"Could not resolve font '{font_family}'. Pass --svg-font-path explicitly."
+            )
+        return os.path.abspath(resolved)
+
+    @staticmethod
+    def _glyph_outline_for_char(
+        *,
+        ch: str,
+        cmap: Dict[int, str],
+        glyph_set: Any,
+        svg_path_pen_cls: Any,
+        bounds_pen_cls: Any,
+    ) -> Optional[Tuple[str, Tuple[float, float, float, float]]]:
+        glyph_name = cmap.get(ord(ch))
+        if not glyph_name:
+            return None
+        if glyph_name not in glyph_set:
+            return None
+        glyph = glyph_set[glyph_name]
+        path_pen = svg_path_pen_cls(glyph_set)
+        glyph.draw(path_pen)
+        path_data = path_pen.getCommands()
+        if not path_data:
+            return None
+
+        bounds_pen = bounds_pen_cls(glyph_set)
+        glyph.draw(bounds_pen)
+        if bounds_pen.bounds is None:
+            return None
+        x_min, y_min, x_max, y_max = bounds_pen.bounds
+        if x_max <= x_min or y_max <= y_min:
+            return None
+        return path_data, (float(x_min), float(y_min), float(x_max), float(y_max))
+
+    def render_html(
+        self,
+        *,
+        fg_color: str = "#111111",
+        bg_color: str = "#ffffff",
+        font_family: str = "monospace",
+    ) -> str:
+        self.render()
+        rows = self._normalized_canvas_rows()
+        html_lines: List[str] = []
+        html_lines.append("<!DOCTYPE html>")
+        html_lines.append('<html><head><meta charset="utf-8"></head><body>')
+        html_lines.append(
+            "<pre style="
+            f'"background:{html_escape(bg_color)};'
+            f"color:{html_escape(fg_color)};"
+            f"font-family:{html_escape(font_family)};"
+            'line-height:1.1;">'
+        )
+        for y, row in enumerate(rows):
+            current_color: Optional[str] = None
+            for x, ch in enumerate(row):
+                target_color = fg_color
+                if y < len(self._color_canvas) and x < len(self._color_canvas[y]):
+                    ansi = self._color_canvas[y][x]
+                    parsed = self._ansi_to_hex(ansi) if ansi else None
+                    if parsed:
+                        target_color = parsed
+                if target_color != current_color:
+                    if current_color is not None:
+                        html_lines.append("</span>")
+                    if target_color != fg_color:
+                        html_lines.append(
+                            f'<span style="color:{html_escape(target_color)}">'
+                        )
+                    else:
+                        html_lines.append("<span>")
+                    current_color = target_color
+                html_lines.append(html_escape(ch))
+            if current_color is not None:
+                html_lines.append("</span>")
+                current_color = None
+            html_lines.append("\n")
+        html_lines.append("</pre></body></html>\n")
+        return "".join(html_lines)
+
     def write_to_file(self, filename: str) -> None:
         """
         Write graph representation to a file.
@@ -1654,6 +2025,175 @@ class ASCIIRenderer:
             return cls(G, **kwargs)
         except Exception as e:
             raise ValueError(f"Failed to read GraphML file: {e}")
+
+    @classmethod
+    def from_plantuml(cls, plantuml_string: str, **kwargs: Any) -> "ASCIIRenderer":
+        """Create a renderer from a PlantUML text diagram.
+
+        Supported subset:
+        - Common participant/class/object declarations
+        - Relationship lines using PlantUML arrows (e.g. A --> B, A <- B, A <-> B)
+        - Optional edge labels using ``: label``
+        """
+
+        graph: nx.DiGraph[Any] = nx.DiGraph()
+        alias_to_id: Dict[str, str] = {}
+
+        declaration_kinds = (
+            "abstract class",
+            "class",
+            "interface",
+            "enum",
+            "entity",
+            "annotation",
+            "actor",
+            "participant",
+            "boundary",
+            "control",
+            "database",
+            "collections",
+            "queue",
+            "component",
+            "node",
+            "usecase",
+            "object",
+            "artifact",
+            "cloud",
+            "folder",
+            "frame",
+            "rectangle",
+        )
+        decl_re = re.compile(
+            r"^(?P<kind>"
+            + "|".join(re.escape(kind) for kind in declaration_kinds)
+            + r")\s+"
+            r"(?P<lhs>\"[^\"]+\"|[A-Za-z_][\w.:$-]*)"
+            r"(?:\s+as\s+(?P<rhs>\"[^\"]+\"|[A-Za-z_][\w.:$-]*))?"
+            r"(?:\s+<<[^>]+>>)?\s*$",
+            re.IGNORECASE,
+        )
+        rel_re = re.compile(
+            r"^(?P<src>\"[^\"]+\"|[A-Za-z_][\w.:$-]*)\s*"
+            r"(?P<arrow>[A-Za-z0-9_<>*#.\-/\\|]+)\s*"
+            r"(?P<dst>\"[^\"]+\"|[A-Za-z_][\w.:$-]*)"
+            r"(?:\s*:\s*(?P<label>.+))?\s*$"
+        )
+
+        def _unquote(token: str) -> str:
+            token = token.strip()
+            if len(token) >= 2 and token[0] == token[-1] == '"':
+                return token[1:-1]
+            return token
+
+        def _ensure_node(node_id: str, label: Optional[str] = None) -> None:
+            if node_id not in graph:
+                graph.add_node(node_id)
+            if label:
+                graph.nodes[node_id]["label"] = label
+
+        def _resolve_token(token: str) -> str:
+            token = token.strip()
+            if len(token) >= 2 and token[0] == token[-1] == '"':
+                label = token[1:-1]
+                _ensure_node(label, label=label)
+                return label
+            return alias_to_id.get(token, token)
+
+        for raw_line in plantuml_string.splitlines():
+            line = raw_line.strip()
+            if "'" in line:
+                line = line.split("'", 1)[0].rstrip()
+            if not line or line.startswith("//"):
+                continue
+            lowered = line.lower()
+            if lowered in {"@startuml", "@enduml", "{", "}", "end", "end note"}:
+                continue
+            if lowered.startswith(
+                (
+                    "skinparam ",
+                    "title ",
+                    "header ",
+                    "footer ",
+                    "legend ",
+                    "note ",
+                    "hide ",
+                    "show ",
+                    "left to right",
+                    "top to bottom",
+                    "scale ",
+                    "caption ",
+                    "newpage",
+                    "page ",
+                    "!",
+                )
+            ):
+                continue
+
+            decl = decl_re.match(line)
+            if decl:
+                lhs = decl.group("lhs")
+                rhs = decl.group("rhs")
+                if rhs:
+                    lhs_unq = _unquote(lhs)
+                    rhs_unq = _unquote(rhs)
+                    if lhs.startswith('"') and rhs.startswith('"'):
+                        node_id = lhs_unq
+                        _ensure_node(node_id, label=lhs_unq)
+                    elif lhs.startswith('"'):
+                        node_id = rhs_unq
+                        alias_to_id[rhs_unq] = node_id
+                        _ensure_node(node_id, label=lhs_unq)
+                    elif rhs.startswith('"'):
+                        node_id = lhs_unq
+                        alias_to_id[lhs_unq] = node_id
+                        _ensure_node(node_id, label=rhs_unq)
+                    else:
+                        node_id = lhs_unq
+                        alias_to_id[rhs_unq] = node_id
+                        _ensure_node(node_id, label=lhs_unq)
+                else:
+                    node_id = _unquote(lhs)
+                    _ensure_node(node_id, label=node_id)
+                    alias_to_id[node_id] = node_id
+                continue
+
+            relation = rel_re.match(line)
+            if not relation:
+                continue
+
+            arrow = relation.group("arrow")
+            # Ignore non-link operator tokens.
+            if not any(ch in arrow for ch in ("-", ".", "<", ">")):
+                continue
+
+            src = _resolve_token(relation.group("src"))
+            dst = _resolve_token(relation.group("dst"))
+            _ensure_node(src, label=graph.nodes[src].get("label", src))
+            _ensure_node(dst, label=graph.nodes[dst].get("label", dst))
+
+            label = relation.group("label")
+            edge_attrs: Dict[str, Any] = {}
+            if label:
+                clean_label = label.strip()
+                if clean_label:
+                    edge_attrs["label"] = clean_label
+
+            has_left = "<" in arrow
+            has_right = ">" in arrow
+            if has_left and not has_right:
+                graph.add_edge(dst, src, **edge_attrs)
+            elif has_right and not has_left:
+                graph.add_edge(src, dst, **edge_attrs)
+            elif has_left and has_right:
+                graph.add_edge(src, dst, **edge_attrs)
+                graph.add_edge(dst, src, **edge_attrs)
+            else:
+                # Undirected relation styles are represented as a single directed edge.
+                graph.add_edge(src, dst, **edge_attrs)
+
+        if graph.number_of_nodes() == 0:
+            raise ValueError("No supported PlantUML nodes or relationships found")
+        return cls(graph, **kwargs)
 
 
 def merge_layout_options(

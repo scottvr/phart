@@ -25,12 +25,12 @@ Anyone interested in representing potentially very dense and complex graphs with
 such that they find themselves here reading this is probably someone with a fair likelyhood to find this next
 trick as amusing as I did.
 
-There is a Gallery of some of the visualization capabilities native(-ish) to NetworkX using matplotlib and GraphViz, 
-and  maybe some other tools. Among the things in that Gallery I found was this demonstration of ["Rainbow Coloring"](https://networkx.org/documentation/stable/auto_examples/drawing/plot_rainbow_coloring.html) that shows this neat image, which I will reproduce by way of a screenshot of their website, logo in full view.
+There is a Gallery of some of the visualization capabilities native(-ish) to NetworkX using matplotlib and GraphViz,
+and maybe some other tools. Among the things in that Gallery I found was this demonstration of ["Rainbow Coloring"](https://networkx.org/documentation/stable/auto_examples/drawing/plot_rainbow_coloring.html) that shows this neat image, which I will reproduce by way of a screenshot of their website, logo in full view.
 
 <img width="800" height="800" alt="nx-rainbow-graph-screenshot" src="https://github.com/user-attachments/assets/ce5aea65-c086-48ae-9c4d-b2dc324b1da7" />
 
-Pretty neat, huh? Well, one thing that was an early goal in the development of PHART wa to be able to go to websites like the one linked about, find demos and examples in code, and do as little as possible to that code, aside from importing phart, and having it render the graph object. It does a pretty good job most of the time, and gets better as I and others use phart to attempt things that it hasn't been made to do yet. 
+Pretty neat, huh? Well, one thing that was an early goal in the development of PHART wa to be able to go to websites like the one linked about, find demos and examples in code, and do as little as possible to that code, aside from importing phart, and having it render the graph object. It does a pretty good job most of the time, and gets better as I and others use phart to attempt things that it hasn't been made to do yet.
 
 So, of course when I saw the code to generate that image above using NetworkX and matplotlib, I wanted to see if I could phart to handle it. Turns out that a lot of the work that had gone into getting ANSI colors to work needed to be undone and reworked so that phart could color paths while leaving nodes uncolored. But that is done now and I am pleased to show you phart's interpretation of the geometric design made by the colored edge paths between nodes as in the image above. While phart does have the ability to translate a circular layout graph to a terminal "canvas" rendered only in text, it is done using only orthogonal paths, 90 degree angles... "Manhattan routing", as it is sometimes called. 
 
@@ -41,7 +41,7 @@ So, with only 90 deg jogs possible to connect any node to another, and in this g
 
 Maybe someday phart will get official acknowledgement from the NetworkX team by way of displaying some of its better output in their Gallery, along with a mention in their list of visualization tools. Maybe.
 
-----
+---
 
 ## NEW Features Feb 2026
 
@@ -460,6 +460,31 @@ See [LAYOUT-STRATEGIES.md](https://github.com/scottvr/phart/blob/main/LAYOUT-STR
   older terminals that support ANSI colors but not Unicode line-art)
 
 ## File Format Support
+
+## SVG Renderer Modes
+
+PHART now supports two SVG text rendering modes:
+
+- `--svg-text-mode text` (default): emits `<text>` nodes using the configured font family.
+- `--svg-text-mode path`: emits each visible character as a glyph outline `<path>` for deterministic vector output.
+
+Path mode requirements:
+
+- install optional dependencies: `pip install phart[svg]`
+- provide either:
+  - `--svg-font-path /path/to/font.ttf` (recommended), or
+  - `--svg-font-family "Family Name"` with matplotlib-based font lookup available
+
+Example:
+
+```bash
+phart --output-format svg \
+  --svg-text-mode path \
+  --svg-font-path /System/Library/Fonts/SFNSMono.ttf \
+  graph.dot > graph.svg
+```
+
+See [svg-renderer.md](svg-renderer.md) for details and troubleshooting.
 
 ### DOT Files
 

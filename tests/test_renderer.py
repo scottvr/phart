@@ -5,6 +5,7 @@ import unittest
 import sys
 import re
 from collections import Counter
+from unittest.mock import patch
 
 import networkx as nx  # type: ignore
 
@@ -251,6 +252,79 @@ class TestASCIIRenderer(unittest.TestCase):
         self.assertIn("A", result)
         self.assertIn("B", result)
         self.assertIn("C", result)
+
+    def test_from_plantuml(self):
+        """Test creation from PlantUML subset."""
+        plantuml = """
+        @startuml
+        participant "Alice User" as Alice
+        participant Bob
+        Alice -> Bob : hello
+        Bob --> Alice : world
+        @enduml
+        """
+        renderer = ASCIIRenderer.from_plantuml(
+            plantuml,
+            options=LayoutOptions(use_ascii=True, use_labels=True),
+        )
+        result = renderer.render()
+
+        self.assertIn("Alice User", result)
+        self.assertIn("Bob", result)
+        self.assertEqual(renderer.graph.number_of_nodes(), 2)
+        self.assertGreaterEqual(renderer.graph.number_of_edges(), 2)
+
+    def test_render_ditaa_wrap(self):
+        graph = nx.DiGraph([("A", "B")])
+        renderer = ASCIIRenderer(
+            graph, options=LayoutOptions(use_ascii=False, bboxes=True)
+        )
+        ditaa = renderer.render_ditaa(wrap_plantuml=True)
+        self.assertIn("@startditaa", ditaa)
+        self.assertIn("@endditaa", ditaa)
+        self.assertNotIn("┌", ditaa)
+        self.assertIn("+", ditaa)
+
+    def test_render_svg_and_html(self):
+        graph = nx.DiGraph([("A", "B")])
+        renderer = ASCIIRenderer(
+            graph, options=LayoutOptions(use_ascii=True, ansi_colors=False)
+        )
+        svg = renderer.render_svg()
+        html = renderer.render_html()
+        self.assertIn("<svg", svg)
+        self.assertIn("<text", svg)
+        self.assertIn("<!DOCTYPE html>", html)
+        self.assertIn("<pre", html)
+
+    def test_ansi_to_hex_supports_named_and_bright_ansi_codes(self):
+        self.assertEqual(ASCIIRenderer._ansi_to_hex("\x1b[31m"), "#800000")
+        self.assertEqual(ASCIIRenderer._ansi_to_hex("\x1b[32m"), "#008000")
+        self.assertEqual(ASCIIRenderer._ansi_to_hex("\x1b[91m"), "#ff0000")
+        self.assertEqual(ASCIIRenderer._ansi_to_hex("\x1b[1;32m"), "#008000")
+        self.assertEqual(ASCIIRenderer._ansi_to_hex("\x1b[38;5;214m"), "#ffaf00")
+
+    def test_render_svg_path_mode_dispatches_to_glyph_renderer(self):
+        graph = nx.DiGraph([("A", "B")])
+        renderer = ASCIIRenderer(
+            graph, options=LayoutOptions(use_ascii=True, ansi_colors=False)
+        )
+        with patch.object(ASCIIRenderer, "_append_svg_glyph_paths") as mock_paths:
+            mock_paths.side_effect = lambda **kwargs: kwargs["lines"].append(
+                '  <path d="M0 0L1 1" />'
+            )
+            svg = renderer.render_svg(text_mode="path")
+        self.assertIn("<svg", svg)
+        self.assertIn("<path", svg)
+        mock_paths.assert_called_once()
+
+    def test_render_svg_invalid_text_mode_raises(self):
+        graph = nx.DiGraph([("A", "B")])
+        renderer = ASCIIRenderer(
+            graph, options=LayoutOptions(use_ascii=True, ansi_colors=False)
+        )
+        with self.assertRaises(ValueError):
+            renderer.render_svg(text_mode="invalid-mode")
 
     def test_auto_ascii_detection(self):
         """Test that ASCII mode is auto-detected correctly."""
