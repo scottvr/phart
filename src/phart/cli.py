@@ -1,18 +1,13 @@
 """Command line interface for PHART."""
 
 import sys
-import ast
-import io
 import argparse
-import importlib.util
-from contextlib import redirect_stdout
 from pathlib import Path
-from typing import Optional, Any
+from typing import Optional
 
 from .core.contracts import OutputRenderConfig
-from .io.input import load_renderer_from_file
+from .io.input import load_renderer_from_file, run_python_source
 from .io.output import render_captured_text
-from .renderer import ASCIIRenderer
 from .styles import NodeStyle, LayoutOptions
 from .charset import CharSet
 
@@ -396,17 +391,6 @@ def _parse_edge_color_rules(rule_specs: list[str]) -> dict[str, dict[str, str]]:
     return parsed
 
 
-def _load_python_module(file_path: Path) -> Any:
-    spec = importlib.util.spec_from_file_location("dynamic_module", file_path)
-    if spec is None or spec.loader is None:
-        raise ImportError(f"Could not load {file_path}")
-
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["dynamic_module"] = module
-    spec.loader.exec_module(module)
-    return module
-
-
 def create_layout_options(
     args: argparse.Namespace, explicit_layout_fields: Optional[set[str]] = None
 ) -> LayoutOptions:
@@ -448,27 +432,6 @@ def create_layout_options(
     return options
 
 
-def _run_python_as_main(file_path: Path) -> Any:
-    spec = importlib.util.spec_from_file_location("__main__", file_path)
-    if spec is None or spec.loader is None:
-        raise ImportError(f"Could not load {file_path}")
-
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["__main__"] = module  # match python's behavior more closely
-    spec.loader.exec_module(module)  # executes exactly once
-    return module
-
-
-def _module_defines_function(file_path: Path, function_name: str) -> bool:
-    """Return True if file defines a top-level function with the given name."""
-    source = file_path.read_text(encoding="utf-8")
-    tree = ast.parse(source, filename=str(file_path))
-    return any(
-        isinstance(node, ast.FunctionDef) and node.name == function_name
-        for node in tree.body
-    )
-
-
 def main() -> Optional[int]:
     """CLI entry point for PHART."""
     args, unknown, explicit_layout_fields, module_argv = parse_args()
@@ -484,51 +447,31 @@ def main() -> Optional[int]:
                 )
                 return 2
 
-            old_argv = sys.argv
-            old_default_options = ASCIIRenderer.default_options
-            sys.argv = [str(args.input)] + module_argv
-
+            cli_options = create_layout_options(args, explicit_layout_fields)
             try:
-                cli_options = create_layout_options(args, explicit_layout_fields)
-                ASCIIRenderer.default_options = cli_options
-                capture = io.StringIO()
-                output_ctx = redirect_stdout(capture)
-
-                with output_ctx:
-                    if args.function != "main":
-                        module = _load_python_module(args.input)
-                        try:
-                            func = getattr(module, args.function)
-                        except AttributeError:
-                            print(
-                                f"Error: Function '{args.function}' not found in {args.input}",
-                                file=sys.stderr,
-                            )
-                            return 1
-                        func()
-                    elif _module_defines_function(args.input, "main"):
-                        module = _load_python_module(args.input)
-                        module.main()
-                    else:
-                        _run_python_as_main(args.input)
-
-                render_cfg = OutputRenderConfig(
-                    output_format=args.output_format,
-                    svg_cell_size=args.svg_cell_size,
-                    svg_font_family=args.svg_font_family,
-                    svg_fg=args.svg_fg,
-                    svg_bg=args.svg_bg,
+                captured = run_python_source(
+                    args.input,
+                    function_name=args.function,
+                    module_argv=module_argv,
+                    options=cli_options,
                 )
-                rendered = render_captured_text(capture.getvalue(), config=render_cfg)
-                if args.output:
-                    args.output.write_text(rendered, encoding="utf-8")
-                else:
-                    print(rendered, end="")
-                return 0
+            except ValueError as runner_error:
+                print(f"Error: {runner_error}", file=sys.stderr)
+                return 1
 
-            finally:
-                sys.argv = old_argv
-                ASCIIRenderer.default_options = old_default_options
+            render_cfg = OutputRenderConfig(
+                output_format=args.output_format,
+                svg_cell_size=args.svg_cell_size,
+                svg_font_family=args.svg_font_family,
+                svg_fg=args.svg_fg,
+                svg_bg=args.svg_bg,
+            )
+            rendered = render_captured_text(captured, config=render_cfg)
+            if args.output:
+                args.output.write_text(rendered, encoding="utf-8")
+            else:
+                print(rendered, end="")
+            return 0
 
         else:
             if module_argv:
