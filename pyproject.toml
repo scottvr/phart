@@ -43,6 +43,10 @@ extra = [
     'pygraphviz>=1.14',
     'scipy',
 ]
+svg = [
+    'fonttools>=4.0',
+    'matplotlib>=3.7',
+]
 test = [
     'pytest>=7.2',
     'pytest-cov>=4.0',
@@ -74,4 +78,3 @@ path = "src/phart/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/phart"]
-

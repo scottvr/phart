@@ -304,6 +304,18 @@ def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
         help="Font family for SVG/HTML output",
     )
     parser.add_argument(
+        "--svg-text-mode",
+        choices=["text", "path"],
+        default="text",
+        help="SVG text rendering mode: text (default) or path (glyph outlines)",
+    )
+    parser.add_argument(
+        "--svg-font-path",
+        type=str,
+        default=None,
+        help="Font file path for --svg-text-mode path (TTF/OTF)",
+    )
+    parser.add_argument(
         "--svg-fg",
         type=str,
         default="#111111",
@@ -565,6 +577,8 @@ def main() -> Optional[int]:
                 rendered = renderer.render_svg(
                     cell_px=args.svg_cell_size,
                     font_family=args.svg_font_family,
+                    text_mode=args.svg_text_mode,
+                    font_path=args.svg_font_path,
                     fg_color=args.svg_fg,
                     bg_color=args.svg_bg,
                 )

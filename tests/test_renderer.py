@@ -5,6 +5,7 @@ import unittest
 import sys
 import re
 from collections import Counter
+from unittest.mock import patch
 
 import networkx as nx  # type: ignore
 
@@ -295,6 +296,28 @@ class TestASCIIRenderer(unittest.TestCase):
         self.assertIn("<text", svg)
         self.assertIn("<!DOCTYPE html>", html)
         self.assertIn("<pre", html)
+
+    def test_render_svg_path_mode_dispatches_to_glyph_renderer(self):
+        graph = nx.DiGraph([("A", "B")])
+        renderer = ASCIIRenderer(
+            graph, options=LayoutOptions(use_ascii=True, ansi_colors=False)
+        )
+        with patch.object(ASCIIRenderer, "_append_svg_glyph_paths") as mock_paths:
+            mock_paths.side_effect = lambda **kwargs: kwargs["lines"].append(
+                '  <path d="M0 0L1 1" />'
+            )
+            svg = renderer.render_svg(text_mode="path")
+        self.assertIn("<svg", svg)
+        self.assertIn("<path", svg)
+        mock_paths.assert_called_once()
+
+    def test_render_svg_invalid_text_mode_raises(self):
+        graph = nx.DiGraph([("A", "B")])
+        renderer = ASCIIRenderer(
+            graph, options=LayoutOptions(use_ascii=True, ansi_colors=False)
+        )
+        with self.assertRaises(ValueError):
+            renderer.render_svg(text_mode="invalid-mode")
 
     def test_auto_ascii_detection(self):
         """Test that ASCII mode is auto-detected correctly."""

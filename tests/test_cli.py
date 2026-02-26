@@ -210,6 +210,28 @@ def main():
         self.assertIn("<svg", output)
         self.assertIn("<text", output)
 
+    @patch("phart.cli.ASCIIRenderer.render_svg", return_value="<svg><path/></svg>\n")
+    def test_output_format_svg_path_mode(self, mock_render_svg):
+        sys.argv = [
+            "phart",
+            "--output-format",
+            "svg",
+            "--svg-text-mode",
+            "path",
+            "--svg-font-path",
+            "/tmp/test-font.ttf",
+            str(self.test_text_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertIn("<svg", output)
+        self.assertIn("<path", output)
+        self.assertTrue(mock_render_svg.called)
+        call_kwargs = mock_render_svg.call_args.kwargs
+        self.assertEqual(call_kwargs.get("text_mode"), "path")
+        self.assertEqual(call_kwargs.get("font_path"), "/tmp/test-font.ttf")
+
     def test_output_format_html(self):
         sys.argv = [
             "phart",
