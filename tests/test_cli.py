@@ -44,6 +44,15 @@ class TestCLI(unittest.TestCase):
         }
         """
         self.edge_attr_dot_file.write_text(edge_attr_dot, encoding="utf-8")
+        self.plantuml_file = Path(self.temp_dir) / "simple.puml"
+        plantuml_content = """
+@startuml
+participant "Alice User" as Alice
+participant Bob
+Alice -> Bob : hello
+@enduml
+"""
+        self.plantuml_file.write_text(plantuml_content, encoding="utf-8")
         # Create test Python file with main() function
         self.py_main_file = Path(self.temp_dir) / "test_main.py"
         main_content = """
@@ -163,6 +172,16 @@ def main():
         self.assertIn("A", output)
         self.assertIn("B", output)
         self.assertIn("C", output)
+        self.assertNotIn("Error", self.stderr.getvalue())
+
+    def test_plantuml_rendering(self):
+        """Test basic PlantUML file rendering."""
+        sys.argv = ["phart", str(self.plantuml_file)]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertIn("Alice", output)
+        self.assertIn("Bob", output)
         self.assertNotIn("Error", self.stderr.getvalue())
 
     def test_style_option(self):

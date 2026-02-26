@@ -252,6 +252,27 @@ class TestASCIIRenderer(unittest.TestCase):
         self.assertIn("B", result)
         self.assertIn("C", result)
 
+    def test_from_plantuml(self):
+        """Test creation from PlantUML subset."""
+        plantuml = """
+        @startuml
+        participant "Alice User" as Alice
+        participant Bob
+        Alice -> Bob : hello
+        Bob --> Alice : world
+        @enduml
+        """
+        renderer = ASCIIRenderer.from_plantuml(
+            plantuml,
+            options=LayoutOptions(use_ascii=True, use_labels=True),
+        )
+        result = renderer.render()
+
+        self.assertIn("Alice User", result)
+        self.assertIn("Bob", result)
+        self.assertEqual(renderer.graph.number_of_nodes(), 2)
+        self.assertGreaterEqual(renderer.graph.number_of_edges(), 2)
+
     def test_auto_ascii_detection(self):
         """Test that ASCII mode is auto-detected correctly."""
         renderer = ASCIIRenderer(self.chain)

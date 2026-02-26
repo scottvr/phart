@@ -155,7 +155,9 @@ def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
         description="PHART: Python Hierarchical ASCII Rendering Tool"
     )
     parser.add_argument(
-        "input", type=Path, help="Input file (.dot, .graphml, or .py format)"
+        "input",
+        type=Path,
+        help="Input file (.dot, .graphml, .puml/.plantuml/.uml, or .py format)",
     )
     parser.add_argument(
         "--output",
@@ -497,7 +499,10 @@ def main() -> Optional[int]:
             cli_options = create_layout_options(args, explicit_layout_fields)
 
             try:
-                if content.strip().startswith("<?xml") or content.strip().startswith(
+                suffix = args.input.suffix.lower()
+                if suffix in {".puml", ".plantuml", ".uml"}:
+                    renderer = ASCIIRenderer.from_plantuml(content, options=cli_options)
+                elif content.strip().startswith("<?xml") or content.strip().startswith(
                     "<graphml"
                 ):
                     renderer = ASCIIRenderer.from_graphml(
@@ -507,7 +512,8 @@ def main() -> Optional[int]:
                     renderer = ASCIIRenderer.from_dot(content, options=cli_options)
             except Exception as parse_error:
                 print(
-                    f"Error: Could not parse file as GraphML or DOT format: {parse_error}",
+                    "Error: Could not parse file as PlantUML, GraphML, or DOT format: "
+                    f"{parse_error}",
                     file=sys.stderr,
                 )
                 return 1
