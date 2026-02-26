@@ -7,7 +7,7 @@ from html import escape as html_escape
 from typing import Optional
 
 from phart.core.contracts import OutputRenderConfig
-from phart.renderer import ANSI_ESCAPE_RE, UNICODE_DITAA_MAP, ASCIIRenderer
+from phart.rendering.ansi import ANSI_ESCAPE_RE, UNICODE_DITAA_MAP, ansi_to_hex
 
 _ANSI_TOKEN_RE = re.compile(r"\x1b\[[0-9;]*m|.", re.DOTALL)
 
@@ -88,7 +88,7 @@ def _render_svg(
             fill = config.svg_fg
             if y < len(color_canvas) and x < len(color_canvas[y]):
                 ansi = color_canvas[y][x]
-                parsed = ASCIIRenderer._ansi_to_hex(ansi) if ansi else None
+                parsed = ansi_to_hex(ansi) if ansi else None
                 if parsed:
                     fill = parsed
             lines.append(
@@ -121,7 +121,7 @@ def _render_html(
             target_color = config.svg_fg
             if y < len(color_canvas) and x < len(color_canvas[y]):
                 ansi = color_canvas[y][x]
-                parsed = ASCIIRenderer._ansi_to_hex(ansi) if ansi else None
+                parsed = ansi_to_hex(ansi) if ansi else None
                 if parsed:
                     target_color = parsed
             if target_color != current_color:
