@@ -1992,13 +1992,10 @@ class ASCIIRenderer:
         ValueError
             If file cannot be read as GraphML
         """
-        try:
-            G = nx.read_graphml(graphml_file)
-            if not isinstance(G, nx.DiGraph):
-                G = nx.DiGraph(G)
-            return cls(G, **kwargs)
-        except Exception as e:
-            raise ValueError(f"Failed to read GraphML file: {e}")
+        from phart.io.input.graphml import parse_graphml_to_digraph
+
+        G = parse_graphml_to_digraph(graphml_file)
+        return cls(G, **kwargs)
 
     @classmethod
     def from_plantuml(cls, plantuml_string: str, **kwargs: Any) -> "ASCIIRenderer":
