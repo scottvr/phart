@@ -1,9 +1,11 @@
 """Performance tests for PHART ASCII renderer."""
 # src path: tests\test_performance.py
 
+import os
 import random
 import time
 import unittest
+from pathlib import Path
 
 import networkx as nx  # type: ignore
 
@@ -133,16 +135,73 @@ class TestPerformance(unittest.TestCase):
                 "output_size": len(result),
             }
 
+    def test_got_graphml_regression_baseline(self):
+        """Guard against major performance regressions on a large real fixture."""
+        graphml_path = Path("examples/got-network-graph.graphml")
+        self.assertTrue(graphml_path.exists(), f"Missing fixture: {graphml_path}")
+
+        load_max = float(os.getenv("PHART_PERF_GOT_LOAD_MAX_SEC", "8.0"))
+        render_max = float(os.getenv("PHART_PERF_GOT_RENDER_MAX_SEC", "8.0"))
+
+        start_time = time.perf_counter()
+        renderer = ASCIIRenderer.from_graphml(str(graphml_path))
+        load_elapsed = time.perf_counter() - start_time
+
+        start_time = time.perf_counter()
+        result = renderer.render()
+        render_elapsed = time.perf_counter() - start_time
+
+        lines = result.splitlines()
+        max_width = max((len(line) for line in lines), default=0)
+        key = "got_graphml_baseline"
+        self.results[key] = {
+            "load_time": load_elapsed,
+            "render_time": render_elapsed,
+            "nodes": renderer.graph.number_of_nodes(),
+            "edges": renderer.graph.number_of_edges(),
+            "output_size": len(result),
+            "line_count": len(lines),
+            "max_width": max_width,
+        }
+
+        # Structural sanity checks to ensure we're measuring the expected fixture.
+        self.assertGreaterEqual(renderer.graph.number_of_nodes(), 100)
+        self.assertGreaterEqual(renderer.graph.number_of_edges(), 600)
+        self.assertGreater(len(result), 1000)
+        self.assertGreaterEqual(len(lines), 8)
+        self.assertGreaterEqual(max_width, 200)
+
+        # Conservative perf guardrails (override with env vars in CI if needed).
+        self.assertLess(
+            load_elapsed,
+            load_max,
+            f"GraphML load exceeded threshold: {load_elapsed:.3f}s > {load_max:.3f}s",
+        )
+        self.assertLess(
+            render_elapsed,
+            render_max,
+            f"Render exceeded threshold: {render_elapsed:.3f}s > {render_max:.3f}s",
+        )
+
     def tearDown(self):
         """Print performance results."""
         print("\nPerformance Results:")
         print("=" * 80)
         for test, data in sorted(self.results.items()):
             print(f"\n{test}:")
-            print(f"  Time: {data['time']:.4f} seconds")
+            if "time" in data:
+                print(f"  Time: {data['time']:.4f} seconds")
+            if "load_time" in data:
+                print(f"  Load Time: {data['load_time']:.4f} seconds")
+            if "render_time" in data:
+                print(f"  Render Time: {data['render_time']:.4f} seconds")
             print(f"  Nodes: {data['nodes']}")
             print(f"  Edges: {data['edges']}")
             print(f"  Output Size: {data['output_size']} characters")
+            if "line_count" in data:
+                print(f"  Line Count: {data['line_count']}")
+            if "max_width" in data:
+                print(f"  Max Width: {data['max_width']}")
 
 
 if __name__ == "__main__":
