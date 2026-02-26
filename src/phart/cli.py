@@ -5,9 +5,9 @@ import argparse
 from pathlib import Path
 from typing import Optional
 
-from .core.contracts import OutputRenderConfig
+from .core.contracts import OutputRenderConfig, RendererOutputConfig
 from .io.input import load_renderer_from_file, run_python_source
-from .io.output import render_captured_text
+from .io.output import render_captured_text, render_renderer_output
 from .styles import NodeStyle, LayoutOptions
 from .charset import CharSet
 
@@ -498,32 +498,19 @@ def main() -> Optional[int]:
                 )
                 return 1
 
-            if args.output_format == "text":
-                rendered = renderer.render()
-            elif args.output_format == "ditaa":
-                rendered = renderer.render_ditaa(wrap_plantuml=False)
-            elif args.output_format == "ditaa-puml":
-                rendered = renderer.render_ditaa(wrap_plantuml=True)
-            elif args.output_format == "svg":
-                rendered = renderer.render_svg(
-                    cell_px=args.svg_cell_size,
-                    font_family=args.svg_font_family,
-                    text_mode=args.svg_text_mode,
-                    font_path=args.svg_font_path,
-                    fg_color=args.svg_fg,
-                    bg_color=args.svg_bg,
-                )
-            elif args.output_format == "html":
-                rendered = renderer.render_html(
-                    fg_color=args.svg_fg,
-                    bg_color=args.svg_bg,
-                    font_family=args.svg_font_family,
-                )
-            else:
-                print(
-                    f"Error: Unsupported output format '{args.output_format}'",
-                    file=sys.stderr,
-                )
+            renderer_cfg = RendererOutputConfig(
+                output_format=args.output_format,
+                svg_cell_size=args.svg_cell_size,
+                svg_font_family=args.svg_font_family,
+                svg_text_mode=args.svg_text_mode,
+                svg_font_path=args.svg_font_path,
+                svg_fg=args.svg_fg,
+                svg_bg=args.svg_bg,
+            )
+            try:
+                rendered = render_renderer_output(renderer, config=renderer_cfg)
+            except ValueError as render_error:
+                print(f"Error: {render_error}", file=sys.stderr)
                 return 2
 
             if args.output:
