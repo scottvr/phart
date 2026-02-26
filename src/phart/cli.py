@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Optional, Any
 
 from .core.contracts import OutputRenderConfig
+from .io.input import load_renderer_from_file
 from .io.output import render_captured_text
 from .renderer import ASCIIRenderer
 from .styles import NodeStyle, LayoutOptions
@@ -543,27 +544,13 @@ def main() -> Optional[int]:
                 )
                 return 2
 
-            with open(args.input, "r", encoding="utf-8") as f:
-                content = f.read()
-
             cli_options = create_layout_options(args, explicit_layout_fields)
 
             try:
-                suffix = args.input.suffix.lower()
-                if suffix in {".puml", ".plantuml", ".uml"}:
-                    renderer = ASCIIRenderer.from_plantuml(content, options=cli_options)
-                elif content.strip().startswith("<?xml") or content.strip().startswith(
-                    "<graphml"
-                ):
-                    renderer = ASCIIRenderer.from_graphml(
-                        str(args.input), options=cli_options
-                    )
-                else:
-                    renderer = ASCIIRenderer.from_dot(content, options=cli_options)
+                renderer = load_renderer_from_file(args.input, options=cli_options)
             except Exception as parse_error:
                 print(
-                    "Error: Could not parse file as PlantUML, GraphML, or DOT format: "
-                    f"{parse_error}",
+                    f"Error: {parse_error}",
                     file=sys.stderr,
                 )
                 return 1
