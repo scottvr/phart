@@ -184,6 +184,45 @@ def main():
         self.assertIn("Bob", output)
         self.assertNotIn("Error", self.stderr.getvalue())
 
+    def test_output_format_ditaa_puml(self):
+        sys.argv = [
+            "phart",
+            "--output-format",
+            "ditaa-puml",
+            str(self.test_text_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertIn("@startditaa", output)
+        self.assertIn("@endditaa", output)
+
+    def test_output_format_svg(self):
+        sys.argv = [
+            "phart",
+            "--output-format",
+            "svg",
+            str(self.test_text_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertIn("<svg", output)
+        self.assertIn("<text", output)
+
+    def test_output_format_html(self):
+        sys.argv = [
+            "phart",
+            "--output-format",
+            "html",
+            str(self.test_text_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertIn("<!DOCTYPE html>", output)
+        self.assertIn("<pre", output)
+
     def test_style_option(self):
         """Test node style option."""
         sys.argv = ["phart", "--style", "round", str(self.test_text_file)]
@@ -273,6 +312,17 @@ def main():
         self.assertEqual(exit_code, 0)
         output = self.stdout.getvalue()
         self.assertNotIn("\x1b[", output)
+
+    def test_output_format_rejected_for_py_input(self):
+        sys.argv = [
+            "phart",
+            "--output-format",
+            "svg",
+            str(self.py_main_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 2)
+        self.assertIn("only supported for non-.py inputs", self.stderr.getvalue())
 
     def test_invalid_file(self):
         """Test handling of invalid file."""

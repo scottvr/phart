@@ -13,6 +13,7 @@ from .styles import NodeStyle, LayoutOptions
 from .charset import CharSet
 
 COLOR_MODES = {"none", "source", "target", "path", "attr"}
+OUTPUT_FORMATS = {"text", "ditaa", "ditaa-puml", "svg", "html"}
 LAYOUT_STRATEGIES = {
     "auto",
     "bfs",
@@ -166,6 +167,12 @@ def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
         help="Output file (if not specified, prints to stdout)",
     )
     parser.add_argument(
+        "--output-format",
+        choices=sorted(OUTPUT_FORMATS),
+        default="text",
+        help="Output format: text (default), ditaa, ditaa-puml, svg, or html",
+    )
+    parser.add_argument(
         "--style",
         choices=[s.name.lower() for s in NodeStyle],
         default=None,
@@ -283,6 +290,30 @@ def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
             "Format: <attribute>:<value>=<color>[,<value>=<color>...] "
             "(repeatable)"
         ),
+    )
+    parser.add_argument(
+        "--svg-cell-size",
+        type=int,
+        default=12,
+        help="Cell size in px for SVG output (default: 12)",
+    )
+    parser.add_argument(
+        "--svg-font-family",
+        type=str,
+        default="monospace",
+        help="Font family for SVG/HTML output",
+    )
+    parser.add_argument(
+        "--svg-fg",
+        type=str,
+        default="#111111",
+        help="Foreground color for SVG/HTML output",
+    )
+    parser.add_argument(
+        "--svg-bg",
+        type=str,
+        default="#ffffff",
+        help="Background color for SVG/HTML output",
     )
     args, unknown = parser.parse_known_args(argv)
     explicit_layout_fields = _collect_explicit_layout_fields(argv, args)
@@ -428,6 +459,12 @@ def main() -> Optional[int]:
 
     try:
         if args.input.suffix == ".py":
+            if args.output_format != "text":
+                print(
+                    "Error: --output-format is only supported for non-.py inputs",
+                    file=sys.stderr,
+                )
+                return 2
             if unknown:
                 print(
                     "It looks like you passed arguments intended for the script.\n"
@@ -518,10 +555,36 @@ def main() -> Optional[int]:
                 )
                 return 1
 
-            if args.output:
-                renderer.write_to_file(str(args.output))
+            if args.output_format == "text":
+                rendered = renderer.render()
+            elif args.output_format == "ditaa":
+                rendered = renderer.render_ditaa(wrap_plantuml=False)
+            elif args.output_format == "ditaa-puml":
+                rendered = renderer.render_ditaa(wrap_plantuml=True)
+            elif args.output_format == "svg":
+                rendered = renderer.render_svg(
+                    cell_px=args.svg_cell_size,
+                    font_family=args.svg_font_family,
+                    fg_color=args.svg_fg,
+                    bg_color=args.svg_bg,
+                )
+            elif args.output_format == "html":
+                rendered = renderer.render_html(
+                    fg_color=args.svg_fg,
+                    bg_color=args.svg_bg,
+                    font_family=args.svg_font_family,
+                )
             else:
-                print(renderer.render())
+                print(
+                    f"Error: Unsupported output format '{args.output_format}'",
+                    file=sys.stderr,
+                )
+                return 2
+
+            if args.output:
+                args.output.write_text(rendered, encoding="utf-8")
+            else:
+                print(rendered, end="")
             return 0
 
     except Exception as e:

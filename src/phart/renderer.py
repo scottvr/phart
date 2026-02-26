@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, TextIO, Tuple, ClassVar, Set
 import re
 import warnings
+from html import escape as html_escape
 
 import networkx as nx  # type: ignore
 
@@ -12,6 +13,7 @@ import sys
 import io
 
 ANSI_RESET = "\x1b[0m"
+ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;]*m")
 ANSI_SUBWAY_PALETTE: Tuple[str, ...] = (
     "\x1b[38;5;45m",  # cyan
     "\x1b[38;5;214m",  # orange
@@ -42,6 +44,34 @@ ANSI_NAMED_COLORS: Dict[str, str] = {
     # Palette aliases used by existing subway colors.
     "orange": "\x1b[38;5;214m",
     "aqua": "\x1b[38;5;81m",
+}
+UNICODE_DITAA_MAP: Dict[str, str] = {
+    "─": "-",
+    "│": "|",
+    "┌": "+",
+    "┐": "+",
+    "└": "+",
+    "┘": "+",
+    "┬": "+",
+    "┴": "+",
+    "├": "+",
+    "┤": "+",
+    "┼": "+",
+    "═": "=",
+    "║": "|",
+    "╔": "+",
+    "╗": "+",
+    "╚": "+",
+    "╝": "+",
+    "╠": "+",
+    "╣": "+",
+    "╦": "+",
+    "╩": "+",
+    "╬": "+",
+    "→": ">",
+    "←": "<",
+    "↑": "^",
+    "↓": "v",
 }
 
 
@@ -1133,6 +1163,178 @@ class ASCIIRenderer:
                 print(self.render(), file=sys.stdout)
         else:
             print(self.render(), file=file)
+
+    @staticmethod
+    def _ansi_to_hex(ansi: str) -> Optional[str]:
+        match = re.search(r"\x1b\[([0-9;]+)m", ansi)
+        if not match:
+            return None
+        parts = [p for p in match.group(1).split(";") if p]
+        if len(parts) >= 3 and parts[0] == "38" and parts[1] == "5":
+            try:
+                idx = int(parts[2])
+            except ValueError:
+                return None
+            return ASCIIRenderer._xterm_index_to_hex(idx)
+        if len(parts) >= 5 and parts[0] == "38" and parts[1] == "2":
+            try:
+                r = max(0, min(255, int(parts[2])))
+                g = max(0, min(255, int(parts[3])))
+                b = max(0, min(255, int(parts[4])))
+            except ValueError:
+                return None
+            return f"#{r:02x}{g:02x}{b:02x}"
+        return None
+
+    @staticmethod
+    def _xterm_index_to_hex(idx: int) -> str:
+        idx = max(0, min(255, idx))
+        base16 = [
+            (0, 0, 0),
+            (128, 0, 0),
+            (0, 128, 0),
+            (128, 128, 0),
+            (0, 0, 128),
+            (128, 0, 128),
+            (0, 128, 128),
+            (192, 192, 192),
+            (128, 128, 128),
+            (255, 0, 0),
+            (0, 255, 0),
+            (255, 255, 0),
+            (0, 0, 255),
+            (255, 0, 255),
+            (0, 255, 255),
+            (255, 255, 255),
+        ]
+        if idx < 16:
+            r, g, b = base16[idx]
+            return f"#{r:02x}{g:02x}{b:02x}"
+        if idx < 232:
+            idx -= 16
+            r = idx // 36
+            g = (idx % 36) // 6
+            b = idx % 6
+            conv = [0, 95, 135, 175, 215, 255]
+            rr, gg, bb = conv[r], conv[g], conv[b]
+            return f"#{rr:02x}{gg:02x}{bb:02x}"
+        gray = 8 + (idx - 232) * 10
+        return f"#{gray:02x}{gray:02x}{gray:02x}"
+
+    def _normalized_canvas_rows(self) -> List[str]:
+        width = max((len(row) for row in self.canvas), default=0)
+        return ["".join(row).ljust(width) for row in self.canvas]
+
+    def render_ditaa(self, wrap_plantuml: bool = False) -> str:
+        self.render()
+        rows = self._normalized_canvas_rows()
+        text = "\n".join(rows)
+        text = ANSI_ESCAPE_RE.sub("", text)
+        text = "".join(UNICODE_DITAA_MAP.get(ch, ch) for ch in text)
+        lines = [line.rstrip() for line in text.splitlines()]
+        while lines and lines[-1] == "":
+            lines.pop()
+        body = "\n".join(lines)
+        if wrap_plantuml:
+            return f"@startditaa\n{body}\n@endditaa\n"
+        return body + ("\n" if body else "")
+
+    def render_svg(
+        self,
+        *,
+        cell_px: int = 12,
+        font_family: str = "monospace",
+        fg_color: str = "#111111",
+        bg_color: str = "#ffffff",
+    ) -> str:
+        self.render()
+        rows = self._normalized_canvas_rows()
+        height = len(rows)
+        width = max((len(row) for row in rows), default=0)
+        svg_w = width * cell_px
+        svg_h = height * cell_px
+        text_x = cell_px / 2
+        text_y0 = cell_px * 0.8
+
+        lines: List[str] = []
+        lines.append('<?xml version="1.0" encoding="UTF-8"?>')
+        lines.append(
+            f'<svg xmlns="http://www.w3.org/2000/svg" width="{svg_w}" height="{svg_h}" '
+            f'viewBox="0 0 {svg_w} {svg_h}">'
+        )
+        lines.append(
+            f'  <rect x="0" y="0" width="{svg_w}" height="{svg_h}" fill="{html_escape(bg_color)}" />'
+        )
+        lines.append(
+            "  <g "
+            f'font-family="{html_escape(font_family)}" '
+            f'font-size="{cell_px}" fill="{html_escape(fg_color)}" '
+            'text-anchor="middle" xml:space="preserve">'
+        )
+        for y, row in enumerate(rows):
+            for x, ch in enumerate(row):
+                if ch == " ":
+                    continue
+                cx = text_x + x * cell_px
+                cy = text_y0 + y * cell_px
+                fill = fg_color
+                if y < len(self._color_canvas) and x < len(self._color_canvas[y]):
+                    ansi = self._color_canvas[y][x]
+                    parsed = self._ansi_to_hex(ansi) if ansi else None
+                    if parsed:
+                        fill = parsed
+                lines.append(
+                    f'    <text x="{cx:.2f}" y="{cy:.2f}" fill="{html_escape(fill)}">{html_escape(ch)}</text>'
+                )
+        lines.append("  </g>")
+        lines.append("</svg>")
+        return "\n".join(lines) + "\n"
+
+    def render_html(
+        self,
+        *,
+        fg_color: str = "#111111",
+        bg_color: str = "#ffffff",
+        font_family: str = "monospace",
+    ) -> str:
+        self.render()
+        rows = self._normalized_canvas_rows()
+        html_lines: List[str] = []
+        html_lines.append('<!DOCTYPE html>')
+        html_lines.append("<html><head><meta charset=\"utf-8\"></head><body>")
+        html_lines.append(
+            "<pre style="
+            f"\"background:{html_escape(bg_color)};"
+            f"color:{html_escape(fg_color)};"
+            f"font-family:{html_escape(font_family)};"
+            "line-height:1.1;\">"
+        )
+        for y, row in enumerate(rows):
+            current_color: Optional[str] = None
+            for x, ch in enumerate(row):
+                target_color = fg_color
+                if y < len(self._color_canvas) and x < len(self._color_canvas[y]):
+                    ansi = self._color_canvas[y][x]
+                    parsed = self._ansi_to_hex(ansi) if ansi else None
+                    if parsed:
+                        target_color = parsed
+                if target_color != current_color:
+                    if current_color is not None:
+                        html_lines.append("</span>")
+                    if target_color != fg_color:
+                        html_lines.append(
+                            f'<span style="color:{html_escape(target_color)}">'
+                        )
+                    else:
+                        html_lines.append("<span>")
+                    current_color = target_color
+                html_lines.append(html_escape(ch))
+            if current_color is not None:
+                html_lines.append("</span>")
+                current_color = None
+            html_lines.append("\n")
+        html_lines.append("</pre></body></html>\n")
+        return "".join(html_lines)
 
     def write_to_file(self, filename: str) -> None:
         """

@@ -273,6 +273,29 @@ class TestASCIIRenderer(unittest.TestCase):
         self.assertEqual(renderer.graph.number_of_nodes(), 2)
         self.assertGreaterEqual(renderer.graph.number_of_edges(), 2)
 
+    def test_render_ditaa_wrap(self):
+        graph = nx.DiGraph([("A", "B")])
+        renderer = ASCIIRenderer(
+            graph, options=LayoutOptions(use_ascii=False, bboxes=True)
+        )
+        ditaa = renderer.render_ditaa(wrap_plantuml=True)
+        self.assertIn("@startditaa", ditaa)
+        self.assertIn("@endditaa", ditaa)
+        self.assertNotIn("┌", ditaa)
+        self.assertIn("+", ditaa)
+
+    def test_render_svg_and_html(self):
+        graph = nx.DiGraph([("A", "B")])
+        renderer = ASCIIRenderer(
+            graph, options=LayoutOptions(use_ascii=True, ansi_colors=False)
+        )
+        svg = renderer.render_svg()
+        html = renderer.render_html()
+        self.assertIn("<svg", svg)
+        self.assertIn("<text", svg)
+        self.assertIn("<!DOCTYPE html>", html)
+        self.assertIn("<pre", html)
+
     def test_auto_ascii_detection(self):
         """Test that ASCII mode is auto-detected correctly."""
         renderer = ASCIIRenderer(self.chain)
