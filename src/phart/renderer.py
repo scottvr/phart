@@ -1,7 +1,6 @@
 from __future__ import annotations
 from typing import Any, Dict, List, Optional, TextIO, Tuple, ClassVar, Set, cast
 import re
-import warnings
 import os
 from html import escape as html_escape
 
@@ -1964,34 +1963,9 @@ class ASCIIRenderer:
         C
         """
 
-        try:
-            import pydot  # type: ignore
-        except ImportError:
-            raise ImportError("pydot is required for DOT format support")
+        from phart.io.input.dot import parse_dot_to_digraph
 
-        with warnings.catch_warnings():
-            # pyparsing emits deprecation warnings via pydot on newer versions.
-            # Tests enforce warnings as errors, so suppress this third-party
-            # warning only for the parse call.
-            warnings.filterwarnings(
-                "ignore",
-                category=DeprecationWarning,
-                module=r"pydot\.dot_parser",
-            )
-            try:
-                from pyparsing import PyparsingDeprecationWarning  # type: ignore
-
-                warnings.filterwarnings("ignore", category=PyparsingDeprecationWarning)
-            except Exception:
-                pass
-            graphs = pydot.graph_from_dot_data(dot_string)
-        if not graphs:
-            raise ValueError("No valid graphs found in DOT string")
-
-        # Take first graph from the list
-        G = nx.nx_pydot.from_pydot(graphs[0])
-        if not isinstance(G, nx.DiGraph):
-            G = nx.DiGraph(G)
+        G = parse_dot_to_digraph(dot_string)
         return cls(G, **kwargs)
 
     @classmethod
