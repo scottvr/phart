@@ -69,10 +69,9 @@ First, we're shown this table as a guide to the named graphlets:
 
 
 ## The ASCII Diagrams
-And now, what you've been waiting for, the diagrams that PHART outputs with the options you can see in the script itself:
-
+And now, what you've been waiting for, the diagrams that PHART outputs with the options you can see in the script itself:  
 ```
-                          003                  012                  102                 021D         
+         003                  012                  102                 021D         
      ┌─────┐              ┌─────┐              ┌─────┐              ┌─────┐         
      │  1  │              │  1  │              │  1  │              │  1  │         
      └─────┘              └─────┘              └─────┘              └─────┘         
