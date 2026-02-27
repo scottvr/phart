@@ -36,7 +36,7 @@ def generate_triads() -> Dict:
 ```
 
 The script also contains two lines of code to call phart's render() function, and then some standard fare
-text-formatting (left-justification, columnar alignment, newlines and print()) boilerplate for columnar alignment
+text-formatting (left-justification, newlines and print()) boilerplate for columnar alignment
 and subtitling each graph. I will spare you the boilerplate here, but the full script is in the repo.
 
 Being able to manipulate phart's output the same way you would any other 2D string object
