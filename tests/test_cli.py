@@ -1,5 +1,7 @@
 """Tests for PHART CLI functionality."""
 
+from __future__ import annotations
+
 import unittest
 import tempfile
 import shutil
