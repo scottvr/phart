@@ -20,29 +20,35 @@ _\*except NetworkX, which should be mentioned prominently, as rendering NX digra
 ## New Layout Strategies
 
 See [LAYOUT-STRATEGIES.md](https://github.com/scottvr/phart/blob/main/LAYOUT-STRATEGIES.md) in the repo for some examples of output.
-I have also dodcumented one of the scripts in the `examples/` directory and shown its output here in [TRIADIC_CENSUS.md](https://github.com/scottvr/phart/blob/main/examples/TRIADIC_CENSUS.md) 
+I have also dodcumented one of the scripts in the `examples/` directory and shown its output here in [TRIADIC_CENSUS.md](https://github.com/scottvr/phart/blob/main/examples/TRIADIC_CENSUS.md)
 
 Anyone interested in representing potentially very dense and complex graphs with an ascii line-drawing generator
 such that they find themselves here reading this is probably someone with a fair likelyhood to find this next
 trick as amusing as I did.
 
-There is a Gallery of some of the visualization capabilities native(-ish) to NetworkX using matplotlib and GraphViz, 
-and  maybe some other tools. Among the things in that Gallery I found was this demonstration of ["Rainbow Coloring"](https://networkx.org/documentation/stable/auto_examples/drawing/plot_rainbow_coloring.html) that shows this neat image, which I will reproduce by way of a screenshot of their website:
+There is a Gallery of some of the visualization capabilities native(-ish) to NetworkX using matplotlib and GraphViz,
+and maybe some other tools. Among the things in that Gallery I found was this demonstration of ["Rainbow Coloring"](https://networkx.org/documentation/stable/auto_examples/drawing/plot_rainbow_coloring.html) that shows this neat image, which I will reproduce by way of a screenshot of their website:
 
 <img width="800" height="800" alt="nx-rainbow-graph-screenshot" src="https://github.com/user-attachments/assets/ce5aea65-c086-48ae-9c4d-b2dc324b1da7" />
 
-Pretty neat, huh? Well, one thing that was an early goal in the development of PHART was to be able to go to websites like the one linked about, find demos and examples in code, and do as little as possible to that code, aside from importing phart, and having it render the graph object. It does a pretty good job most of the time, and gets better as I and others use phart to attempt things that it hasn't been made to do yet. 
+Pretty neat, huh? Well, one thing that was an early goal in the development of PHART was to be able to go to websites like the one linked above,and find demos of how these system visualize various graphs, and then to try to get phart to ingest it and see how it works (or doesn't) to represent complex systems of relationships under the very tight constraints it is working with.. It does a pretty good job most of the time, and gets better as I and others attempt things that it hasn't yet done before.
 
-So, of course when I saw the code to generate that image above using NetworkX and matplotlib, I wanted to see if I could get phart to handle it. Turns out that a lot of the work that had gone into getting ANSI colors to work needed to be undone and reworked so that phart could color paths while leaving nodes uncolored. But that is done now and I am pleased to show you phart's interpretation of the geometric design made by the colored edge paths between nodes as in the image above. While phart does have the ability to translate a circular layout graph to a terminal "canvas" rendered only in text, it is done using only orthogonal paths, 90 degree angles... "Manhattan routing", as it is sometimes called. 
+### It's not a Spirograph, it's not yarn art, but better than that - it's from P-HART
 
+So, of course when I saw the code used to generate the image above using NetworkX and matplotlib, I wanted to see if I could get **phart** to handle it. With the recent addition of ANSI color code escape sequences to its limited palettte with which to express itself, I am quite pleased to show you phart's interpretation of the geometric design made by the colored edge paths between nodes as in the image above. Recalll that while phart does have the capabilities originally planned for it - that of drawing rectangles with 7-bit terminal characters, and it has since acquired the ability to translate a graph into a circular layout within those means - still it is, after all, doing so using only orthogonal paths, 90 degree angles... "**Manhattan routing**", as it is sometimes called.
 
-So, with only 90 deg jogs possible to connect any node to another, and in this graph all 13 nodes are connected to all other nodes, which is precisely why a circular layout with distance-based coloring gives the pleasing looks that it does in the example above. Having rambled on long enough, let me show you phart's latest masterpiece of ASCII Art (ok, I used Unicode characters in this one, and phart colors them with ANSI color escape codes, but it's still plain text!). It's quite fetching in its own way I think.
+So, with only 90 degree jogs available to connect any node to another, and with this graph being comprised of 13 nodes, each connected to all the other nodes... (This complete connectivity is precisely why the circular layout with distance-based coloring gives the pleasing appearance that it does in the image above. My friends and colleagues working in fields involving computer networking, though, may be slightly triggered by [this concept](https://en.wikipedia.org/wiki/Network_topology#Fully_connected_network), and start thinking of things like [this](https://datatracker.ietf.org/doc/html/rfc7727) or [this](https://datatracker.ietf.org/doc/html/rfc2328). _I realize that STP is an IEEE standard, I found an RFC on the topic to link to because an IETF document will have 7-bit hand-drawn ASCII diagrams in it, which is a topic near and dear to me, as you possibly can tell._)
+
+### You can get there from here, just probably not as a crow flies
+
+If you did the math, you know that there are 78 connections to account for in this graph (or 156, depending on how you count a bidirectional path; we're going to use the same connection to go both ways in our diagram. You will see it is quite crowded already.)
+Having rambled on long enough now, let me show you phart's latest masterpiece of ASCII Art (ok, I used Unicode characters in this one, and phart colored it them with ANSI color escape codes, but it's still plain text!). It's rendering is quite fetching in its own way I think.
 
 <img width="800" height="800" alt="NX-complete-graph" src="https://github.com/user-attachments/assets/ac28aa5c-b6b2-4a23-a03f-4a6839076c55" />
 
 Maybe someday phart will get official acknowledgement from the NetworkX team by way of displaying some of its better output in their Gallery, along with a mention in their list of visualization tools. Maybe.
 
-----
+---
 
 ## NEW Features Feb 2026
 
@@ -284,8 +290,15 @@ This gives us:
                                     <#L1>    <#L2>
 ```
 
-There are plenty more examples in the repo, along with a README in the examples/ directory
-that includes the output of a very early release of phart.
+Now that phart has ANSI color support, we can also use the same 'side' edge attribute
+that enables the left/right sorting to apply color to the paths representing edges in
+the output:
+
+```bash
+phart --bboxes --btree --no-color-nodes --charset unicode  --layer-spacing 4 --colors attr --output-format html --svg-bg black --edge-color-rule side:left=bright_red,right=bright_green examples/collatz.py
+```
+
+There are more examples scripts in the repo, along with a README in the examples/ directory
 
 ---
 
@@ -333,6 +346,13 @@ python -mvenv .venv
 # or .venv\Scripts\activate on Windows
 pip install .
 ```
+
+For your convenience, any 'extra' requirements can be installed bundled by category.
+For instance, if you require DOT file support to have phart use one of the dot files
+from the `examples/` directory, all requirements, including pydot, to use the examples
+can be installed with `piip install -e .'[examples]'`.
+
+To install all `extra` requirements (e.g., `fonttools` for svg rendering support, `scipy` for Kamada-Kawai layout support), you can install them all with `pip instaall -e .'[extra]'`. Additionally, there are `[developer]` and `[test]` module requirements that can be installed, or to get _everything-everywhere-all-at-once_, you can `pip install -e .'[all]'`. (Note: If installing from PyPi, you would use `pip install 'phart[all]'` rather than the `-e .` syntax for installing from source.)
 
 ## The CLI
 
@@ -461,6 +481,31 @@ See [LAYOUT-STRATEGIES.md](https://github.com/scottvr/phart/blob/main/LAYOUT-STR
   older terminals that support ANSI colors but not Unicode line-art)
 
 ## File Format Support
+
+## SVG Renderer Modes
+
+PHART now supports two SVG text rendering modes:
+
+- `--svg-text-mode text` (default): emits `<text>` nodes using the configured font family.
+- `--svg-text-mode path`: emits each visible character as a glyph outline `<path>` for deterministic vector output.
+
+Path mode requirements:
+
+- install optional dependencies: `pip install phart[svg]`
+- provide either:
+  - `--svg-font-path /path/to/font.ttf` (recommended), or
+  - `--svg-font-family "Family Name"` with matplotlib-based font lookup available
+
+Example:
+
+```bash
+phart --output-format svg \
+  --svg-text-mode path \
+  --svg-font-path /System/Library/Fonts/SFNSMono.ttf \
+  graph.dot > graph.svg
+```
+
+See [svg-renderer.md](svg-renderer.md) for details and troubleshooting.
 
 ### DOT Files
 
