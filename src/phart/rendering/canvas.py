@@ -64,7 +64,7 @@ def init_canvas(
 
 
 def render_row(
-    render: ASCIIRenderer, row: List[str], colors: List[Optional[str]]
+    renderer: ASCIIRenderer, row: List[str], colors: List[Optional[str]]
 ) -> str:
     last = -1
     for idx, ch in enumerate(row):
@@ -73,7 +73,7 @@ def render_row(
     if last < 0:
         return ""
 
-    if not render.use_ansi_colors():
+    if not renderer._use_ansi_colors():
         return "".join(row[: last + 1])
 
     rendered: List[str] = []
@@ -93,7 +93,9 @@ def render_row(
     return "".join(rendered)
 
 
-def merge_edge_cell_color(renderer, x: int, y: int, color: Optional[str]) -> None:
+def merge_edge_cell_color(
+    renderer: ASCIIRenderer, x: int, y: int, color: Optional[str]
+) -> None:
     if not renderer._use_ansi_colors():
         return
 
@@ -115,17 +117,17 @@ def merge_edge_cell_color(renderer, x: int, y: int, color: Optional[str]) -> Non
 
 
 def paint_edge_cell(
-    render, x: int, y: int, char: str, color: Optional[str] = None
+    renderer: ASCIIRenderer, x: int, y: int, char: str, color: Optional[str] = None
 ) -> None:
     key = (x, y)
-    if key in render._locked_arrow_cells and not is_arrow_glyph(render, char):
+    if key in renderer._locked_arrow_cells and not is_arrow_glyph(renderer, char):
         # Preserve terminal arrow glyphs even when later edges overlap.
-        merge_edge_cell_color(render, x, y, color)
+        merge_edge_cell_color(renderer, x, y, color)
         return
 
 
 def paint_cell(
-    renderer, x: int, y: int, char: str, color: Optional[str] = None
+    renderer: ASCIIRenderer, x: int, y: int, char: str, color: Optional[str] = None
 ) -> None:
     renderer.canvas[y][x] = char
     if not renderer._use_ansi_colors():
