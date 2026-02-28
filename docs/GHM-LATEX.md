@@ -80,7 +80,7 @@ ${\mathtt{\textbf{\textcolor{#111111}{depth:~~~~5~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 Lol, it's not perfectly aligned, and I've put the puzzle of the non-fixed-width-but-superficially-resmbling-one-font that is used to display my 
-GHFMD-MathJax-Latex "equation", and just stopped wiutha napkin-math equation that alllows it to look as close to correct as it does now, which is
+GHFMD-MathJax-Latex "equation", and just stop-gapped for now with a napkin-math equation that alllows it to look as close to correct as it does now, which is
 to say it came a long way since my first attempt at pasting a phart diagram in here. FWIW, just using straight-up markdown fences for a pre-formatted block:
 
 
