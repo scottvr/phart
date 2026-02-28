@@ -1,7 +1,6 @@
 from __future__ import annotations
-from typing import Any, Dict, List, Optional, TextIO, Tuple, ClassVar, Set, cast
-import os
-from html import escape as html_escape
+from typing import Any, Dict, List, Optional, TextIO, Tuple, ClassVar, Set
+import warnings
 
 import networkx as nx  # type: ignore
 
@@ -9,10 +8,7 @@ from .layout import LayoutManager
 from .rendering.ansi import (
     ANSI_RESET,
     ANSI_SUBWAY_PALETTE,
-    ansi_to_hex as _ansi_to_hex_impl,
-    normalize_edge_attr_value as _normalize_edge_attr_value_impl,
-    resolve_color_spec as _resolve_color_spec_impl,
-    xterm_index_to_hex as _xterm_index_to_hex_impl,
+    ANSI_NAMED_COLORS,
 )
 from .rendering import ports as ports_mod
 from .rendering import routing as routing_mod
@@ -172,11 +168,43 @@ class ASCIIRenderer:
 
     @staticmethod
     def _normalize_edge_attr_value(value: Any) -> str:
-        return _normalize_edge_attr_value_impl(value)
+        text = str(value).strip()
+        if len(text) >= 2 and text[0] == text[-1] and text[0] in {"'", '"'}:
+            text = text[1:-1]
+        return text.strip().lower()
 
     @staticmethod
     def _resolve_color_spec(spec: Any) -> Optional[str]:
-        return _resolve_color_spec_impl(spec)
+        """Resolve a color spec into an ANSI escape sequence."""
+        token = str(spec).strip()
+        if not token:
+            return None
+
+        lowered = token.lower()
+        if lowered in ANSI_NAMED_COLORS:
+            return ANSI_NAMED_COLORS[lowered]
+
+        if token.startswith("\x1b[") and token.endswith("m"):
+            return token
+
+        if lowered.startswith("color") and lowered[5:].isdigit():
+            lowered = lowered[5:]
+
+        if lowered.isdigit():
+            color_index = int(lowered)
+            if 0 <= color_index <= 255:
+                return f"\x1b[38;5;{color_index}m"
+
+        if lowered.startswith("#") and len(lowered) == 7:
+            try:
+                r = int(lowered[1:3], 16)
+                g = int(lowered[3:5], 16)
+                b = int(lowered[5:7], 16)
+                return f"\x1b[38;2;{r};{g};{b}m"
+            except ValueError:
+                return None
+
+        return None
 
     def _resolve_attr_edge_color(
         self,
@@ -644,201 +672,6 @@ class ASCIIRenderer:
         else:
             print(self.render(), file=file)
 
-    @staticmethod
-    def _ansi_to_hex(ansi: str) -> Optional[str]:
-        return _ansi_to_hex_impl(ansi)
-
-    @staticmethod
-    def _xterm_index_to_hex(idx: int) -> str:
-        return _xterm_index_to_hex_impl(idx)
-
-    def _normalized_canvas_rows(self) -> List[str]:
-        from .rendering.output import normalized_canvas_rows
-
-        return normalized_canvas_rows(self)
-
-    def render_ditaa(self, wrap_plantuml: bool = False) -> str:
-        from .rendering.output import render_ditaa
-
-        return render_ditaa(self, wrap_plantuml=wrap_plantuml)
-
-    def render_svg(
-        self,
-        *,
-        cell_px: int = 12,
-        font_family: str = "monospace",
-        text_mode: str = "text",
-        font_path: Optional[str] = None,
-        fg_color: str = "#111111",
-        bg_color: str = "#ffffff",
-    ) -> str:
-        from .rendering.output import render_svg
-
-        return render_svg(
-            self,
-            cell_px=cell_px,
-            font_family=font_family,
-            text_mode=text_mode,
-            font_path=font_path,
-            fg_color=fg_color,
-            bg_color=bg_color,
-        )
-
-    def _append_svg_glyph_paths(
-        self,
-        *,
-        lines: List[str],
-        rows: List[str],
-        cell_px: int,
-        font_family: str,
-        font_path: Optional[str],
-        fg_color: str,
-    ) -> None:
-        try:
-            from fontTools.ttLib import TTFont  # type: ignore
-            from fontTools.pens.svgPathPen import SVGPathPen  # type: ignore
-            from fontTools.pens.boundsPen import BoundsPen  # type: ignore
-        except ImportError as exc:
-            raise RuntimeError(
-                "SVG path glyph mode requires fonttools. Install it and retry."
-            ) from exc
-
-        resolved_font = self._resolve_svg_font_path(
-            font_family=font_family,
-            font_path=font_path,
-        )
-        font = TTFont(resolved_font)
-        glyph_set = font.getGlyphSet()
-        cmap = font.getBestCmap() or {}
-        units_per_em = max(1, int(font["head"].unitsPerEm))
-        scale = float(cell_px) / float(units_per_em)
-        glyph_cache: Dict[
-            str, Optional[Tuple[str, Tuple[float, float, float, float]]]
-        ] = {}
-
-        try:
-            lines.append(
-                "  <g "
-                f'fill="{html_escape(fg_color)}" '
-                f'data-svg-font-path="{html_escape(resolved_font)}" '
-                'xml:space="preserve">'
-            )
-            for y, row in enumerate(rows):
-                for x, ch in enumerate(row):
-                    if ch == " ":
-                        continue
-
-                    cache_item = glyph_cache.get(ch)
-                    if ch not in glyph_cache:
-                        cache_item = self._glyph_outline_for_char(
-                            ch=ch,
-                            cmap=cmap,
-                            glyph_set=glyph_set,
-                            svg_path_pen_cls=SVGPathPen,
-                            bounds_pen_cls=BoundsPen,
-                        )
-                        glyph_cache[ch] = cache_item
-                    if cache_item is None:
-                        continue
-
-                    path_data, bounds = cache_item
-                    x_min, y_min, x_max, y_max = bounds
-                    glyph_w_px = (x_max - x_min) * scale
-                    glyph_h_px = (y_max - y_min) * scale
-                    tx = (
-                        (x * cell_px) + ((cell_px - glyph_w_px) / 2.0) - (x_min * scale)
-                    )
-                    ty = (
-                        (y * cell_px) + ((cell_px - glyph_h_px) / 2.0) + (y_max * scale)
-                    )
-
-                    fill = fg_color
-                    if y < len(self._color_canvas) and x < len(self._color_canvas[y]):
-                        ansi = self._color_canvas[y][x]
-                        parsed = self._ansi_to_hex(ansi) if ansi else None
-                        if parsed:
-                            fill = parsed
-
-                    lines.append(
-                        f'    <path d="{html_escape(path_data)}" fill="{html_escape(fill)}" '
-                        f'transform="translate({tx:.2f} {ty:.2f}) scale({scale:.6f} {-scale:.6f})" />'
-                    )
-            lines.append("  </g>")
-        finally:
-            font.close()
-
-    @staticmethod
-    def _resolve_svg_font_path(*, font_family: str, font_path: Optional[str]) -> str:
-        if font_path:
-            if os.path.isfile(font_path):
-                return os.path.abspath(font_path)
-            raise ValueError(f"--svg-font-path not found: {font_path}")
-        try:
-            from matplotlib import font_manager  # type: ignore
-        except ImportError as exc:
-            raise RuntimeError(
-                "SVG path glyph mode needs either --svg-font-path or matplotlib for font lookup."
-            ) from exc
-
-        resolved = cast(
-            str,
-            font_manager.findfont(
-                font_family,
-                fallback_to_default=False,
-            ),
-        )
-        if not resolved or not os.path.isfile(resolved):
-            raise RuntimeError(
-                f"Could not resolve font '{font_family}'. Pass --svg-font-path explicitly."
-            )
-        return os.path.abspath(resolved)
-
-    @staticmethod
-    def _glyph_outline_for_char(
-        *,
-        ch: str,
-        cmap: Dict[int, str],
-        glyph_set: Any,
-        svg_path_pen_cls: Any,
-        bounds_pen_cls: Any,
-    ) -> Optional[Tuple[str, Tuple[float, float, float, float]]]:
-        glyph_name = cmap.get(ord(ch))
-        if not glyph_name:
-            return None
-        if glyph_name not in glyph_set:
-            return None
-        glyph = glyph_set[glyph_name]
-        path_pen = svg_path_pen_cls(glyph_set)
-        glyph.draw(path_pen)
-        path_data = path_pen.getCommands()
-        if not path_data:
-            return None
-
-        bounds_pen = bounds_pen_cls(glyph_set)
-        glyph.draw(bounds_pen)
-        if bounds_pen.bounds is None:
-            return None
-        x_min, y_min, x_max, y_max = bounds_pen.bounds
-        if x_max <= x_min or y_max <= y_min:
-            return None
-        return path_data, (float(x_min), float(y_min), float(x_max), float(y_max))
-
-    def render_html(
-        self,
-        *,
-        fg_color: str = "#111111",
-        bg_color: str = "#ffffff",
-        font_family: str = "monospace",
-    ) -> str:
-        from .rendering.output import render_html
-
-        return render_html(
-            self,
-            fg_color=fg_color,
-            bg_color=bg_color,
-            font_family=font_family,
-        )
-
     def write_to_file(self, filename: str) -> None:
         """
         Write graph representation to a file.
@@ -1007,9 +840,34 @@ class ASCIIRenderer:
         C
         """
 
-        from phart.io.input.dot import parse_dot_to_digraph
+        try:
+            import pydot  # type: ignore
+        except ImportError:
+            raise ImportError("pydot is required for DOT format support")
 
-        G = parse_dot_to_digraph(dot_string)
+        with warnings.catch_warnings():
+            # pyparsing emits deprecation warnings via pydot on newer versions.
+            # Tests enforce warnings as errors, so suppress this third-party
+            # warning only for the parse call.
+            warnings.filterwarnings(
+                "ignore",
+                category=DeprecationWarning,
+                module=r"pydot\.dot_parser",
+            )
+            try:
+                from pyparsing import PyparsingDeprecationWarning  # type: ignore
+
+                warnings.filterwarnings("ignore", category=PyparsingDeprecationWarning)
+            except Exception:
+                pass
+            graphs = pydot.graph_from_dot_data(dot_string)
+        if not graphs:
+            raise ValueError("No valid graphs found in DOT string")
+
+        # Take first graph from the list
+        G = nx.nx_pydot.from_pydot(graphs[0])
+        if not isinstance(G, nx.DiGraph):
+            G = nx.DiGraph(G)
         return cls(G, **kwargs)
 
     @classmethod
@@ -1036,25 +894,13 @@ class ASCIIRenderer:
         ValueError
             If file cannot be read as GraphML
         """
-        from phart.io.input.graphml import parse_graphml_to_digraph
-
-        G = parse_graphml_to_digraph(graphml_file)
-        return cls(G, **kwargs)
-
-    @classmethod
-    def from_plantuml(cls, plantuml_str: str, **kwargs: Any) -> "ASCIIRenderer":
-        """Create a renderer from a PlantUML text diagram.
-
-        Supported subset:
-        - Common participant/class/object declarations
-        - Relationship lines using PlantUML arrows (e.g. A --> B, A <- B, A <-> B)
-        - Optional edge labels using ``: label``
-        """
-
-        from phart.io.input.plantuml import parse_plantuml_to_digraph
-
-        G = parse_plantuml_to_digraph(plantuml_str)
-        return cls(G, **kwargs)
+        try:
+            G = nx.read_graphml(graphml_file)
+            if not isinstance(G, nx.DiGraph):
+                G = nx.DiGraph(G)
+            return cls(G, **kwargs)
+        except Exception as e:
+            raise ValueError(f"Failed to read GraphML file: {e}")
 
 
 def merge_layout_options(
