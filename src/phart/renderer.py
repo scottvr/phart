@@ -1,21 +1,30 @@
 from __future__ import annotations
-from typing import Any, Dict, List, Optional, TextIO, Tuple, ClassVar, Set
-import warnings
+
+import io
+import os
+import sys
+
+from typing import Any, ClassVar, Dict, List, Optional, Set, TextIO, Tuple, cast
 
 import networkx as nx  # type: ignore
 
 from .layout import LayoutManager
+from .rendering import colors as colors_mod
+from .rendering import nodes as nodes_mod
+from .rendering import ports as ports_mod
+from .rendering import routing as routing_mod
+from .rendering import svg as svg_mod
 from .rendering.ansi import (
     ANSI_RESET,
     ANSI_SUBWAY_PALETTE,
     ANSI_NAMED_COLORS,
 )
-from .rendering import ports as ports_mod
-from .rendering import routing as routing_mod
-from .styles import LayoutOptions, NodeStyle
+from .rendering.ansi import ansi_to_hex as _ansi_to_hex_impl
+from .rendering.ansi import normalize_edge_attr_value as _normalize_edge_attr_value_impl
+from .rendering.ansi import resolve_color_spec as _resolve_color_spec_impl
+from .rendering.ansi import xterm_index_to_hex as _xterm_index_to_hex_impl
 
-import sys
-import io
+from .styles import LayoutOptions, NodeStyle
 
 
 class ASCIIRenderer:
@@ -53,8 +62,8 @@ class ASCIIRenderer:
     def _is_redirected() -> bool:
         """Check if output is being redirected."""
         if sys.platform == "win32":
-            import msvcrt
             import ctypes
+            import msvcrt
 
             try:
                 fileno = sys.stdout.fileno()
@@ -207,37 +216,12 @@ class ASCIIRenderer:
         return None
 
     def _resolve_attr_edge_color(
-        self,
+        self: ASCIIRenderer,
         edge: Tuple[Any, Any],
         idx: int,
         node_palette_map: Optional[Dict[Any, str]] = None,
     ) -> Optional[str]:
-        """Resolve edge color from configured attribute rules."""
-        node_palette = node_palette_map if node_palette_map is not None else {}
-        fallback = (
-            node_palette.get(edge[0])
-            or self._node_color_map.get(edge[0])
-            or ANSI_SUBWAY_PALETTE[idx % len(ANSI_SUBWAY_PALETTE)]
-        )
-        edge_data = self.graph.get_edge_data(edge[0], edge[1]) or {}
-        normalized_data = {
-            str(key).strip().lower(): self._normalize_edge_attr_value(value)
-            for key, value in edge_data.items()
-        }
-
-        for attr_name, mapping in self.options.edge_color_rules.items():
-            attr_value = normalized_data.get(attr_name)
-            if attr_value is None:
-                continue
-            color_spec = mapping.get(attr_value)
-            if color_spec is None:
-                continue
-            resolved = self._resolve_color_spec(color_spec)
-            if resolved is not None:
-                return resolved
-            break
-
-        return fallback
+        return colors_mod.resolve_attr_edge_color(self, edge, idx, node_palette_map)
 
     def _normalized_edge_attrs(self, start: Any, end: Any) -> Dict[str, str]:
         edge_data = self.graph.get_edge_data(start, end) or {}
@@ -281,65 +265,12 @@ class ASCIIRenderer:
         return not self._attr_rules_match_for_reverse_edge(start, end)
 
     def _initialize_color_maps(self, positions: Dict[Any, Tuple[int, int]]) -> None:
-        self._node_color_map = {}
-        self._edge_color_map = {}
-        if not self._use_ansi_colors():
-            return
-
-        if not ANSI_SUBWAY_PALETTE:
-            return
-
-        sorted_nodes = sorted(
-            positions.items(),
-            key=lambda item: (item[1][1], item[1][0], str(item[0])),
-        )
-        node_palette_map: Dict[Any, str] = {}
-        for idx, (node, _) in enumerate(sorted_nodes):
-            node_palette_map[node] = ANSI_SUBWAY_PALETTE[idx % len(ANSI_SUBWAY_PALETTE)]
-
-        if self.options.color_nodes:
-            self._node_color_map = node_palette_map.copy()
-
-        sorted_edges = sorted(
-            (
-                edge
-                for edge in self.graph.edges()
-                if edge[0] in positions and edge[1] in positions
-            ),
-            key=lambda edge: (
-                positions[edge[0]][1],
-                positions[edge[0]][0],
-                positions[edge[1]][1],
-                positions[edge[1]][0],
-                str(edge[0]),
-                str(edge[1]),
-            ),
-        )
-
-        edge_mode = self.options.edge_color_mode
-        for idx, edge in enumerate(sorted_edges):
-            if edge_mode == "target":
-                color = node_palette_map.get(edge[1])
-            elif edge_mode == "source":
-                color = node_palette_map.get(edge[0])
-            elif edge_mode == "attr":
-                color = self._resolve_attr_edge_color(edge, idx, node_palette_map)
-            else:  # path
-                color = ANSI_SUBWAY_PALETTE[idx % len(ANSI_SUBWAY_PALETTE)]
-
-            if color is None:
-                color = ANSI_SUBWAY_PALETTE[idx % len(ANSI_SUBWAY_PALETTE)]
-            self._edge_color_map[edge] = color
+        return colors_mod.initialize_color_maps(self, positions)
 
     def _paint_cell(
         self, x: int, y: int, char: str, color: Optional[str] = None
     ) -> None:
-        self.canvas[y][x] = char
-        if not self._use_ansi_colors():
-            return
-        self._color_canvas[y][x] = color
-        self._edge_conflict_cells.discard((x, y))
-        self._locked_arrow_cells.discard((x, y))
+        colors_mod.paint_cell(self, x, y, char, color)
 
     def _is_arrow_glyph(self, char: str) -> bool:
         return char in {
@@ -350,39 +281,12 @@ class ASCIIRenderer:
         }
 
     def _merge_edge_cell_color(self, x: int, y: int, color: Optional[str]) -> None:
-        if not self._use_ansi_colors():
-            return
-
-        key = (x, y)
-        if key in self._edge_conflict_cells:
-            self._color_canvas[y][x] = None
-            return
-
-        existing = self._color_canvas[y][x]
-        if existing is None:
-            self._color_canvas[y][x] = color
-            return
-
-        if color is None or existing == color:
-            return
-
-        self._color_canvas[y][x] = None
-        self._edge_conflict_cells.add(key)
+        colors_mod.merge_edge_cell_color(self, x, y, color)
 
     def _paint_edge_cell(
         self, x: int, y: int, char: str, color: Optional[str] = None
     ) -> None:
-        key = (x, y)
-        if key in self._locked_arrow_cells and not self._is_arrow_glyph(char):
-            # Preserve terminal arrow glyphs even when later edges overlap.
-            self._merge_edge_cell_color(x, y, color)
-            return
-
-        self.canvas[y][x] = char
-        if self._is_arrow_glyph(char):
-            self._locked_arrow_cells.add(key)
-
-        self._merge_edge_cell_color(x, y, color)
+        colors_mod.paint_edge_cell(self, x, y, char, color)
 
     def _render_row(self, row: List[str], colors: List[Optional[str]]) -> str:
         last = -1
@@ -414,58 +318,22 @@ class ASCIIRenderer:
     @staticmethod
     def _normalize_label_value(label: Any) -> str:
         """Normalize node labels for single-line display."""
-        text = str(label).strip()
-        if len(text) >= 2 and text[0] == text[-1] and text[0] in {"'", '"'}:
-            text = text[1:-1]
-        text = text.replace("\r\n", " ").replace("\n", " ")
-        return text.strip()
+        return nodes_mod.normalize_label_value(label)
 
     def _get_display_node_text(self, node: Any) -> str:
         """Resolve display text for a node key."""
-        if self.options.use_labels:
-            label = self.graph.nodes[node].get("label") if node in self.graph else None
-            if label is not None:
-                normalized = self._normalize_label_value(label)
-                if normalized:
-                    return normalized
-        return str(node)
+        return nodes_mod.get_display_node_text(self, node)
 
     def _get_widest_node_text_width(self) -> Optional[int]:
-        if not self.options.uniform:
-            return None
-        return max(
-            (
-                len(self.options.get_node_text(self._get_display_node_text(node)))
-                for node in self.graph.nodes()
-            ),
-            default=0,
-        )
+        return nodes_mod.get_widest_node_text_width(self)
 
     def _get_node_dimensions(self, node: Any) -> Tuple[int, int]:
-        return self.options.get_node_dimensions(
-            self._get_display_node_text(node),
-            widest_text_width=self._get_widest_node_text_width(),
-        )
+        return nodes_mod.get_node_dimensions(self, node)
 
     def _get_node_bounds(
         self, node: Any, positions: Dict[Any, Tuple[int, int]]
     ) -> Dict[str, int]:
-        x, y = positions[node]
-        width, height = self._get_node_dimensions(node)
-        left = x
-        right = x + width - 1
-        top = y
-        bottom = y + height - 1
-        center_x = left + (width // 2)
-        center_y = top + (height // 2)
-        return {
-            "left": left,
-            "right": right,
-            "top": top,
-            "bottom": bottom,
-            "center_x": center_x,
-            "center_y": center_y,
-        }
+        return nodes_mod.get_node_bounds(self, node, positions)
 
     def _get_edge_sides(
         self, start_bounds: Dict[str, int], end_bounds: Dict[str, int]
@@ -547,42 +415,6 @@ class ASCIIRenderer:
     ) -> Tuple[Tuple[int, int], Tuple[int, int]]:
         return ports_mod.get_edge_anchor_points(self, start, end, positions)
 
-    def _draw_node(self, node: Any, x: int, y: int) -> None:
-        label = self.options.get_node_text(self._get_display_node_text(node))
-        node_width, node_height = self._get_node_dimensions(node)
-        node_color = self._node_color_map.get(node)
-
-        if not self.options.bboxes:
-            for i, char in enumerate(label):
-                self._paint_cell(x + i, y, char, node_color)
-            return
-
-        right_x = x + node_width - 1
-        bottom_y = y + node_height - 1
-        inner_width = max(0, node_width - 2 - (2 * self.options.hpad))
-        label_offset = (
-            max(0, (inner_width - len(label)) // 2) if self.options.uniform else 0
-        )
-        inner_start_x = x + 1 + self.options.hpad + label_offset
-        label_y = y + 1 + self.options.vpad
-
-        self._paint_cell(x, y, self.options.box_top_left, node_color)
-        self._paint_cell(right_x, y, self.options.box_top_right, node_color)
-        for col in range(x + 1, right_x):
-            self._paint_cell(col, y, self.options.edge_horizontal, node_color)
-
-        self._paint_cell(x, bottom_y, self.options.box_bottom_left, node_color)
-        self._paint_cell(right_x, bottom_y, self.options.box_bottom_right, node_color)
-        for col in range(x + 1, right_x):
-            self._paint_cell(col, bottom_y, self.options.edge_horizontal, node_color)
-
-        for row in range(y + 1, bottom_y):
-            self._paint_cell(x, row, self.options.edge_vertical, node_color)
-            self._paint_cell(right_x, row, self.options.edge_vertical, node_color)
-
-        for i, char in enumerate(label):
-            self._paint_cell(inner_start_x + i, label_y, char, node_color)
-
     def _should_skip_edge_draw(
         self,
         start: Any,
@@ -593,11 +425,17 @@ class ASCIIRenderer:
             self, start, end, drawn_bidirectional_pairs
         )
 
+    def _draw_node(self, node: Any, x: int, y: int) -> None:
+        nodes_mod.draw_node(self, node, x, y)
+
     def render(self, print_config: Optional[bool] = False) -> str:
         """Render the graph as ASCII art."""
         positions, width, height = self.layout_manager.calculate_layout()
         if not positions:
             return ""
+
+        if not print_config:
+            pass
 
         # Initialize canvas with adjusted positions
         self._init_canvas(width, height, positions)
@@ -639,7 +477,7 @@ class ASCIIRenderer:
 
         return "\n".join(
             self._render_row(row, colors)
-            for row, colors in zip(self.canvas, self._color_canvas)
+            for row, colors in zip(self.canvas, self._color_canvas, strict=True)
         )
 
     def draw(self, file: Optional[TextIO] = None) -> None:
@@ -672,18 +510,118 @@ class ASCIIRenderer:
         else:
             print(self.render(), file=file)
 
-    def write_to_file(self, filename: str) -> None:
-        """
-        Write graph representation to a file.
+    @staticmethod
+    def _ansi_to_hex(ansi: str) -> Optional[str]:
+        return _ansi_to_hex_impl(ansi)
 
-        Parameters
-        ----------
-        filename : str
-            Path to output file
-        """
+    @staticmethod
+    def _xterm_index_to_hex(idx: int) -> str:
+        return _xterm_index_to_hex_impl(idx)
 
-        with open(filename, "w", encoding="utf-8") as f:
-            f.write(self.render())
+    def _normalized_canvas_rows(self) -> List[str]:
+        from .rendering.output import normalized_canvas_rows
+
+        return normalized_canvas_rows(self)
+
+    def render_ditaa(self, wrap_plantuml: bool = False) -> str:
+        from .rendering.output import render_ditaa
+
+        return render_ditaa(self, wrap_plantuml=wrap_plantuml)
+
+    def render_svg(
+        self,
+        *,
+        cell_px: int = 12,
+        font_family: str = "monospace",
+        text_mode: str = "text",
+        font_path: Optional[str] = None,
+        fg_color: str = "#111111",
+        bg_color: str = "#ffffff",
+    ) -> str:
+        from .rendering.output import render_svg as render_svg_impl
+
+        return render_svg_impl(
+            self,
+            cell_px=cell_px,
+            font_family=font_family,
+            text_mode=text_mode,
+            font_path=font_path,
+            fg_color=fg_color,
+            bg_color=bg_color,
+        )
+
+    def _append_svg_glyph_paths(
+        self,
+        *,
+        lines: List[str],
+        rows: List[str],
+        cell_px: int,
+        font_family: str,
+        font_path: Optional[str],
+        fg_color: str,
+    ) -> None:
+        svg_mod.append_svg_glyph_paths(
+            renderer=self,
+            lines=lines,
+            rows=rows,
+            cell_px=cell_px,
+            font_family=font_family,
+            font_path=font_path,
+            fg_color=fg_color,
+        )
+
+    @staticmethod
+    def _resolve_svg_font_path(*, font_family: str, font_path: Optional[str]) -> str:
+        return svg_mod.resolve_svg_font_path(
+            font_family=font_family, font_path=font_path
+        )
+
+    @staticmethod
+    def _glyph_outline_for_char(
+        *,
+        ch: str,
+        cmap: Dict[int, str],
+        glyph_set: Any,
+        svg_path_pen_cls: Any,
+        bounds_pen_cls: Any,
+    ) -> Optional[Tuple[str, Tuple[float, float, float, float]]]:
+        return svg_mod.glyph_outline_for_char(
+            ch=ch,
+            cmap=cmap,
+            glyph_set=glyph_set,
+            svg_path_pen_cls=svg_path_pen_cls,
+            bounds_pen_cls=bounds_pen_cls,
+        )
+
+    def render_html(
+        self,
+        *,
+        fg_color: str = "#111111",
+        bg_color: str = "#ffffff",
+        font_family: str = "monospace",
+    ) -> str:
+        from .rendering.output import render_html as render_html_impl
+
+        return render_html_impl(
+            self,
+            fg_color=fg_color,
+            bg_color=bg_color,
+            font_family=font_family,
+        )
+
+    def render_latex_markdown(
+        self,
+        *,
+        fg_color: str = "#111111",
+    ) -> str:
+        from .rendering.output import (
+            render_latex_markdown as render_latex_markdown_impl,
+        )
+
+        return render_latex_markdown_impl(
+            self,
+            fg_color=fg_color,
+        )
 
     def _init_canvas(
         self, width: int, height: int, positions: Dict[Any, Tuple[int, int]]
@@ -801,106 +739,25 @@ class ASCIIRenderer:
 
     @classmethod
     def from_dot(cls, dot_string: str, **kwargs: Any) -> "ASCIIRenderer":
-        """
-        Create a renderer from a DOT format string.
+        from phart.io.input.dot import parse_dot_to_digraph
 
-        Parameters
-        ----------
-        dot_string : str
-            Graph description in DOT format
-        **kwargs
-            Additional arguments passed to the constructor
-
-        Returns
-        -------
-        ASCIIRenderer
-            New renderer instance
-
-        Raises
-        ------
-        ImportError
-            If pydot is not available
-        ValueError
-            If DOT string doesn't contain any valid graphs
-
-        Examples
-        --------
-        >>> dot = '''
-        ... digraph {
-        ...     A -> B
-        ...     B -> C
-        ... }
-        ... '''
-        >>> renderer = ASCIIRenderer.from_dot(dot)
-        >>> print(renderer.render())
-        A
-        |
-        B
-        |
-        C
-        """
-
-        try:
-            import pydot  # type: ignore
-        except ImportError:
-            raise ImportError("pydot is required for DOT format support")
-
-        with warnings.catch_warnings():
-            # pyparsing emits deprecation warnings via pydot on newer versions.
-            # Tests enforce warnings as errors, so suppress this third-party
-            # warning only for the parse call.
-            warnings.filterwarnings(
-                "ignore",
-                category=DeprecationWarning,
-                module=r"pydot\.dot_parser",
-            )
-            try:
-                from pyparsing import PyparsingDeprecationWarning  # type: ignore
-
-                warnings.filterwarnings("ignore", category=PyparsingDeprecationWarning)
-            except Exception:
-                pass
-            graphs = pydot.graph_from_dot_data(dot_string)
-        if not graphs:
-            raise ValueError("No valid graphs found in DOT string")
-
-        # Take first graph from the list
-        G = nx.nx_pydot.from_pydot(graphs[0])
-        if not isinstance(G, nx.DiGraph):
-            G = nx.DiGraph(G)
+        G = parse_dot_to_digraph(dot_string)
         return cls(G, **kwargs)
 
     @classmethod
     def from_graphml(cls, graphml_file: str, **kwargs: Any) -> "ASCIIRenderer":
-        """
-        Create a renderer from a GraphML file.
+        from phart.io.input.graphml import parse_graphml_to_digraph
 
-        Parameters
-        ----------
-        graphml_file : str
-            Path to GraphML file
-        **kwargs
-            Additional arguments passed to the constructor
+        G = parse_graphml_to_digraph(graphml_file)
+        return cls(G, **kwargs)
 
-        Returns
-        -------
-        ASCIIRenderer
-            New renderer instance
+    @classmethod
+    def from_plantuml(cls, plantuml_str: str, **kwargs: Any) -> "ASCIIRenderer":
 
-        Raises
-        ------
-        ImportError
-            If NetworkX graphml support is not available
-        ValueError
-            If file cannot be read as GraphML
-        """
-        try:
-            G = nx.read_graphml(graphml_file)
-            if not isinstance(G, nx.DiGraph):
-                G = nx.DiGraph(G)
-            return cls(G, **kwargs)
-        except Exception as e:
-            raise ValueError(f"Failed to read GraphML file: {e}")
+        from phart.io.input.plantuml import parse_plantuml_to_digraph
+
+        G = parse_plantuml_to_digraph(plantuml_str)
+        return cls(G, **kwargs)
 
 
 def merge_layout_options(

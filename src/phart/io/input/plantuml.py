@@ -2,13 +2,21 @@
 
 from __future__ import annotations
 
-import networkx as nx  # type: ignore
 import re
-
 from typing import Any, Dict, Optional
+
+import networkx as nx  # type: ignore
 
 
 def parse_plantuml_to_digraph(plantuml_str: str) -> nx.DiGraph:
+    """Create a renderer from a PlantUML text diagram.
+
+    Supported subset:
+    - Common participant/class/object declarations
+    - Relationship lines using PlantUML arrows (e.g. A --> B, A <- B, A <-> B)
+    - Optional edge labels using ``: label``
+    """
+
     graph: nx.DiGraph[Any] = nx.DiGraph()
     alias_to_id: Dict[str, str] = {}
 

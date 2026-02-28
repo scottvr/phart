@@ -4,10 +4,12 @@ This module handles the calculation of node positions and edge routing
 for ASCII graph visualization.
 """
 
-from typing import Dict, Tuple, Any, Set, List, Optional
 import math
 from collections import deque
+from typing import Any, Dict, List, Optional, Set, Tuple
+
 import networkx as nx
+
 from .styles import LayoutOptions
 
 

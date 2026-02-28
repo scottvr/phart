@@ -31,5 +31,7 @@ def render_renderer_output(
             bg_color=config.svg_bg,
             font_family=config.svg_font_family,
         )
+    if config.output_format == "latex-markdown":
+        return renderer.render_latex_markdown(fg_color=config.svg_fg)
 
     raise ValueError(f"Unsupported output format '{config.output_format}'")

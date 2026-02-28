@@ -11,10 +11,11 @@ import networkx as nx  # type: ignore
 from phart import ASCIIRenderer, LayoutOptions, NodeStyle
 from phart.styles import FlowDirection
 from phart.renderer import merge_layout_options
-
+from phart.io.output.files import write_to_file
 from pathlib import Path
 
 import tempfile
+from unittest.mock import patch
 
 
 class TestASCIIRenderer(unittest.TestCase):
@@ -251,6 +252,83 @@ class TestASCIIRenderer(unittest.TestCase):
         self.assertIn("A", result)
         self.assertIn("B", result)
         self.assertIn("C", result)
+
+    def test_from_plantuml(self):
+        """Test creation from PlantUML subset."""
+        plantuml = """
+        @startuml
+        participant "Alice User" as Alice
+        participant Bob
+        Alice -> Bob : hello
+        Bob --> Alice : world
+        @enduml
+        """
+        renderer = ASCIIRenderer.from_plantuml(
+            plantuml,
+            options=LayoutOptions(use_ascii=True, use_labels=True),
+        )
+        result = renderer.render()
+
+        self.assertIn("Alice User", result)
+        self.assertIn("Bob", result)
+        self.assertEqual(renderer.graph.number_of_nodes(), 2)
+        self.assertGreaterEqual(renderer.graph.number_of_edges(), 2)
+
+    def test_render_ditaa_wrap(self):
+        graph = nx.DiGraph([("A", "B")])
+        renderer = ASCIIRenderer(
+            graph, options=LayoutOptions(use_ascii=False, bboxes=True)
+        )
+        ditaa = renderer.render_ditaa(wrap_plantuml=True)
+        print(f"DEBUGDITAA:{ditaa}")
+        self.assertIn("@startditaa", ditaa)
+        self.assertIn("@endditaa", ditaa)
+        self.assertNotIn("┌", ditaa)
+        self.assertIn("+", ditaa)
+
+    def test_render_svg_and_html(self):
+        graph = nx.DiGraph([("A", "B")])
+        renderer = ASCIIRenderer(
+            graph, options=LayoutOptions(use_ascii=True, ansi_colors=False)
+        )
+        svg = renderer.render_svg()
+        html = renderer.render_html()
+        latex_md = renderer.render_latex_markdown()
+        self.assertIn("<svg", svg)
+        self.assertIn("<text", svg)
+        self.assertIn("<!DOCTYPE html>", html)
+        self.assertIn("<pre", html)
+        self.assertIn(r"\textcolor", latex_md)
+        self.assertIn("$", latex_md)
+
+    def test_ansi_to_hex_supports_named_and_bright_ansi_codes(self):
+        self.assertEqual(ASCIIRenderer._ansi_to_hex("\x1b[31m"), "#800000")
+        self.assertEqual(ASCIIRenderer._ansi_to_hex("\x1b[32m"), "#008000")
+        self.assertEqual(ASCIIRenderer._ansi_to_hex("\x1b[91m"), "#ff0000")
+        self.assertEqual(ASCIIRenderer._ansi_to_hex("\x1b[1;32m"), "#008000")
+        self.assertEqual(ASCIIRenderer._ansi_to_hex("\x1b[38;5;214m"), "#ffaf00")
+
+    def test_render_svg_path_mode_dispatches_to_glyph_renderer(self):
+        graph = nx.DiGraph([("A", "B")])
+        renderer = ASCIIRenderer(
+            graph, options=LayoutOptions(use_ascii=True, ansi_colors=False)
+        )
+        with patch.object(ASCIIRenderer, "_append_svg_glyph_paths") as mock_paths:
+            mock_paths.side_effect = lambda **kwargs: kwargs["lines"].append(
+                '  <path d="M0 0L1 1" />'
+            )
+            svg = renderer.render_svg(text_mode="path")
+        self.assertIn("<svg", svg)
+        self.assertIn("<path", svg)
+        mock_paths.assert_called_once()
+
+    def test_render_svg_invalid_text_mode_raises(self):
+        graph = nx.DiGraph([("A", "B")])
+        renderer = ASCIIRenderer(
+            graph, options=LayoutOptions(use_ascii=True, ansi_colors=False)
+        )
+        with self.assertRaises(ValueError):
+            renderer.render_svg(text_mode="invalid-mode")
 
     def test_auto_ascii_detection(self):
         """Test that ASCII mode is auto-detected correctly."""
@@ -1134,7 +1212,7 @@ class TestASCIIRenderer(unittest.TestCase):
         with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", delete=False) as f:
             name = f.name
         try:
-            renderer.write_to_file(name)
+            write_to_file(renderer, filename=name)
             with open(name, "r", encoding="utf-8") as f2:
                 content = f2.read()
                 self.assertEqual(content, renderer.render())
@@ -1153,6 +1231,9 @@ class TestASCIIRenderer(unittest.TestCase):
             self.assertIn("A", result)
             self.assertIn("B", result)
             self.assertIn("C", result)
+        except Exception as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return 1
         finally:
             if temp_file.exists():
                 temp_file.unlink()
@@ -1274,14 +1355,14 @@ class TestLayoutOptions(unittest.TestCase):
     def test_merge_layout_options_respects_explicit_cli_fields(self):
         script_options = LayoutOptions(binary_tree_layout=True, use_ascii=True)
         cli_options = LayoutOptions(binary_tree_layout=False, use_ascii=True)
-        setattr(cli_options, "_explicit_cli_fields", {"use_ascii"})
+        setattr(cli_options, "_explicit_cli_fields", {"use_ascii"})  # noqa: B010
         merged = merge_layout_options(script_options, cli_options)
         self.assertTrue(merged.binary_tree_layout)
 
     def test_merge_layout_options_respects_explicit_color_nodes_field(self):
         script_options = LayoutOptions(color_nodes=True, use_ascii=True)
         cli_options = LayoutOptions(color_nodes=False, use_ascii=True)
-        setattr(cli_options, "_explicit_cli_fields", {"color_nodes"})
+        setattr(cli_options, "_explicit_cli_fields", {"color_nodes"})  # noqa: B010
         merged = merge_layout_options(script_options, cli_options)
         self.assertFalse(merged.color_nodes)
 
@@ -1290,7 +1371,7 @@ class TestLayoutOptions(unittest.TestCase):
     ):
         script_options = LayoutOptions(use_ascii=True)
         cli_options = LayoutOptions(bboxes=True, use_ascii=True)
-        setattr(cli_options, "_explicit_cli_fields", {"bboxes"})
+        setattr(cli_options, "_explicit_cli_fields", {"bboxes"})  # nnoqa: B010
         merged = merge_layout_options(script_options, cli_options)
         self.assertTrue(merged.bboxes)
         self.assertEqual(merged.node_style, NodeStyle.MINIMAL)
@@ -1298,7 +1379,7 @@ class TestLayoutOptions(unittest.TestCase):
     def test_merge_layout_options_bboxes_cli_preserves_explicit_script_style(self):
         script_options = LayoutOptions(node_style=NodeStyle.ROUND, use_ascii=True)
         cli_options = LayoutOptions(bboxes=True, use_ascii=True)
-        setattr(cli_options, "_explicit_cli_fields", {"bboxes"})
+        setattr(cli_options, "_explicit_cli_fields", {"bboxes"})  # nnoqa: B010
         merged = merge_layout_options(script_options, cli_options)
         self.assertTrue(merged.bboxes)
         self.assertEqual(merged.node_style, NodeStyle.ROUND)

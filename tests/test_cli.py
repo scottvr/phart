@@ -1,5 +1,4 @@
 """Tests for PHART CLI functionality."""
-# src path: tests\test_cli.py
 
 import unittest
 import tempfile
@@ -44,6 +43,15 @@ class TestCLI(unittest.TestCase):
         }
         """
         self.edge_attr_dot_file.write_text(edge_attr_dot, encoding="utf-8")
+        self.plantuml_file = Path(self.temp_dir) / "simple.puml"
+        plantuml_content = """
+@startuml
+participant "Alice User" as Alice
+participant Bob
+Alice -> Bob : hello
+@enduml
+"""
+        self.plantuml_file.write_text(plantuml_content, encoding="utf-8")
         # Create test Python file with main() function
         self.py_main_file = Path(self.temp_dir) / "test_main.py"
         main_content = """
@@ -165,6 +173,92 @@ def main():
         self.assertIn("C", output)
         self.assertNotIn("Error", self.stderr.getvalue())
 
+    def test_plantuml_rendering(self):
+        """Test basic PlantUML file rendering."""
+        sys.argv = ["phart", str(self.plantuml_file)]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertIn("Alice", output)
+        self.assertIn("Bob", output)
+        self.assertNotIn("Error", self.stderr.getvalue())
+
+    def test_output_format_ditaa_puml(self):
+        sys.argv = [
+            "phart",
+            "--output-format",
+            "ditaa-puml",
+            str(self.test_text_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertIn("@startditaa", output)
+        self.assertIn("@endditaa", output)
+
+    def test_output_format_svg(self):
+        sys.argv = [
+            "phart",
+            "--output-format",
+            "svg",
+            str(self.test_text_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertIn("<svg", output)
+        self.assertIn("<text", output)
+
+    @patch("phart.cli.load_renderer_from_file")
+    def test_output_format_svg_path_mode(self, mock_load_renderer):
+        mock_renderer = mock_load_renderer.return_value
+        mock_renderer.render_svg.return_value = "<svg><path/></svg>\n"
+        sys.argv = [
+            "phart",
+            "--output-format",
+            "svg",
+            "--svg-text-mode",
+            "path",
+            "--svg-font-path",
+            "/tmp/test-font.ttf",
+            str(self.test_text_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertIn("<svg", output)
+        self.assertIn("<path", output)
+        self.assertTrue(mock_renderer.render_svg.called)
+        call_kwargs = mock_renderer.render_svg.call_args.kwargs
+        self.assertEqual(call_kwargs.get("text_mode"), "path")
+        self.assertEqual(call_kwargs.get("font_path"), "/tmp/test-font.ttf")
+
+    def test_output_format_html(self):
+        sys.argv = [
+            "phart",
+            "--output-format",
+            "html",
+            str(self.test_text_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertIn("<!DOCTYPE html>", output)
+        self.assertIn("<pre", output)
+
+    def test_output_format_latex_markdown(self):
+        sys.argv = [
+            "phart",
+            "--output-format",
+            "latex-markdown",
+            str(self.test_text_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertIn(r"\textcolor", output)
+        self.assertIn("$", output)
+
     def test_style_option(self):
         """Test node style option."""
         sys.argv = ["phart", "--style", "round", str(self.test_text_file)]
@@ -255,6 +349,34 @@ def main():
         output = self.stdout.getvalue()
         self.assertNotIn("\x1b[", output)
 
+    def test_output_format_svg_for_py_input(self):
+        sys.argv = [
+            "phart",
+            "--output-format",
+            "svg",
+            str(self.py_main_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertIn("<svg", output)
+        self.assertIn("<text", output)
+        self.assertNotIn("Error", self.stderr.getvalue())
+
+    def test_output_format_latex_markdown_for_py_input(self):
+        sys.argv = [
+            "phart",
+            "--output-format",
+            "latex-markdown",
+            str(self.py_main_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertIn(r"\textcolor", output)
+        self.assertIn("$", output)
+        self.assertNotIn("Error", self.stderr.getvalue())
+
     def test_invalid_file(self):
         """Test handling of invalid file."""
         sys.argv = ["phart", "nonexistent.dot"]
@@ -270,7 +392,9 @@ def main():
         self.assertEqual(exit_code, 1)
         error_msg = self.stderr.getvalue()
         self.assertIn("Error", error_msg)
-        self.assertIn("Could not parse file as GraphML or DOT format", error_msg)
+        self.assertIn(
+            "Could not parse file as PlantUML, GraphML, or DOT format", error_msg
+        )
 
     def test_option_construction_errors_are_not_reported_as_parse_errors(self):
         sys.argv = ["phart", str(self.test_text_file)]
@@ -283,7 +407,9 @@ def main():
         self.assertEqual(exit_code, 1)
         error_msg = self.stderr.getvalue()
         self.assertIn("Error: synthetic options error", error_msg)
-        self.assertNotIn("Could not parse file as GraphML or DOT format", error_msg)
+        self.assertNotIn(
+            "Could not parse file as PlantUML, GraphML, or DOT format", error_msg
+        )
 
     def test_python_with_main(self):
         """Test executing Python file with main() function."""

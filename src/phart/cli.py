@@ -1,18 +1,20 @@
 """Command line interface for PHART."""
 
 import sys
-import ast
 import argparse
-import importlib.util
-from contextlib import nullcontext, redirect_stdout
 from pathlib import Path
-from typing import Optional, Any, ContextManager
+from typing import Optional
 
-from .renderer import ASCIIRenderer
-from .styles import NodeStyle, LayoutOptions
+from phart import __version__ as version
+
 from .charset import CharSet
+from .core.contracts import OutputRenderConfig, RendererOutputConfig
+from .io.input import load_renderer_from_file, run_python_source
+from .io.output import render_captured_text, render_renderer_output
+from .styles import LayoutOptions, NodeStyle
 
 COLOR_MODES = {"none", "source", "target", "path", "attr"}
+OUTPUT_FORMATS = {"text", "ditaa", "ditaa-puml", "svg", "html", "latex-markdown"}
 LAYOUT_STRATEGIES = {
     "auto",
     "bfs",
@@ -164,6 +166,21 @@ def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
         help="Output file (if not specified, prints to stdout)",
     )
     parser.add_argument(
+        "--version",
+        "-v",
+        action="version",
+        version=version,
+    )
+    parser.add_argument(
+        "--output-format",
+        choices=sorted(OUTPUT_FORMATS),
+        default="text",
+        help=(
+            "Output format: text (default), ditaa, ditaa-puml, "
+            "svg, html, or latex-markdown"
+        ),
+    )
+    parser.add_argument(
         "--style",
         choices=[s.name.lower() for s in NodeStyle],
         default=None,
@@ -282,6 +299,42 @@ def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
             "(repeatable)"
         ),
     )
+    parser.add_argument(
+        "--svg-cell-size",
+        type=int,
+        default=12,
+        help="Cell size in pixels for SVG output (default: 12)",
+    )
+    parser.add_argument(
+        "--svg-font-family",
+        type=str,
+        default="monospace",
+        help="Font family for SVG/HTML output (default: monospace)",
+    )
+    parser.add_argument(
+        "--svg-text-mode",
+        choices=["text", "path"],
+        default="text",
+        help="Render SVG characters as <text> (default) or glyph paths",
+    )
+    parser.add_argument(
+        "--svg-font-path",
+        type=str,
+        default=None,
+        help="Font file path required when --svg-text-mode path is used",
+    )
+    parser.add_argument(
+        "--svg-fg",
+        type=str,
+        default="#111111",
+        help="Foreground color for SVG/HTML/LaTeX output",
+    )
+    parser.add_argument(
+        "--svg-bg",
+        type=str,
+        default="#ffffff",
+        help="Background color for SVG/HTML output",
+    )
     args, unknown = parser.parse_known_args(argv)
     explicit_layout_fields = _collect_explicit_layout_fields(argv, args)
     return args, unknown, explicit_layout_fields, module_argv
@@ -347,17 +400,6 @@ def _parse_edge_color_rules(rule_specs: list[str]) -> dict[str, dict[str, str]]:
     return parsed
 
 
-def _load_python_module(file_path: Path) -> Any:
-    spec = importlib.util.spec_from_file_location("dynamic_module", file_path)
-    if spec is None or spec.loader is None:
-        raise ImportError(f"Could not load {file_path}")
-
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["dynamic_module"] = module
-    spec.loader.exec_module(module)
-    return module
-
-
 def create_layout_options(
     args: argparse.Namespace, explicit_layout_fields: Optional[set[str]] = None
 ) -> LayoutOptions:
@@ -399,32 +441,28 @@ def create_layout_options(
     return options
 
 
-def _run_python_as_main(file_path: Path) -> Any:
-    spec = importlib.util.spec_from_file_location("__main__", file_path)
-    if spec is None or spec.loader is None:
-        raise ImportError(f"Could not load {file_path}")
-
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["__main__"] = module  # match python's behavior more closely
-    spec.loader.exec_module(module)  # executes exactly once
-    return module
-
-
-def _module_defines_function(file_path: Path, function_name: str) -> bool:
-    """Return True if file defines a top-level function with the given name."""
-    source = file_path.read_text(encoding="utf-8")
-    tree = ast.parse(source, filename=str(file_path))
-    return any(
-        isinstance(node, ast.FunctionDef) and node.name == function_name
-        for node in tree.body
-    )
-
-
 def main() -> Optional[int]:
     """CLI entry point for PHART."""
     args, unknown, explicit_layout_fields, module_argv = parse_args()
 
     try:
+        output_render_config = OutputRenderConfig(
+            output_format=args.output_format,
+            svg_cell_size=args.svg_cell_size,
+            svg_font_family=args.svg_font_family,
+            svg_fg=args.svg_fg,
+            svg_bg=args.svg_bg,
+        )
+        renderer_output_config = RendererOutputConfig(
+            output_format=args.output_format,
+            svg_cell_size=args.svg_cell_size,
+            svg_font_family=args.svg_font_family,
+            svg_text_mode=args.svg_text_mode,
+            svg_font_path=args.svg_font_path,
+            svg_fg=args.svg_fg,
+            svg_bg=args.svg_bg,
+        )
+
         if args.input.suffix == ".py":
             if unknown:
                 print(
@@ -435,47 +473,21 @@ def main() -> Optional[int]:
                 )
                 return 2
 
-            old_argv = sys.argv
-            old_default_options = ASCIIRenderer.default_options
-            sys.argv = [str(args.input)] + module_argv
-
-            try:
-                cli_options = create_layout_options(args, explicit_layout_fields)
-                ASCIIRenderer.default_options = cli_options
-                output_ctx: ContextManager[Any] = nullcontext()
-                out_file = None
-                if args.output:
-                    out_file = args.output.open("w", encoding="utf-8")
-                    output_ctx = redirect_stdout(out_file)
-
-                try:
-                    with output_ctx:
-                        if args.function != "main":
-                            module = _load_python_module(args.input)
-                            try:
-                                func = getattr(module, args.function)
-                            except AttributeError:
-                                print(
-                                    f"Error: Function '{args.function}' not found in {args.input}",
-                                    file=sys.stderr,
-                                )
-                                return 1
-                            func()
-                            return 0
-
-                        if _module_defines_function(args.input, "main"):
-                            module = _load_python_module(args.input)
-                            module.main()
-                        else:
-                            _run_python_as_main(args.input)
-                        return 0
-                finally:
-                    if out_file is not None:
-                        out_file.close()
-
-            finally:
-                sys.argv = old_argv
-                ASCIIRenderer.default_options = old_default_options
+            cli_options = create_layout_options(args, explicit_layout_fields)
+            raw_output = run_python_source(
+                args.input,
+                function_name=args.function,
+                module_argv=module_argv,
+                options=cli_options,
+            )
+            rendered_output = render_captured_text(
+                raw_output, config=output_render_config
+            )
+            if args.output:
+                args.output.write_text(rendered_output, encoding="utf-8")
+            else:
+                sys.stdout.write(rendered_output)
+            return 0
 
         else:
             if module_argv:
@@ -491,31 +503,15 @@ def main() -> Optional[int]:
                 )
                 return 2
 
-            with open(args.input, "r", encoding="utf-8") as f:
-                content = f.read()
-
             cli_options = create_layout_options(args, explicit_layout_fields)
-
-            try:
-                if content.strip().startswith("<?xml") or content.strip().startswith(
-                    "<graphml"
-                ):
-                    renderer = ASCIIRenderer.from_graphml(
-                        str(args.input), options=cli_options
-                    )
-                else:
-                    renderer = ASCIIRenderer.from_dot(content, options=cli_options)
-            except Exception as parse_error:
-                print(
-                    f"Error: Could not parse file as GraphML or DOT format: {parse_error}",
-                    file=sys.stderr,
-                )
-                return 1
-
+            renderer = load_renderer_from_file(args.input, options=cli_options)
+            rendered_output = render_renderer_output(
+                renderer, config=renderer_output_config
+            )
             if args.output:
-                renderer.write_to_file(str(args.output))
+                args.output.write_text(rendered_output, encoding="utf-8")
             else:
-                print(renderer.render())
+                sys.stdout.write(rendered_output)
             return 0
 
     except Exception as e:

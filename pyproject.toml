@@ -33,13 +33,16 @@ developer = [
     'pre-commit>=3.2',
     'mypy>=1.1',
     'isort',
+    'ruff',
 ]
 doc = [
 ]
-example = [
+examples = [
     'pydot>=3.0.1',
 ]
 extra = [
+    "phart[examples]",
+    "phart[svg]",
     'pygraphviz>=1.14',
     'scipy',
 ]
@@ -50,7 +53,12 @@ svg = [
 test = [
     'pytest>=7.2',
     'pytest-cov>=4.0',
-    'pydot'
+    "phart[extra]",
+]
+all = [
+    "phart[developer]",
+    "phart[test]",
+    "phart[extra]",
 ]
 
 [project.scripts]
@@ -78,3 +86,16 @@ path = "src/phart/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/phart"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "B"]
+
+ignore = ["F401", "B010"]
+#ignore = ["E501"]
+unfixable = ["B"]
+
+
+# 4. Ignore `E402` (import violations) in all `__init__.py` files, and in selected subdirectories.
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["E402"]
+"**/{tests,docs,tools}/*" = ["E402"]

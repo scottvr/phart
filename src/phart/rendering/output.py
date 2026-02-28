@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from html import escape as html_escape
 from typing import TYPE_CHECKING, List, Optional
 
@@ -9,6 +10,9 @@ from .ansi import ANSI_ESCAPE_RE, UNICODE_DITAA_MAP, ansi_to_hex
 
 if TYPE_CHECKING:
     from phart.renderer import ASCIIRenderer
+
+
+_TILDE_SPACE_RATIO = 30.0 / 22.0
 
 
 def normalized_canvas_rows(renderer: ASCIIRenderer) -> List[str]:
@@ -144,3 +148,95 @@ def render_html(
         html_lines.append("\n")
     html_lines.append("</pre></body></html>\n")
     return "".join(html_lines)
+
+
+def _latex_escape_text(text: str) -> str:
+    escaped: List[str] = []
+    i = 0
+    while i < len(text):
+        ch = text[i]
+        if ch == " ":
+            j = i
+            while j < len(text) and text[j] == " ":
+                j += 1
+            run_len = max(4, int(math.ceil((j - i) * _TILDE_SPACE_RATIO)))
+            escaped.append("~" * run_len)
+            i = j
+            continue
+
+        if ch == "\\":
+            escaped.append(r"\textbackslash{}")
+        elif ch == "_":
+            # GitHub markdown+math parsing is brittle around underscores.
+            # Prefer visual fidelity over strict literal preservation.
+            escaped.append("-")
+        elif ch == "#":
+            # Avoid parser errors seen in GFM math around '#'.
+            escaped.append("-")
+        elif ch in {"{", "}", "$", "#", "%", "&"}:
+            escaped.append(f"\\{ch}")
+        elif ch == "^":
+            escaped.append(r"\^{}")
+        else:
+            escaped.append(ch)
+        i += 1
+
+    encoded = "".join(escaped)
+    if encoded.startswith("~"):
+        encoded = "." + encoded
+    if encoded.endswith("~"):
+        encoded += "."
+    return encoded
+
+
+def render_latex_markdown(
+    renderer: ASCIIRenderer,
+    *,
+    fg_color: str = "#111111",
+) -> str:
+    renderer.render()
+    rows = normalized_canvas_rows(renderer)
+    latex_lines: List[str] = []
+    for y, row in enumerate(rows):
+        row_colors = (
+            renderer._color_canvas[y]
+            if y < len(renderer._color_canvas)
+            else [None] * len(row)
+        )
+
+        segments: List[str] = []
+        current_color: Optional[str] = None
+        current_text: List[str] = []
+        for ch, ansi in zip(row, row_colors, strict=True):
+            target_color = fg_color
+            parsed = ansi_to_hex(ansi) if ansi else None
+            if parsed:
+                target_color = parsed
+
+            if target_color != current_color:
+                if current_text:
+                    escaped = _latex_escape_text("".join(current_text))
+                    segments.append(
+                        r"\mathtt{\textbf{\textcolor{"
+                        f"{current_color}"
+                        r"}{"
+                        f"{escaped}"
+                        r"}}}"
+                    )
+                    current_text = []
+                current_color = target_color
+            current_text.append(ch)
+
+        if current_text and current_color is not None:
+            escaped = _latex_escape_text("".join(current_text))
+            segments.append(
+                r"\mathtt{\textbf{\textcolor{"
+                f"{current_color}"
+                r"}{"
+                f"{escaped}"
+                r"}}}"
+            )
+
+        latex_lines.append("${" + "".join(segments) + "}$")
+    # Blank lines are required; otherwise GFM can merge adjacent math lines.
+    return "\n\n".join(latex_lines) + ("\n" if latex_lines else "")
