@@ -5,43 +5,17 @@ import warnings
 import networkx as nx  # type: ignore
 
 from .layout import LayoutManager
+from .rendering.ansi import (
+    ANSI_RESET,
+    ANSI_SUBWAY_PALETTE,
+    ANSI_NAMED_COLORS,
+)
+from .rendering import ports as ports_mod
+from .rendering import routing as routing_mod
 from .styles import LayoutOptions, NodeStyle
 
 import sys
 import io
-
-ANSI_RESET = "\x1b[0m"
-ANSI_SUBWAY_PALETTE: Tuple[str, ...] = (
-    "\x1b[38;5;45m",  # cyan
-    "\x1b[38;5;214m",  # orange
-    "\x1b[38;5;118m",  # green
-    "\x1b[38;5;199m",  # magenta
-    "\x1b[38;5;39m",  # blue
-    "\x1b[38;5;226m",  # yellow
-    "\x1b[38;5;160m",  # red
-    "\x1b[38;5;81m",  # aqua
-)
-ANSI_NAMED_COLORS: Dict[str, str] = {
-    "black": "\x1b[30m",
-    "red": "\x1b[31m",
-    "green": "\x1b[32m",
-    "yellow": "\x1b[33m",
-    "blue": "\x1b[34m",
-    "magenta": "\x1b[35m",
-    "cyan": "\x1b[36m",
-    "white": "\x1b[37m",
-    "bright_black": "\x1b[90m",
-    "bright_red": "\x1b[91m",
-    "bright_green": "\x1b[92m",
-    "bright_yellow": "\x1b[93m",
-    "bright_blue": "\x1b[94m",
-    "bright_magenta": "\x1b[95m",
-    "bright_cyan": "\x1b[96m",
-    "bright_white": "\x1b[97m",
-    # Palette aliases used by existing subway colors.
-    "orange": "\x1b[38;5;214m",
-    "aqua": "\x1b[38;5;81m",
-}
 
 
 class ASCIIRenderer:
@@ -496,90 +470,42 @@ class ASCIIRenderer:
     def _get_edge_sides(
         self, start_bounds: Dict[str, int], end_bounds: Dict[str, int]
     ) -> Tuple[str, str]:
-        """Choose source/target box sides for an edge based on relative geometry."""
-        vertical_overlap = max(start_bounds["top"], end_bounds["top"]) <= min(
-            start_bounds["bottom"], end_bounds["bottom"]
-        )
-        if (
-            vertical_overlap and start_bounds["center_x"] != end_bounds["center_x"]
-        ) or (start_bounds["center_y"] == end_bounds["center_y"]):
-            if start_bounds["center_x"] <= end_bounds["center_x"]:
-                return "right", "left"
-            return "left", "right"
-        if start_bounds["center_y"] < end_bounds["center_y"]:
-            return "bottom", "top"
-        return "top", "bottom"
+        return ports_mod.get_edge_sides(self, start_bounds, end_bounds)
 
     def _get_center_anchor_for_side(
         self, bounds: Dict[str, int], side: str
     ) -> Tuple[int, int]:
-        if side == "top":
-            return bounds["center_x"], bounds["top"]
-        if side == "bottom":
-            return bounds["center_x"], bounds["bottom"]
-        if side == "left":
-            return bounds["left"], bounds["center_y"]
-        return bounds["right"], bounds["center_y"]
+        return ports_mod.get_center_anchor_for_side(self, bounds, side)
 
     def _get_side_port_values(self, bounds: Dict[str, int], side: str) -> List[int]:
-        """Get candidate port coordinates along a side (axis-only values)."""
-        if side in ("top", "bottom"):
-            if bounds["right"] - bounds["left"] > 1:
-                return list(range(bounds["left"] + 1, bounds["right"]))
-            return [bounds["center_x"]]
-        if bounds["bottom"] - bounds["top"] > 1:
-            return list(range(bounds["top"] + 1, bounds["bottom"]))
-        return [bounds["center_y"]]
+        return ports_mod.get_side_port_values(self, bounds, side)
 
     def _port_value_to_xy(
         self, bounds: Dict[str, int], side: str, value: int
     ) -> Tuple[int, int]:
-        if side == "top":
-            return value, bounds["top"]
-        if side == "bottom":
-            return value, bounds["bottom"]
-        if side == "left":
-            return bounds["left"], value
-        return bounds["right"], value
+        return ports_mod.port_value_to_xy(self, bounds, side, value)
 
     @staticmethod
     def _crowding_cost(value: int, used_values: List[int]) -> float:
-        """Soft penalty for placing a port too close to existing ports."""
-        if not used_values:
-            return 0.0
-        return sum(1.0 / (abs(value - used) + 1.0) for used in used_values)
+        return ports_mod.crowding_cost(value, used_values)
 
     @staticmethod
     def _values_with_min_separation(
         candidates: List[int], used_values: List[int], min_sep: int
     ) -> List[int]:
-        """Filter candidate values by minimum separation from existing values."""
-        if not used_values:
-            return list(candidates)
-
-        filtered = [
-            candidate
-            for candidate in candidates
-            if all(abs(candidate - used) >= min_sep for used in used_values)
-        ]
-        return filtered if filtered else list(candidates)
+        return ports_mod.values_with_min_separation(candidates, used_values, min_sep)
 
     @staticmethod
     def _port_pair_jog_cost(start_value: int, end_value: int) -> int:
-        """Orthogonal jog distance in the routing axis for a port pair."""
-        return abs(start_value - end_value)
+        return ports_mod.port_pair_jog_cost(start_value, end_value)
 
     @staticmethod
     def _side_center_value(bounds: Dict[str, int], side: str) -> int:
-        """Get the center axis coordinate for a given node side."""
-        if side in ("top", "bottom"):
-            return bounds["center_x"]
-        return bounds["center_y"]
+        return ports_mod.side_center_value(bounds, side)
 
     @staticmethod
     def _nearest_candidate_to_center(candidates: List[int], center_value: int) -> int:
-        """Pick candidate nearest to local side center (deterministic ties)."""
-        return min(candidates, key=lambda value: (abs(value - center_value), value))
+        return ports_mod.nearest_candidate_to_center(candidates, center_value)
 
     def _choose_port_pair(
         self,
@@ -591,406 +517,35 @@ class ASCIIRenderer:
         used_start_values: List[int],
         used_end_values: List[int],
     ) -> Tuple[int, int]:
-        """Choose best (start,end) port pair using spacing + route-awareness."""
-        best_pair: Optional[Tuple[int, int]] = None
-        best_key: Optional[Tuple[float, int, int, int, int]] = None
-
-        for start_value in start_candidates:
-            for end_value in end_candidates:
-                start_cost = abs(start_value - start_counter)
-                end_cost = abs(end_value - end_counter)
-                jog_cost = self._port_pair_jog_cost(start_value, end_value)
-
-                # Preserve spread unless route simplification is compelling.
-                crowding = self._crowding_cost(
-                    start_value, used_start_values
-                ) + self._crowding_cost(end_value, used_end_values)
-
-                straight_bonus = 3.0 if jog_cost == 0 else 0.0
-                score = (
-                    float(start_cost)
-                    + float(end_cost)
-                    + (0.75 * float(jog_cost))
-                    + (2.0 * crowding)
-                    - straight_bonus
-                )
-                pair_key = (
-                    score,
-                    start_cost + end_cost,
-                    jog_cost,
-                    start_value,
-                    end_value,
-                )
-                if best_key is None or pair_key < best_key:
-                    best_key = pair_key
-                    best_pair = (start_value, end_value)
-
-        if best_pair is None:
-            return start_counter, end_counter
-        return best_pair
+        return ports_mod.choose_port_pair(
+            self,
+            start_candidates=start_candidates,
+            end_candidates=end_candidates,
+            start_counter=start_counter,
+            end_counter=end_counter,
+            used_start_values=used_start_values,
+            used_end_values=used_end_values,
+        )
 
     def _assign_monotone_port_values(
         self, counters: List[int], candidates: List[int]
     ) -> List[int]:
-        """Assign candidate ports monotonically to ordered counters.
-
-        Preserves left-to-right/top-to-bottom ordering to minimize surprising
-        edge crossings on a shared node face.
-        """
-        if not counters:
-            return []
-        if not candidates:
-            return list(counters)
-
-        ordered_candidates = sorted(set(candidates))
-        ordered_counters = list(counters)
-        n = len(ordered_counters)
-        m = len(ordered_candidates)
-
-        if n == 1:
-            center = ordered_counters[0]
-            return [self._nearest_candidate_to_center(ordered_candidates, center)]
-
-        # If there are fewer candidate slots than edges, keep monotonicity by
-        # reusing slots in order.
-        if m < n:
-            max_index = m - 1
-            return [
-                ordered_candidates[round((i * max_index) / max(n - 1, 1))]
-                for i in range(n)
-            ]
-
-        # Dynamic programming: choose strictly increasing candidate indices
-        # that minimize total absolute deviation from desired counters.
-        inf = float("inf")
-        dp: List[List[float]] = [[inf for _ in range(m)] for _ in range(n)]
-        prev: List[List[int]] = [[-1 for _ in range(m)] for _ in range(n)]
-
-        for j in range(m):
-            dp[0][j] = abs(ordered_counters[0] - ordered_candidates[j])
-
-        for i in range(1, n):
-            for j in range(i, m):
-                local_cost = abs(ordered_counters[i] - ordered_candidates[j])
-                best_prev_idx = -1
-                best_prev_cost = inf
-                for k in range(i - 1, j):
-                    cand_cost = dp[i - 1][k]
-                    if cand_cost < best_prev_cost:
-                        best_prev_cost = cand_cost
-                        best_prev_idx = k
-                dp[i][j] = best_prev_cost + local_cost
-                prev[i][j] = best_prev_idx
-
-        best_last_idx = min(
-            range(n - 1, m),
-            key=lambda j: (dp[n - 1][j], j),
-        )
-
-        chosen_indices = [0 for _ in range(n)]
-        chosen_indices[n - 1] = best_last_idx
-        for i in range(n - 1, 0, -1):
-            chosen_indices[i - 1] = prev[i][chosen_indices[i]]
-
-        return [ordered_candidates[idx] for idx in chosen_indices]
+        return ports_mod.assign_monotone_port_values(self, counters, candidates)
 
     def _assign_monotone_port_indices(
         self, counters: List[int], candidates: List[int]
     ) -> List[int]:
-        """Assign monotonically ordered candidate indices to ordered counters."""
-        if not counters:
-            return []
-        ordered_candidates = sorted(set(candidates))
-        if not ordered_candidates:
-            return [0 for _ in counters]
-
-        n = len(counters)
-        m = len(ordered_candidates)
-        if n == 1:
-            target = counters[0]
-            best_idx = min(
-                range(m), key=lambda idx: (abs(ordered_candidates[idx] - target), idx)
-            )
-            return [best_idx]
-
-        if m < n:
-            max_index = m - 1
-            return [round((i * max_index) / max(n - 1, 1)) for i in range(n)]
-
-        # Dynamic programming: strictly increasing indices minimizing deviation.
-        inf = float("inf")
-        dp: List[List[float]] = [[inf for _ in range(m)] for _ in range(n)]
-        prev: List[List[int]] = [[-1 for _ in range(m)] for _ in range(n)]
-
-        for j in range(m):
-            dp[0][j] = abs(counters[0] - ordered_candidates[j])
-
-        for i in range(1, n):
-            for j in range(i, m):
-                local_cost = abs(counters[i] - ordered_candidates[j])
-                best_prev_idx = -1
-                best_prev_cost = inf
-                for k in range(i - 1, j):
-                    cand_cost = dp[i - 1][k]
-                    if cand_cost < best_prev_cost:
-                        best_prev_cost = cand_cost
-                        best_prev_idx = k
-                dp[i][j] = best_prev_cost + local_cost
-                prev[i][j] = best_prev_idx
-
-        best_last_idx = min(
-            range(n - 1, m),
-            key=lambda j: (dp[n - 1][j], j),
-        )
-        chosen = [0 for _ in range(n)]
-        chosen[n - 1] = best_last_idx
-        for i in range(n - 1, 0, -1):
-            chosen[i - 1] = prev[i][chosen[i]]
-        return chosen
+        return ports_mod.assign_monotone_port_indices(self, counters, candidates)
 
     def _compute_edge_anchor_map(
         self, positions: Dict[Any, Tuple[int, int]]
     ) -> Dict[Tuple[Any, Any], Dict[str, Tuple[int, int]]]:
-        """Precompute deterministic per-edge anchors for edges that use ports."""
-        if not self.options.bboxes:
-            return {}
-
-        edge_specs: List[
-            Tuple[
-                Tuple[Any, Any],
-                Any,
-                str,
-                int,
-                List[int],
-                Any,
-                str,
-                int,
-                List[int],
-                int,
-            ]
-        ] = []
-
-        for start, end in sorted(
-            self.graph.edges(), key=lambda edge: (str(edge[0]), str(edge[1]))
-        ):
-            if start not in positions or end not in positions:
-                continue
-            if not self._should_use_ports_for_edge(start, end):
-                continue
-
-            start_bounds = self._get_node_bounds(start, positions)
-            end_bounds = self._get_node_bounds(end, positions)
-            start_side, end_side = self._get_edge_sides(start_bounds, end_bounds)
-
-            start_counter = (
-                end_bounds["center_x"]
-                if start_side in ("top", "bottom")
-                else end_bounds["center_y"]
-            )
-            end_counter = (
-                start_bounds["center_x"]
-                if end_side in ("top", "bottom")
-                else start_bounds["center_y"]
-            )
-            start_candidates = self._get_side_port_values(start_bounds, start_side)
-            end_candidates = self._get_side_port_values(end_bounds, end_side)
-            if not start_candidates:
-                start_candidates = [start_counter]
-            if not end_candidates:
-                end_candidates = [end_counter]
-
-            edge_specs.append(
-                (
-                    (start, end),
-                    start,
-                    start_side,
-                    start_counter,
-                    start_candidates,
-                    end,
-                    end_side,
-                    end_counter,
-                    end_candidates,
-                    abs(start_counter - end_counter),
-                )
-            )
-
-        edge_anchor_map: Dict[Tuple[Any, Any], Dict[str, Tuple[int, int]]] = {}
-        used_by_side: Dict[Tuple[Any, str], List[int]] = {}
-        min_port_separation = 1
-        wiggle_radius = 1
-        face_candidate_pools: Dict[Tuple[Tuple[Any, Any], str], List[int]] = {}
-        face_requirements: Dict[
-            Tuple[Any, str], List[Tuple[Tuple[Any, Any], str, int, str]]
-        ] = {}
-        for (
-            edge_key,
-            start_node,
-            start_side,
-            start_counter,
-            _start_candidates_unused,
-            end_node,
-            end_side,
-            end_counter,
-            _end_candidates_unused,
-            _axis_delta,
-        ) in edge_specs:
-            face_requirements.setdefault((start_node, start_side), []).append(
-                (edge_key, "start", start_counter, str(end_node))
-            )
-            face_requirements.setdefault((end_node, end_side), []).append(
-                (edge_key, "end", end_counter, str(start_node))
-            )
-
-        for (node, side), items in face_requirements.items():
-            node_bounds = self._get_node_bounds(node, positions)
-            candidates = sorted(set(self._get_side_port_values(node_bounds, side)))
-            if not candidates:
-                candidates = [self._side_center_value(node_bounds, side)]
-            max_idx = len(candidates) - 1
-
-            sorted_items = sorted(items, key=lambda item: (item[2], item[3]))
-            if len(sorted_items) == 1:
-                center = self._side_center_value(node_bounds, side)
-                center_idx = min(
-                    range(len(candidates)),
-                    key=lambda idx: (abs(candidates[idx] - center), idx),
-                )
-                low_idx = max(0, center_idx - wiggle_radius)
-                high_idx = min(max_idx, center_idx + wiggle_radius)
-                edge_key, role, _counter, _peer = sorted_items[0]
-                face_candidate_pools[(edge_key, role)] = candidates[
-                    low_idx : high_idx + 1
-                ]
-            else:
-                counters = [item[2] for item in sorted_items]
-                base_indices = self._assign_monotone_port_indices(counters, candidates)
-                n = len(base_indices)
-                for idx, (edge_key, role, _counter, _peer) in enumerate(sorted_items):
-                    base_idx = base_indices[idx]
-                    left_limit = (
-                        (base_indices[idx - 1] + base_idx + 1) // 2 if idx > 0 else 0
-                    )
-                    right_limit = (
-                        (base_idx + base_indices[idx + 1] - 1) // 2
-                        if idx < n - 1
-                        else max_idx
-                    )
-                    if left_limit > right_limit:
-                        left_limit = right_limit = min(max(base_idx, 0), max_idx)
-                    low_idx = max(left_limit, base_idx - wiggle_radius)
-                    high_idx = min(right_limit, base_idx + wiggle_radius)
-                    if low_idx > high_idx:
-                        low_idx = high_idx = min(max(base_idx, left_limit), right_limit)
-                    face_candidate_pools[(edge_key, role)] = candidates[
-                        low_idx : high_idx + 1
-                    ]
-
-        edge_specs_sorted = sorted(
-            edge_specs,
-            key=lambda spec: (
-                spec[9],
-                str(spec[1]),
-                spec[2],
-                str(spec[5]),
-                spec[6],
-                str(spec[0][0]),
-                str(spec[0][1]),
-            ),
-        )
-
-        for (
-            edge_key,
-            start_node,
-            start_side,
-            start_counter,
-            start_candidates,
-            end_node,
-            end_side,
-            end_counter,
-            end_candidates,
-            _axis_delta,
-        ) in edge_specs_sorted:
-            start_key = (start_node, start_side)
-            end_key = (end_node, end_side)
-            used_start_values = used_by_side.get(start_key, [])
-            used_end_values = used_by_side.get(end_key, [])
-
-            start_bounds = self._get_node_bounds(start_node, positions)
-            end_bounds = self._get_node_bounds(end_node, positions)
-            start_pool = face_candidate_pools.get((edge_key, "start"), start_candidates)
-            end_pool = face_candidate_pools.get((edge_key, "end"), end_candidates)
-
-            start_pool = self._values_with_min_separation(
-                start_pool, used_start_values, min_port_separation
-            )
-            end_pool = self._values_with_min_separation(
-                end_pool, used_end_values, min_port_separation
-            )
-
-            start_value, end_value = self._choose_port_pair(
-                start_candidates=start_pool,
-                end_candidates=end_pool,
-                start_counter=start_counter,
-                end_counter=end_counter,
-                used_start_values=used_start_values,
-                used_end_values=used_end_values,
-            )
-
-            used_by_side.setdefault(start_key, []).append(start_value)
-            used_by_side.setdefault(end_key, []).append(end_value)
-
-            edge_anchor_map.setdefault(edge_key, {})["start"] = self._port_value_to_xy(
-                start_bounds, start_side, start_value
-            )
-            edge_anchor_map.setdefault(edge_key, {})["end"] = self._port_value_to_xy(
-                end_bounds, end_side, end_value
-            )
-
-        return edge_anchor_map
+        return ports_mod.compute_edge_anchor_map(self, positions)
 
     def _get_edge_anchor_points(
         self, start: Any, end: Any, positions: Dict[Any, Tuple[int, int]]
     ) -> Tuple[Tuple[int, int], Tuple[int, int]]:
-        start_bounds = self._get_node_bounds(start, positions)
-        end_bounds = self._get_node_bounds(end, positions)
-        start_side, end_side = self._get_edge_sides(start_bounds, end_bounds)
-
-        horizontal_sides = (start_side, end_side) in {
-            ("left", "right"),
-            ("right", "left"),
-        }
-        overlap_top = max(start_bounds["top"], end_bounds["top"])
-        overlap_bottom = min(start_bounds["bottom"], end_bounds["bottom"])
-        has_vertical_overlap = overlap_top <= overlap_bottom
-
-        def _clamp_to_overlap(y_val: int) -> int:
-            return min(max(y_val, overlap_top), overlap_bottom)
-
-        if self._should_use_ports_for_edge(start, end):
-            cached = self._edge_anchor_map.get((start, end), {})
-            start_anchor = cached.get("start")
-            end_anchor = cached.get("end")
-            if start_anchor is not None and end_anchor is not None:
-                if (
-                    horizontal_sides
-                    and has_vertical_overlap
-                    and start_anchor[1] != end_anchor[1]
-                ):
-                    target_y = _clamp_to_overlap(start_anchor[1])
-                    start_anchor = (start_anchor[0], target_y)
-                    end_anchor = (end_anchor[0], target_y)
-                return start_anchor, end_anchor
-
-        start_anchor = self._get_center_anchor_for_side(start_bounds, start_side)
-        end_anchor = self._get_center_anchor_for_side(end_bounds, end_side)
-        if horizontal_sides and has_vertical_overlap:
-            target_y = (overlap_top + overlap_bottom) // 2
-            start_anchor = (start_anchor[0], target_y)
-            end_anchor = (end_anchor[0], target_y)
-        return (
-            start_anchor,
-            end_anchor,
-        )
+        return ports_mod.get_edge_anchor_points(self, start, end, positions)
 
     def _draw_node(self, node: Any, x: int, y: int) -> None:
         label = self.options.get_node_text(self._get_display_node_text(node))
@@ -1034,25 +589,9 @@ class ASCIIRenderer:
         end: Any,
         drawn_bidirectional_pairs: Set[frozenset[Any]],
     ) -> bool:
-        """Skip second pass when a reciprocal edge can share one route."""
-        if not self._is_bidirectional_edge(start, end):
-            return False
-        if (end, start) not in self.graph.edges():
-            return False
-
-        # Only dedupe when both directed edges resolve to the same color;
-        # otherwise keep separate draws so color semantics remain visible.
-        if self._edge_color_map.get((start, end)) != self._edge_color_map.get(
-            (end, start)
-        ):
-            return False
-
-        pair_key = frozenset((start, end))
-        if pair_key in drawn_bidirectional_pairs:
-            return True
-
-        drawn_bidirectional_pairs.add(pair_key)
-        return False
+        return routing_mod.should_skip_edge_draw(
+            self, start, end, drawn_bidirectional_pairs
+        )
 
     def render(self, print_config: Optional[bool] = False) -> str:
         """Render the graph as ASCII art."""
@@ -1203,12 +742,7 @@ class ASCIIRenderer:
         marker: Optional[str],
         color: Optional[str] = None,
     ) -> None:
-        for y in range(start_y + 1, end_y):
-            self._paint_edge_cell(x, y, self.options.edge_vertical, color)
-        if marker is not None:
-            mid_y = (start_y + end_y) // 2
-            self._paint_edge_cell(x, mid_y, marker, color)
-        return None
+        routing_mod.draw_vertical_segment(self, x, start_y, end_y, marker, color)
 
     def _draw_horizontal_segment(
         self,
@@ -1218,110 +752,28 @@ class ASCIIRenderer:
         marker: Optional[str],
         color: Optional[str] = None,
     ) -> None:
-        for x in range(start_x + 1, end_x):
-            self._paint_edge_cell(x, y, self.options.edge_horizontal, color)
-        if marker is not None:
-            mid_x = (start_x + end_x) // 2
-            self._paint_edge_cell(mid_x, y, marker, color)
-        return None
+        routing_mod.draw_horizontal_segment(self, y, start_x, end_x, marker, color)
 
     def _safe_draw(
         self, x: int, y: int, char: str, color: Optional[str] = None
     ) -> None:
-        try:
-            self._paint_edge_cell(x, y, char, color)
-        except IndexError:
-            raise IndexError(f"Drawing exceeded canvas bounds at ({x}, {y})")
-        return None
+        routing_mod.safe_draw(self, x, y, char, color)
 
     def _line_dirs_for_char(self, ch: str) -> Set[str]:
-        """Map existing glyphs to line connection directions."""
-        if ch in (
-            self.options.edge_vertical,
-            self.options.edge_arrow_up,
-            self.options.edge_arrow_down,
-        ):
-            return {"up", "down"}
-        if ch in (
-            self.options.edge_horizontal,
-            self.options.edge_arrow_l,
-            self.options.edge_arrow_r,
-        ):
-            return {"left", "right"}
-
-        unicode_map: Dict[str, Set[str]] = {
-            "┌": {"right", "down"},
-            "┐": {"left", "down"},
-            "└": {"right", "up"},
-            "┘": {"left", "up"},
-            "┬": {"left", "right", "down"},
-            "┴": {"left", "right", "up"},
-            "├": {"up", "down", "right"},
-            "┤": {"up", "down", "left"},
-            "┼": {"up", "down", "left", "right"},
-            "+": {"up", "down", "left", "right"},
-            "|": {"up", "down"},
-            "-": {"left", "right"},
-        }
-        return unicode_map.get(ch, set())
+        return routing_mod.line_dirs_for_char(self, ch)
 
     def _glyph_for_line_dirs(self, dirs: Set[str]) -> str:
-        """Choose ASCII/Unicode line-art glyph for a connection set."""
-        if not dirs:
-            return " "
-
-        if self.options.use_ascii:
-            if ("left" in dirs or "right" in dirs) and ("up" in dirs or "down" in dirs):
-                return "+"
-            if "left" in dirs or "right" in dirs:
-                return "-"
-            return "|"
-
-        key = frozenset(dirs)
-        unicode_glyphs = {
-            frozenset({"up", "down"}): self.options.edge_vertical,
-            frozenset({"left", "right"}): self.options.edge_horizontal,
-            frozenset({"right", "down"}): self.options.edge_corner_ul,
-            frozenset({"left", "down"}): self.options.edge_corner_ur,
-            frozenset({"right", "up"}): self.options.edge_corner_ll,
-            frozenset({"left", "up"}): self.options.edge_corner_lr,
-            frozenset({"left", "right", "down"}): self.options.edge_tee_down,
-            frozenset({"left", "right", "up"}): self.options.edge_tee_up,
-            frozenset({"up", "down", "right"}): self.options.edge_tee_right,
-            frozenset({"up", "down", "left"}): self.options.edge_tee_left,
-            frozenset({"up", "down", "left", "right"}): self.options.edge_cross,
-        }
-
-        if key in unicode_glyphs:
-            return unicode_glyphs[key]
-        if "left" in dirs or "right" in dirs:
-            return self.options.edge_horizontal
-        return self.options.edge_vertical
+        return routing_mod.glyph_for_line_dirs(self, dirs)
 
     def _merge_line_cell(
         self, x: int, y: int, add_dirs: Set[str], color: Optional[str] = None
     ) -> None:
-        current = self.canvas[y][x]
-        merged_dirs = self._line_dirs_for_char(current) | add_dirs
-        self._paint_edge_cell(x, y, self._glyph_for_line_dirs(merged_dirs), color)
+        routing_mod.merge_line_cell(self, x, y, add_dirs, color)
 
     def _is_terminal(
         self, positions: Dict[Any, Tuple[int, int]], node: Any, x: int, y: int
     ) -> bool:
-        """
-        Check if a position represents a node connection point.
-
-        A terminal is the point where an edge connects to a node, typically the
-        node's center point on its boundary.
-        """
-        if node not in positions:
-            return False
-        bounds = self._get_node_bounds(node, positions)
-        return y == bounds["center_y"] and x in {
-            bounds["left"],
-            bounds["right"],
-            bounds["center_x"],
-        }
+        return routing_mod.is_terminal(self, positions, node, x, y)
 
     def _draw_direction(
         self,
@@ -1331,21 +783,7 @@ class ASCIIRenderer:
         is_terminal: bool = False,
         color: Optional[str] = None,
     ) -> None:
-        """
-        Draw a directional indicator, respecting terminal points.
-
-        Terminal points always show direction as they represent actual node connections.
-        Non-terminal points preserve existing directional indicators to maintain path clarity.
-        """
-        if is_terminal:
-            # Always show direction at node connection points
-            self._paint_edge_cell(x, y, direction, color)
-        elif self.canvas[y][x] not in (
-            self.options.edge_arrow_up,
-            self.options.edge_arrow_down,
-        ):
-            # Only draw direction on non-terminals if there isn't already a direction
-            self._paint_edge_cell(x, y, direction, color)
+        routing_mod.draw_direction(self, y, x, direction, is_terminal, color)
 
     def _get_jog_row(
         self,
@@ -1354,203 +792,12 @@ class ASCIIRenderer:
         top_y: int,
         bottom_y: int,
     ) -> int:
-        """Choose a jog row for a parent→child edge that doesn't conflict with
-        content already on the canvas.
-
-        Scans downward from top_y+1 and returns the first row where the full
-        horizontal span [min_x, max_x] is clear, treating an existing vertical
-        bar at either endpoint as acceptable (it will become a corner).
-
-        Requires at least 2 rows below jog_y before bottom_y (one vertical
-        segment row + one arrow row), so the latest usable row is bottom_y - 2.
-        Falls back to that row if no clean row is found.
-        """
-        min_x = min(top_center, bottom_center)
-        max_x = max(top_center, bottom_center)
-        latest_jog = bottom_y - 2
-        if latest_jog < top_y + 1:
-            return top_y + 1
-
-        for jog_y in range(top_y + 1, latest_jog + 1):
-            conflict = False
-            for x in range(min_x, max_x + 1):
-                cell = self.canvas[jog_y][x]
-                if cell == " ":
-                    continue
-                # A vertical bar at one of our own columns is fine — we'll place
-                # a corner there.
-                if cell == self.options.edge_vertical and x in (
-                    top_center,
-                    bottom_center,
-                ):
-                    continue
-                conflict = True
-                break
-            if not conflict:
-                return jog_y
-
-        return latest_jog
+        return routing_mod.get_jog_row(self, top_center, bottom_center, top_y, bottom_y)
 
     def _draw_edge(
         self, start: Any, end: Any, positions: Dict[Any, Tuple[int, int]]
     ) -> None:
-        """Draw an edge between two nodes on the canvas."""
-        if start not in positions or end not in positions:
-            raise KeyError(
-                f"Node position not found: {start if start not in positions else end}"
-            )
-
-        start_anchor, end_anchor = self._get_edge_anchor_points(start, end, positions)
-        start_x, start_y = start_anchor
-        end_x, end_y = end_anchor
-        edge_color = self._edge_color_map.get((start, end))
-
-        # Check if this is a bidirectional edge (attribute-aware in attr color mode).
-        is_bidirectional = self._is_bidirectional_edge(start, end)
-
-        try:
-            # Case 1: Same level horizontal connection
-            if start_y == end_y:
-                y = start_y
-                min_x = min(start_x, end_x) + 1
-                max_x = max(start_x, end_x) - 1
-
-                for x in range(min_x, max_x + 1):
-                    self._merge_line_cell(x, y, {"left", "right"}, edge_color)
-
-                if is_bidirectional:
-                    if min_x <= max_x:
-                        self._paint_edge_cell(
-                            min_x,
-                            y,
-                            self.options.get_arrow_for_direction("left"),
-                            edge_color,
-                        )
-                        self._paint_edge_cell(
-                            max_x,
-                            y,
-                            self.options.get_arrow_for_direction("right"),
-                            edge_color,
-                        )
-                elif min_x <= max_x:
-                    if start_x < end_x:
-                        self._paint_edge_cell(
-                            max_x,
-                            y,
-                            self.options.get_arrow_for_direction("right"),
-                            edge_color,
-                        )
-                    else:
-                        self._paint_edge_cell(
-                            min_x,
-                            y,
-                            self.options.get_arrow_for_direction("left"),
-                            edge_color,
-                        )
-
-            # Case 2: Top to bottom (or bottom to top) connection
-            else:
-                top_anchor = start_anchor if start_y < end_y else end_anchor
-                bottom_anchor = end_anchor if start_y < end_y else start_anchor
-
-                top_center = top_anchor[0]
-                bottom_center = bottom_anchor[0]
-                top_y = top_anchor[1]
-                bottom_y = bottom_anchor[1]
-
-                # --- Jog row selection ---
-                #
-                # Each edge gets its own horizontal routing row chosen to avoid
-                # conflicts with lines already on the canvas.  Straight-down
-                # edges always use top_y+1 since they need no horizontal span.
-                #
-                #   top_y      Parent          <- node row
-                #   top_y+1    |  (or +--+)    <- vertical stub / jog row
-                #   ...        |
-                #   jog_y      +-------+       <- horizontal jog (chosen dynamically)
-                #   jog_y+1    |               <- vertical drop begins
-                #   ...        |
-                #   bottom_y-1 v               <- arrow just above child
-                #   bottom_y   Child           <- node row
-
-                if bottom_y <= top_y + 1:
-                    return
-
-                if top_center == bottom_center:
-                    jog_y = top_y + 1
-                else:
-                    jog_y = self._get_jog_row(
-                        top_center, bottom_center, top_y, bottom_y
-                    )
-
-                # Draw vertical stub from parent down to (but not including) the
-                # jog row.  Skip cells that already hold a corner so we don't
-                # clobber a previously drawn edge.
-                for y in range(top_y + 1, jog_y):
-                    if self.canvas[y][top_center] != self.options.edge_cross:
-                        self._merge_line_cell(top_center, y, {"up", "down"}, edge_color)
-
-                if top_center != bottom_center:
-                    # Junctions at both ends of the horizontal jog.
-                    top_dirs: Set[str] = {"up"}
-                    bottom_dirs: Set[str] = {"down"}
-                    if bottom_center > top_center:
-                        top_dirs.add("right")
-                        bottom_dirs.add("left")
-                    else:
-                        top_dirs.add("left")
-                        bottom_dirs.add("right")
-
-                    self._merge_line_cell(top_center, jog_y, top_dirs, edge_color)
-                    self._merge_line_cell(bottom_center, jog_y, bottom_dirs, edge_color)
-
-                    # Horizontal segment between the corners
-                    min_x = min(top_center, bottom_center)
-                    max_x = max(top_center, bottom_center)
-                    for x in range(min_x + 1, max_x):
-                        self._merge_line_cell(x, jog_y, {"left", "right"}, edge_color)
-                else:
-                    # Straight down: vertical bar at jog_y too
-                    self._merge_line_cell(top_center, jog_y, {"up", "down"}, edge_color)
-
-                # Draw vertical segment from jog row down to child
-                for y in range(jog_y + 1, bottom_y):
-                    self._merge_line_cell(bottom_center, y, {"up", "down"}, edge_color)
-
-                # Direction indicators
-                top_terminal_y = top_y + 1
-                bottom_terminal_y = bottom_y - 1
-                if is_bidirectional:
-                    self._paint_edge_cell(
-                        top_center,
-                        top_terminal_y,
-                        self.options.get_arrow_for_direction("up"),
-                        edge_color,
-                    )
-                    self._paint_edge_cell(
-                        bottom_center,
-                        bottom_terminal_y,
-                        self.options.get_arrow_for_direction("down"),
-                        edge_color,
-                    )
-                else:
-                    if start_y < end_y:  # top-to-bottom: arrow points down toward child
-                        self._paint_edge_cell(
-                            bottom_center,
-                            bottom_terminal_y,
-                            self.options.get_arrow_for_direction("down"),
-                            edge_color,
-                        )
-                    else:  # bottom-to-top: arrow points up toward parent
-                        self._paint_edge_cell(
-                            top_center,
-                            top_terminal_y,
-                            self.options.get_arrow_for_direction("up"),
-                            edge_color,
-                        )
-
-        except IndexError as e:
-            raise IndexError(f"Edge drawing exceeded canvas boundaries: {e}")
+        routing_mod.draw_edge(self, start, end, positions)
 
     @classmethod
     def from_dot(cls, dot_string: str, **kwargs: Any) -> "ASCIIRenderer":
