@@ -265,23 +265,10 @@ $ phart --colors attr --edge-color-rule side:left=green,right=red --bbox --btree
  --charset unicode --no-color-nodes examples/collatz.py -- 5 | tail -15                                                           
 ```
 
-This gives us the following output:
+This gives us the following output, which I'll share via screenshot, because GitHub is picky about letting one color a markdown document:
 
-```
-             ┌─────┐  ┌─────┐
-             │ 016 │  │ #F2 │
-             └─────┘  └─────┘
-       ┌────────┴────────┐
-       v                 v
-    ┌─────┐           ┌─────┐
-    │ 032 │           │ 005 │
-    └─────┘           └─────┘
-   ┌───┴────┐        ┌───┴────┐
-   v        v        v        v
-┌─────┐  ┌─────┐  ┌─────┐  ┌─────┐
-│ #L1 │  │ #L2 │  │ #L3 │  │ #L4 │
-└─────┘  └─────┘  └─────┘  └─────┘
-```
+<img width="325" height="218" alt="collatz-5-tail-15" src="https://github.com/user-attachments/assets/bcd4cd1b-322a-464a-b1b6-e0e1359332a0" />
+
 
 There are more examples scripts in the repo, along with a README in the examples/ directory
 
