@@ -29,7 +29,9 @@ GHM-MathJax will either 1) display your **LaTex** equation in Math-mode, with au
 alignment, or 2) it will but a very thick blank line (like a **Paragraph indicator**) between every line of text. The bulleted list takes up less vertical 
 space than a blank line does. It all fits very well within the generally unnecessary constraints within phart voluntarily works, though doesn't it?
 
-Now, if you're still with  me this far.. Witness pharts output target `markdown-latex` as it was meant to be seen, under very narrow suboptimal conditions.
+Now, if you're still with  me this far.. Witness phart's new output target `markdown-latex` as it was meant to be seen, under very narrow suboptimal conditions:
+
+----
 
 ${\mathtt{\textbf{\textcolor{#111111}{depth:~~~~5~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.}}}}$
 - ${\mathtt{\textbf{\textcolor{#111111}{max-depth:~~~~5~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.}}}}$
