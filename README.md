@@ -35,7 +35,6 @@ Pretty neat, huh? Well, one thing that was an early goal in the development of P
 
 ### It's not a Spirograph, it's not yarn art, but better than that - it's from P-HART
 
-<<<<<<< HEAD
 So, of course when I saw the code used to generate the image above using NetworkX and matplotlib, I wanted to see if I could get **phart** to handle it. With the recent addition of ANSI color code escape sequences to its limited palettte with which to express itself, I am quite pleased to show you phart's interpretation of the geometric design made by the colored edge paths between nodes as in the image above. Recalll that while phart does have the capabilities originally planned for it - that of drawing rectangles with 7-bit terminal characters, and it has since acquired the ability to translate a graph into a circular layout within those means - still it is, after all, doing so using only orthogonal paths, 90 degree angles... "**Manhattan routing**", as it is sometimes called.
 
 So, with only 90 degree jogs available to connect any node to another, and with this graph being comprised of 13 nodes, each connected to all the other nodes... (This complete connectivity is precisely why the circular layout with distance-based coloring gives the pleasing appearance that it does in the image above. My friends and colleagues working in fields involving computer networking, though, may be slightly triggered by [this concept](https://en.wikipedia.org/wiki/Network_topology#Fully_connected_network), and start thinking of things like [this](https://datatracker.ietf.org/doc/html/rfc7727) or [this](https://datatracker.ietf.org/doc/html/rfc2328). _I realize that STP is an IEEE standard, I found an RFC on the topic to link to because an IETF document will have 7-bit hand-drawn ASCII diagrams in it, which is a topic near and dear to me, as you possibly can tell._)
@@ -52,16 +51,11 @@ So, with only 90 degree jogs available to connect any node to another, and with 
 
 If you did the math, you know that there are 78 connections to account for in this graph (or 156, depending on how you count a bidirectional path; we're going to use the same connection to go both ways in our diagram. You will see it is quite crowded already.)
 
-> > > > > > > main
-> > > > > > > Having rambled on long enough now, let me show you phart's latest masterpiece of ASCII Art (ok, I used Unicode characters in this one, and phart colored it them with ANSI color escape codes, but it's still plain text!). It's rendering is quite fetching in its own way I think.
+Having rambled on long enough now, let me show you phart's latest masterpiece of ASCII Art (ok, I used Unicode characters in this one, and phart colored it them with ANSI color escape codes, but it's still plain text!). It's rendering is quite fetching in its own way I think.
 
 <img width="800" height="800" alt="NX-complete-graph" src="https://github.com/user-attachments/assets/ac28aa5c-b6b2-4a23-a03f-4a6839076c55" />
 
-# <<<<<<< HEAD
-
 Maybe someday phart will get official acknowledgement from the folks in the space, such as NetworkX or GraphViz, by way of displaying some of its more pleasing and interesting output in their own Galleries. Maybe.
-
-> > > > > > > main
 
 ---
 
@@ -278,7 +272,6 @@ $ phart --colors attr --edge-color-rule side:left=green,right=red --bbox --btree
  --charset unicode --no-color-nodes examples/collatz.py -- 5 | tail -15
 ```
 
-<<<<<<< HEAD
 Now that phart has ANSI color support, we can also use the same 'side' edge attribute
 that enables the left/right sorting to apply color to the paths representing edges in
 the output:
@@ -291,8 +284,6 @@ phart --bboxes --btree --no-color-nodes --charset unicode  --layer-spacing 4 --c
 This gives us the following output, which I'll share via screenshot, because GitHub is picky about letting one color a markdown document:
 
 <img width="325" height="218" alt="collatz-5-tail-15" src="https://github.com/user-attachments/assets/bcd4cd1b-322a-464a-b1b6-e0e1359332a0" />
-
-> > > > > > > main
 
 There are more examples scripts in the repo, along with a README in the examples/ directory
 

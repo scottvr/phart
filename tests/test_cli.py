@@ -349,6 +349,22 @@ def main():
         output = self.stdout.getvalue()
         self.assertNotIn("\x1b[", output)
 
+    def test_python_script_options_preserve_charset_ansi_color_support(self):
+        sys.argv = [
+            "phart",
+            "--charset",
+            "ansi",
+            "--colors",
+            str(self.py_script_options_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertIn("\x1b[", output)
+        stripped = re.sub(r"\x1b\[[0-9;]*m", "", output)
+        self.assertTrue(all(ord(c) < 128 for c in stripped))
+        self.assertNotIn("Error", self.stderr.getvalue())
+
     def test_output_format_svg_for_py_input(self):
         sys.argv = [
             "phart",
@@ -560,6 +576,15 @@ def main():
         self.assertEqual(exit_code, 0)
         output = self.stdout.getvalue()
         self.assertNotIn("\x1b[", output)
+
+    def test_colors_flag_emits_ansi_with_ansi_charset(self):
+        sys.argv = ["phart", "--colors", "--charset", "ansi", str(self.test_text_file)]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertIn("\x1b[", output)
+        stripped = re.sub(r"\x1b\[[0-9;]*m", "", output)
+        self.assertTrue(all(ord(c) < 128 for c in stripped))
 
     def test_colors_mode_argument(self):
         sys.argv = [
