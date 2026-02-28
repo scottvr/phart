@@ -1,5 +1,4 @@
 """Test suite for PHART ASCII graph renderer."""
-# src path: tests\test_renderer.py
 
 import unittest
 import sys
@@ -8,8 +7,9 @@ from collections import Counter
 
 import networkx as nx  # type: ignore
 
-from phart import ASCIIRenderer, LayoutOptions, NodeStyle
-from phart.styles import FlowDirection
+from phart.renderer import ASCIIRenderer
+from phart.layout import LayoutOptions
+from phart.styles import FlowDirection, NodeStyle
 from phart.renderer import merge_layout_options
 from phart.io.output.files import write_to_file
 from pathlib import Path
