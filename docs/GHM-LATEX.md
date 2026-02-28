@@ -97,7 +97,7 @@ We hope you'll join us again _Next Time_!
 
 *****You may notice that throught the code and the supporting documentation I interchangeably swap in and out the words _"Rendering"_ and _"Representation". _
 So which is it? I'm not sure, but I've been unsure and consistent about mixing it up unintentionally, just using whichever word comes to mind at
-the time of writing. It's obviously less important now that the acronym, but it seem a gift when I asked myself "So, what should I call a [**Python ASCII [Representation|Rendering] Tool**](https://github.com/scottvr/phart), anyway?" and noticed the freebie acronym.
+the time of writing. It's obviously less important now that the acronym, but it seem a gift when I asked myself "So, what should I call a [**Python Hierarchical ASCII [Representation|Rendering] Tool**](https://github.com/scottvr/phart), anyway?" and noticed the freebie acronym.
 __
 
 
