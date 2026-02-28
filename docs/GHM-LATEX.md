@@ -7,7 +7,7 @@ consumed by another tool that outputs a **Scalable Vector Graphic** - AND, while
 
 So, I'll get to the mermaid topic later, and I'll skip a lot of the explanation I want to give, and instead will just say that phart now can output
 SVGs - but they're essentially virtual framebuffers for a terminal display, and instead of drawing the text to your tty, it draws them to an SVG
-of what ***would* be on your screen**. So that' silly and all, but siller is that the first SVG style it output was really cheating, because it just
+of what ***would* be on your screen**. So that's silly and all, but sillier is that the first SVG style it output was really cheating, because it just
 captured the text output, and wrapped it in `<PRE>` tags, and embeded the html inside an svg container. Voila! :-)
 
 Cuz then of course, instead of just writing pretty styled **HTML of the Graph,** I wanted to capture the full ASCII glory - and ANSI glory too - 
