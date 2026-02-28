@@ -52,7 +52,7 @@ ${\mathtt{\textbf{\textcolor{#111111}{depth:~~~~5~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 - ${\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~│~~~~004~~~~│~~~~~│~~~~-F1~~~~│~~~~~~~~~.}}}}$
 - ${\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~└─────┘~~~~~└─────┘~~~~~~~~~.}}}}$
 
-{----
+----
 
 
 Lol, it's not perfectly aligned, and I've put the puzzle of the _non-fixed-width-but-superficially-resembling-one font_ that is used to display my 
