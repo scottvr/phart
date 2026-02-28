@@ -31,23 +31,37 @@ and maybe some other tools. Among the things in that Gallery I found was this de
 
 <img width="800" height="800" alt="nx-rainbow-graph-screenshot" src="https://github.com/user-attachments/assets/ce5aea65-c086-48ae-9c4d-b2dc324b1da7" />
 
-
 Pretty neat, huh? Well, one thing that was an early goal in the development of PHART was to be able to go to websites like the one linked above,and find demos of how these system visualize various graphs, and then to try to get phart to ingest it and see how it works (or doesn't) to represent complex systems of relationships under the very tight constraints it is working with.. It does a pretty good job most of the time, and gets better as I and others attempt things that it hasn't yet done before.
 
 ### It's not a Spirograph, it's not yarn art, but better than that - it's from P-HART
 
+<<<<<<< HEAD
 So, of course when I saw the code used to generate the image above using NetworkX and matplotlib, I wanted to see if I could get **phart** to handle it. With the recent addition of ANSI color code escape sequences to its limited palettte with which to express itself, I am quite pleased to show you phart's interpretation of the geometric design made by the colored edge paths between nodes as in the image above. Recalll that while phart does have the capabilities originally planned for it - that of drawing rectangles with 7-bit terminal characters, and it has since acquired the ability to translate a graph into a circular layout within those means - still it is, after all, doing so using only orthogonal paths, 90 degree angles... "**Manhattan routing**", as it is sometimes called.
 
-So, with only 90 degree jogs available to connect any node to another, and with this graph being comprised of 13 nodes, each connected to all the other nodes... (This complete connectivity is precisely why the circular layout with distance-based coloring gives the pleasing appearance that it does in the image above. My friends and colleagues working in fields involving computer networking, though, may be slightly triggered by [this concept](https://en.wikipedia.org/wiki/Network_topology#Fully_connected_network), and start thinking of things like [this](https://datatracker.ietf.org/doc/html/rfc7727) or [this](https://datatracker.ietf.org/doc/html/rfc2328). _I realize that STP is an IEEE standard, I found an RFC on the topic to link to because an IETF document will have 7-bit hand-drawn ASCII diagrams in it, which is a topic near and dear to me,  as you possibly can tell._)  
+So, with only 90 degree jogs available to connect any node to another, and with this graph being comprised of 13 nodes, each connected to all the other nodes... (This complete connectivity is precisely why the circular layout with distance-based coloring gives the pleasing appearance that it does in the image above. My friends and colleagues working in fields involving computer networking, though, may be slightly triggered by [this concept](https://en.wikipedia.org/wiki/Network_topology#Fully_connected_network), and start thinking of things like [this](https://datatracker.ietf.org/doc/html/rfc7727) or [this](https://datatracker.ietf.org/doc/html/rfc2328). _I realize that STP is an IEEE standard, I found an RFC on the topic to link to because an IETF document will have 7-bit hand-drawn ASCII diagrams in it, which is a topic near and dear to me, as you possibly can tell._)
 
 ### You can get there from here, just probably not as a crow flies
 
-If you did the math, you know that there are 78 connections to account for in this graph (or 156, depending on how you count a bidirectional path; we're going to use the same connection to go both ways in our diagram. You will see it is quite crowded already.) 
-Having rambled on long enough now, let me show you phart's latest masterpiece of ASCII Art (ok, I used Unicode characters in this one, and phart colored it them with ANSI color escape codes, but it's still plain text!). It's rendering is quite fetching in its own way I think.
+# If you did the math, you know that there are 78 connections to account for in this graph (or 156, depending on how you count a bidirectional path; we're going to use the same connection to go both ways in our diagram. You will see it is quite crowded already.)
+
+So, of course when I saw the code used to generate the image above using NetworkX and matplotlib, I wanted to see if I could get **phart** to handle it. With the recent addition of ANSI color code escape sequences to its limited palettte with which to express itself, I am quite pleased to show you phart's interpretation of the geometric design made by the colored edge paths between nodes as seen. Recalll that while phart does have the capabilities originally planned for it - that of drawing rectangles with 7-bit terminal characters, and it has since acquired the ability to translate a graph into a circular layout within those means - still it is, after all, doing so using only orthogonal paths, 90 degree angles... "**Manhattan routing**", as it is sometimes called.
+
+So, with only 90 degree jogs available to connect any node to another, and with this graph being comprised of 13 nodes, each connected to all the other nodes... (This complete connectivity is precisely why the circular layout with distance-based coloring gives the pleasing appearance that it does in the image above. My friends and colleagues working in fields involving computer networking, though, may be slightly triggered by [this concept](https://en.wikipedia.org/wiki/Network_topology#Fully_connected_network), and start thinking of things like [this](https://datatracker.ietf.org/doc/html/rfc7727) or [this](https://datatracker.ietf.org/doc/html/rfc2328). _I realize that STP is an IEEE standard, I found an RFC on the topic to link to because an IETF document will have 7-bit hand-drawn ASCII diagrams in it, which is a topic near and dear to me, as you possibly can tell._)
+
+### You can get there from here, just probably not as a crow flies
+
+If you did the math, you know that there are 78 connections to account for in this graph (or 156, depending on how you count a bidirectional path; we're going to use the same connection to go both ways in our diagram. You will see it is quite crowded already.)
+
+> > > > > > > main
+> > > > > > > Having rambled on long enough now, let me show you phart's latest masterpiece of ASCII Art (ok, I used Unicode characters in this one, and phart colored it them with ANSI color escape codes, but it's still plain text!). It's rendering is quite fetching in its own way I think.
 
 <img width="800" height="800" alt="NX-complete-graph" src="https://github.com/user-attachments/assets/ac28aa5c-b6b2-4a23-a03f-4a6839076c55" />
 
-Maybe someday phart will get official acknowledgement from the NetworkX team by way of displaying some of its better output in their Gallery, along with a mention in their list of visualization tools. Maybe.
+# <<<<<<< HEAD
+
+Maybe someday phart will get official acknowledgement from the folks in the space, such as NetworkX or GraphViz, by way of displaying some of its more pleasing and interesting output in their own Galleries. Maybe.
+
+> > > > > > > main
 
 ---
 
@@ -110,7 +124,7 @@ Basic Directed Graph:
 
 phart also comes as a handy **CLI tool**, set up for you when you `pip install` phart.
 The phart **CLI** can read graphs in **graphml** or **dot** format. Additionally, the phart CLI
-can read _python code_ that itseslf makes use of phart such as that above, so that it can be tested from the command-line, allowing you to try out various display options without having to edit your code repeatedly to see what works best.
+can read _python code_ that itself makes use of phart such as that above, so that it can be tested from the command-line, allowing you to try out various display options without having to edit your code repeatedly to see what works best.
 
 phart supports ASCII and Unicode, and will try to use the sensible default for your
 terminal environment.
@@ -225,72 +239,46 @@ switches meant for phart from any switches meant for the script it is loading by
 
 `phart --charset unicode --style minimal  --hpad 1 --binary-tree
   --node-spacing 1 --layer-spacing 4  --vpad 0  --edge-anchors ports --bboxes
-  deostroll/collatz.py -- `
+  examples/collatz.py -- 1 `
 
 This results in the following graph:
 
 ```
-                ┌────┐
-                │ 1  │
-                └────┘
-                ┌┘  └─┐
-                │     │
-                v     v
-            ┌────┐  ┌────┐
-            │ 2  │  │ Z1 │
-            └────┘  └────┘
-            ┌┘  └─┐
-            │     │
-            v     v
-        ┌────┐  ┌────┐
-        │ 4  │  │ F1 │
-        └────┘  └────┘
-        ┌┘  └─┐
-        │     │
-        v     v
-    ┌────┐  ┌────┐
-    │ 8  │  │ E1 │
-    └────┘  └────┘
-    ┌┘  └─┐
-    │     │
-    v     v
-┌────┐  ┌────┐
-│ L1 │  │ L2 │
-└────┘  └────┘
+depth: 1
+max_depth: 1
+max_val 2
+          ┌────┐
+          │ 1  │
+          └────┘
+         ┌─┘  └──┐
+         │       │
+         v       v
+     ┌────┐    ┌────┐
+     │ 2  │    │ Z1 │
+     └────┘    └────┘
+    ┌─┘  └──┐
+    │       │
+    v       v
+┌────┐    ┌────┐
+│ L1 │    │ L2 │
+└────┘    └────┘
 ```
 
 You can see that all of the number terms are on the left, while Leaves, Zero, Fractals,
 etc are to the right (and also the terminal Leaves at the bottom of the tree.)
 
-We can see what this graph would look like without the binary-tree sorting (which respects "side" properties such as "left" and "right" in your graph.) We'll pass a `4` to deostroll's `collatz.py`, this time with ascii output, and a simple "diamond" styling, without the "left/right" properties being read:
+Now that phart has ANSI color support, we can also use the same 'side' edge attribute
+that enables the left/right sorting to apply color to the paths representing edges in
+the output. (And, because it is simply console text, you can pipe it elsewhere, redirect it, and so on.
+As we'll see here, I will `tail` to just the last 15 lines of output so I can just see
+something new and interesting, further down the tree:
 
-`phart --charset unicode --layer-spacing 4  --vpad 0 --style diamond  --charset ascii deostroll/collatz.py -- 4`
-This gives us:
-
-```
-                      <001>
-                        +----+
-  +---------------------+    |
-  v                          v
-<#Z1>                      <002>
-                             +---+
-           +-----------------+   |
-           v                     v
-         <#F1>                 <004>
-                                 +----+
-                    +------------+    |
-                    v                 v
-                  <#E1>             <008>
-                                      +---+
-                             +--------+   |
-                             v            v
-                           <#F2>        <016>
-                                      +---+
-                                      |   +----+
-                                      v        v
-                                    <#L1>    <#L2>
+```bash
+$ phart --colors attr --edge-color-rule side:left=green,right=red --bbox --btree \
+ --charset unicode --no-color-nodes examples/collatz.py -- 5 | tail -15
 ```
 
+<<<<<<< HEAD
 Now that phart has ANSI color support, we can also use the same 'side' edge attribute
 that enables the left/right sorting to apply color to the paths representing edges in
 the output:
@@ -298,6 +286,13 @@ the output:
 ```bash
 phart --bboxes --btree --no-color-nodes --charset unicode  --layer-spacing 4 --colors attr --output-format html --svg-bg black --edge-color-rule side:left=bright_red,right=bright_green examples/collatz.py
 ```
+
+=======
+This gives us the following output, which I'll share via screenshot, because GitHub is picky about letting one color a markdown document:
+
+<img width="325" height="218" alt="collatz-5-tail-15" src="https://github.com/user-attachments/assets/bcd4cd1b-322a-464a-b1b6-e0e1359332a0" />
+
+> > > > > > > main
 
 There are more examples scripts in the repo, along with a README in the examples/ directory
 
