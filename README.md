@@ -20,7 +20,7 @@ _\*except NetworkX, which should be mentioned prominently, as rendering NX digra
 ## New Layout Strategies
 
 See [LAYOUT-STRATEGIES.md](https://github.com/scottvr/phart/blob/main/LAYOUT-STRATEGIES.md) in the repo for some examples of output.
-I have also dodcumented one of the scripts in the `examples/` directory and shown its output here in [TRIADIC_CENSUS.md](https://github.com/scottvr/phart/blob/main/examples/TRIADIC_CENSUS.md)
+I have also documented one of the scripts in the `examples/` directory and shown its output here in [TRIADIC_CENSUS.md](https://github.com/scottvr/phart/blob/main/examples/TRIADIC-CENSUS.md)
 
 Anyone interested in representing potentially very dense and complex graphs with an ascii line-drawing generator
 such that they find themselves here reading this is probably someone with a fair likelyhood to find this next
