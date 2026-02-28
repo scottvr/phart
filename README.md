@@ -226,79 +226,61 @@ switches meant for phart from any switches meant for the script it is loading by
 
 `phart --charset unicode --style minimal  --hpad 1 --binary-tree
   --node-spacing 1 --layer-spacing 4  --vpad 0  --edge-anchors ports --bboxes
-  examples/collatz.py -- `
+  examples/collatz.py -- 1 `
 
 This results in the following graph:
 
 ```
-                ┌────┐
-                │ 1  │
-                └────┘
-                ┌┘  └─┐
-                │     │
-                v     v
-            ┌────┐  ┌────┐
-            │ 2  │  │ Z1 │
-            └────┘  └────┘
-            ┌┘  └─┐
-            │     │
-            v     v
-        ┌────┐  ┌────┐
-        │ 4  │  │ F1 │
-        └────┘  └────┘
-        ┌┘  └─┐
-        │     │
-        v     v
-    ┌────┐  ┌────┐
-    │ 8  │  │ E1 │
-    └────┘  └────┘
-    ┌┘  └─┐
-    │     │
-    v     v
-┌────┐  ┌────┐
-│ L1 │  │ L2 │
-└────┘  └────┘
+depth: 1
+max_depth: 1
+max_val 2
+          ┌────┐
+          │ 1  │
+          └────┘
+         ┌─┘  └──┐
+         │       │
+         v       v
+     ┌────┐    ┌────┐
+     │ 2  │    │ Z1 │
+     └────┘    └────┘
+    ┌─┘  └──┐
+    │       │
+    v       v
+┌────┐    ┌────┐
+│ L1 │    │ L2 │
+└────┘    └────┘
 ```
 
 You can see that all of the number terms are on the left, while Leaves, Zero, Fractals,
 etc are to the right (and also the terminal Leaves at the bottom of the tree.)
 
-We can see what this graph would look like without the binary-tree sorting (which respects "side" properties such as "left" and "right" in your graph.) We'll pass a `4` to deostroll's `collatz.py`, this time with ascii output, and a simple "diamond" styling, without the "left/right" properties being read:
-
-`phart --charset unicode --layer-spacing 4  --vpad 0 --style diamond  --charset ascii deostroll/collatz.py -- 4`
-
-This gives us:
-
-```
-                      <001>
-                        +----+
-  +---------------------+    |
-  v                          v
-<#Z1>                      <002>
-                             +---+
-           +-----------------+   |
-           v                     v
-         <#F1>                 <004>
-                                 +----+
-                    +------------+    |
-                    v                 v
-                  <#E1>             <008>
-                                      +---+
-                             +--------+   |
-                             v            v
-                           <#F2>        <016>
-                                      +---+
-                                      |   +----+
-                                      v        v
-                                    <#L1>    <#L2>
-```
-
 Now that phart has ANSI color support, we can also use the same 'side' edge attribute
 that enables the left/right sorting to apply color to the paths representing edges in
-the output:
+the output. (And, because it is simply console text, you can pipe it elsewhere, redirect it, and so on.
+As we'll see here, I will `tail` to just the last 15 lines of output so I can just see
+something new and interesting, further down the tree:
 
-```bash
-phart --bboxes --btree --no-color-nodes --charset unicode  --layer-spacing 4 --colors attr --output-format html --svg-bg black --edge-color-rule side:left=bright_red,right=bright_green examples/collatz.py
+``` bash
+$ phart --colors attr --edge-color-rule side:left=green,right=red --bbox --btree \
+ --charset unicode --no-color-nodes examples/collatz.py -- 5 | tail -15                                                           
+```
+
+This gives us the following output:
+
+```
+             ┌─────┐  ┌─────┐
+             │ 016 │  │ #F2 │
+             └─────┘  └─────┘
+       ┌────────┴────────┐
+       v                 v
+    ┌─────┐           ┌─────┐
+    │ 032 │           │ 005 │
+    └─────┘           └─────┘
+   ┌───┴────┐        ┌───┴────┐
+   v        v        v        v
+┌─────┐  ┌─────┐  ┌─────┐  ┌─────┐
+│ #L1 │  │ #L2 │  │ #L3 │  │ #L4 │
+└─────┘  └─────┘  └─────┘  └─────┘
 ```
 
 There are more examples scripts in the repo, along with a README in the examples/ directory
