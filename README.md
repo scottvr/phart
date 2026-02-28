@@ -266,6 +266,7 @@ etc are to the right (and also the terminal Leaves at the bottom of the tree.)
 We can see what this graph would look like without the binary-tree sorting (which respects "side" properties such as "left" and "right" in your graph.) We'll pass a `4` to deostroll's `collatz.py`, this time with ascii output, and a simple "diamond" styling, without the "left/right" properties being read:
 
 `phart --charset unicode --layer-spacing 4  --vpad 0 --style diamond  --charset ascii deostroll/collatz.py -- 4`
+
 This gives us:
 
 ```
