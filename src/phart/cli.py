@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Optional
 
 from phart import __version__ as version
-
+from phart.renderer import ASCIIRenderer
 from .charset import CharSet
 from .core.contracts import OutputRenderConfig, RendererOutputConfig
 from .io.input import load_renderer_from_file, run_python_source
