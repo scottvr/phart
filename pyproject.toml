@@ -54,7 +54,7 @@ test = [
     'pytest>=7.2',
     'pytest-cov>=4.0',
     "phart[svg]",
-    "phart[extra]",
+    "phart[examples]",
 ]
 all = [
     "phart[developer]",
@@ -100,3 +100,4 @@ unfixable = ["B"]
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["E402"]
 "**/{tests,docs,tools}/*" = ["E402"]
+
