@@ -7,7 +7,7 @@ from collections import Counter
 
 import networkx as nx  # type: ignore
 
-from phart.renderer import ASCIIRenderer
+from phart import ASCIIRenderer
 from phart.layout import LayoutOptions
 from phart.styles import FlowDirection, NodeStyle
 from phart.renderer import merge_layout_options
