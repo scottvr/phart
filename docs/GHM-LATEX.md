@@ -25,11 +25,11 @@ be a solution there (which itself could make this go on way longer if I tried to
 hacky, glitchy way so that I can paste plain **ASCII text** in here, and have it display in a fixed(ish)-width font, and in color. One hint at the grueling
 frtustration that ensued: Yo may notice that the diagram, while it is text and in color and all of the things I described, it is also strangely situated
 in a Markdown bullet-list, one bullet per row. (The reason for this, not that any of this is justified, is that without an extra newline at every row,
-GHM-MathJax will either 1) display your **LaTex** equation in Math-mode, with automagic setting and centering, which works against my goal of a fixed witdth
+**GHM-MathJax** will either 1) display your **LaTex** equation in Math-mode, with automagic setting and centering, which works against my goal of a fixed witdth
 alignment, or 2) it will but a very thick blank line (like a **Paragraph indicator**) between every line of text. The bulleted list takes up less vertical 
 space than a blank line does. It all fits very well within the generally unnecessary constraints within phart voluntarily works, though doesn't it?
 
-Now, if you're still with  me this far.. Witness phart's new output target `markdown-latex` as it was meant to be seen, under very narrow suboptimal conditions:
+Now, if you're still with  me this far.. Witness **phart**'s new output target `markdown-latex` as it was meant to be seen, under very narrow suboptimal conditions:
 
 ----
 
@@ -55,9 +55,9 @@ ${\mathtt{\textbf{\textcolor{#111111}{depth:~~~~5~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {----
 
 
-Lol, it's not perfectly aligned, and I've put the puzzle of the non-fixed-width-but-superficially-resmbling-one-font that is used to display my 
+Lol, it's not perfectly aligned, and I've put the puzzle of the _non-fixed-width-but-superficially-resembling-one font_ that is used to display my 
 GHFMD-MathJax-Latex "equation", and just stop-gapped for now with a napkin-math equation that alllows it to look as close to correct as it does now, which is
-to say it came a long way since my first attempt at pasting a phart diagram in here. FWIW, just using straight-up markdown fences for a pre-formatted block:
+to say it came a long way since my first attempt at pasting a **phart diagram** in here. It's not a highly complex "solution", but it did take exploring a system I knew nothing about and getting a bit creative. FWIW, just using straight-up markdown fences for a pre-formatted block:
 
 
 ``` math
@@ -70,15 +70,15 @@ run_len = max(4, int(math.ceil((j i) * _TILDE_SPACE_RATIO)))
 That's the lilttle equation I'm using to accomplish getting around every piece of that GH/MD/MJ/Latex/Tex/HTML pipeline you're reading this through.
 What's funny, especially in light of the preposterous process I just described tfor getting that nonsense graph to display in color, centered, in 
 teletype font on this page without using an embedded graphics file format, which _really _wanted to collapse any two-or-more consecutive spaces down 
-to one. That, coupled with the bullet list, the tilde-space narrow-space compensation, and `.` as sentinal characters at the end of each run of spaces
+to one. That, coupled with the bullet list, the **tilde-space narrow-space compensation**, and `.` as sentinal characters at the end of each run of spaces
 so that some other strange, finicky, not-well-publicized security and style-compliance policy doesn't suddenly appear 20 rows in to wreck it all to 
 hell printing to the screen an explosion in a punctuation factory. No, that's not what's funny. I mean, yeah.. it *is* funny, but it's not what i was 
 leading up to when I said **"what's funny is...**__" 
 
 What's funny is that that strange, complicated looking math syntax where I pasted the equation I'm using for compensating for strangely-varying 
-glyph-widths to get that almost-"right" diagram to displaay here in test and in color, not centered, and all that stuff ...What's funny us that strangfe
-mish-mash of mathematical notation under the image is actully just this, in a markdown fenced block that for grins I thought I'd see wht happened if I 
-typed the word `math` inside the triple-tickls. All I acually wrote in that area above with the dquiggly math letters was:
+**glyph-widths**__ to get that almost-"right" diagram to displaay here in test and in color, not centered, and all that stuff ...What's funny us that strange
+**mish-mash**__ of mathematical notation under the image is actully just this, in a markdown fenced block that for grins I thought I'd see wht happened if I 
+typed the word `math` inside the **triple-ticks**__. All I acually wrote in that area above with the _squiggly math letters_ was:
 
 ```
 _TILDE_SPACE_RATIO = 32.0 / 15.0
@@ -86,15 +86,32 @@ run_len = max(4, int(math.ceil((j - i) * _TILDE_SPACE_RATIO)))
 ```
 
 Yeah. Its the ratio describfing the tilde character which coerces the LateX renderer behind the mathjax/ghfm backend system to actually 
-predictably spit out space characters and respect them (so long as they are surrounded by sentiual dots. It seems fitting somehow that then I'd paste some straightforward  text into a rfened block designed to display it just right, and I'd end up getting properly ty[eset and renderer-as-math nonsense out of it. 
-Some sort of ironic coincidence.  Anyway, as you see... **Phart is exploring New Media **to express itself through Math, Science, and Visual Arts.
+predictably spit out space characters and respect them (so long as they are surrounded by sentiual dots. It seems fitting somehow that then I'd paste some straightforward  text into a fenced block designed to display it just right, and I'd end up getting properly ty[eset and renderer-as-math nonsense out of it. 
+
+Some sort of ironic coincidence.  Anyway, as you see... **Phart is exploring New Media **to express itself through _Math, Science, and Visual Arts_.
 
 We hope you'll join us again _Next Time_! 
 
 ****
 ----
 
-*****You may notice that throught the code and the supporting documentaion I interchangeably swap in and out thte words _"Rendering"_ and _"Representation". _
+*****You may notice that throught the code and the supporting documentation I interchangeably swap in and out the words _"Rendering"_ and _"Representation". _
 So which is it? I'm not sure, but I've been unsure and consistent about mixing it up unintentionally, just using whichever word comes to mind at
 the time of writing. It's obviously less important now that the acronym, but it seem a gift when I asked myself "So, what should I call a [**Python ASCII [Representation|Rendering] Tool**](https://github.com/scottvr/phart), anyway?" and noticed the freebie acronym.
 __
+
+
+And just for fun, if you scrolled this far,  Here's the text that creates that image (just the bottom row):
+
+```
+- ${\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~┌─────┐~~~~~~~~~~~~~~~~~~~~~~~~┌─────┐~~~~~~~~~~~~~~~~~~~~~~~~~~.}}}}$
+- ${\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~│~~~~032~~~~│~~~~~~~~~~~~~~~~~~~~~~~~│~~~~005~~~~│~~~~~~~~~~~~~~~~~~~~~~~~~~.}}}}$
+- ${\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~└─────┘~~~~~~~~~~~~~~~~~~~~~~~~└─────┘~~~~~~~~~~~~~~~~~~~~~~~~~~.}}}}$
+- ${\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~.}}}\mathtt{\textbf{\textcolor{#008000}{┌───}}}\mathtt{\textbf{\textcolor{#111111}{┤~~~~~~~~~~~~~~~~~~~~~~~~~~~~.}}}\mathtt{\textbf{\textcolor{#008000}{┌───}}}\mathtt{\textbf{\textcolor{#111111}{┤~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.}}}}$
+- ${\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~.}}}\mathtt{\textbf{\textcolor{#008000}{│}}}\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~.}}}\mathtt{\textbf{\textcolor{#800000}{└────┐}}}\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~~~~~~~~~~.}}}\mathtt{\textbf{\textcolor{#008000}{│}}}\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~.}}}\mathtt{\textbf{\textcolor{#800000}{└────┐}}}\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~~~~~~~~~~~~~~.}}}}$
+- ${\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~.}}}\mathtt{\textbf{\textcolor{#008000}{v}}}\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~~~~~~~~~~.}}}\mathtt{\textbf{\textcolor{#800000}{v}}}\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~~~~~~~~~~.}}}\mathtt{\textbf{\textcolor{#008000}{v}}}\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~~~~~~~~~~.}}}\mathtt{\textbf{\textcolor{#800000}{v}}}\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~~~~~~~~~~~~~~.}}}}$
+- ${\mathtt{\textbf{\textcolor{#111111}{┌─────┐~~~~~┌─────┐~~~~~┌─────┐~~~~~┌─────┐~~~~~~~~~~~~~~~.}}}}$
+- ${\mathtt{\textbf{\textcolor{#111111}{│~~~~-L1~~~~│~~~~~│~~~~-L2~~~~│~~~~~│~~~~-L3~~~~│~~~~~│~~~~-L4~~~~│~~~~~~~~~~~~~~~.}}}}$
+- ${\mathtt{\textbf{\textcolor{#111111}{└─────┘~~~~~└─────┘~~~~~└─────┘~~~~~└─────┘~~~~~~~~~~~~~~~.}}}}$
+- ${\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.}}}}$
+```
