@@ -15,8 +15,8 @@ just in different text presentation systems. SO... Yes, phart now - instead of d
 
 ## OH, YOU SILLY THING
 
-So, not quite through doing silly things, I wanted to be able to somehow paste a `<pre>`-tagged, or fence-block of a diagram straigh from my terminal
-without having to take a screenshot of the ones with color, and paste the text right into theae GitHub Markdown pages. I know I said I'd be quick;
+So, not quite through doing silly things, I wanted to be able to somehow paste a `<pre>`-tagged, or fence-block of a diagram straight from my terminal (
+without having to take a screenshot of the ones with color), and paste the text right into theae GitHub Markdown pages. I know I said I'd be quick...
 I'm almost there... Long story a little less long that it could be, ** GitHub-Flavored Markdown **__ - while it does allow embedding of, yup, _mermaid syntax_,
 which it will then convert to an SVG in your markdown using the **mermaidjsAPI**, and it's not what I wanted. I wanted the text, as it came out. 
 
