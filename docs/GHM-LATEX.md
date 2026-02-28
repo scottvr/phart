@@ -88,7 +88,7 @@ to say it came a long way since my first attempt at pasting a phart diagram in h
 _TILDE_SPACE_RATIO = 32.0 / 15.0
 run_len = max(4, int(math.ceil((j - i) * _TILDE_SPACE_RATIO)))
 ```
-
+----
 
 That's the lilttle equation I'm using to accomplish getting around every piece of that GH/MD/MJ/Latex/Tex/HTML pipeline you're reading this through.
 What's funny, especially in light of the preposterous process I just described tfor getting that nonsense graph to display in color, centered, in 
