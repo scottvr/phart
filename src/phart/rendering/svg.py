@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 
 def append_svg_glyph_paths(
-    self,
+    renderer: ASCIIRenderer,
     *,
     lines: List[str],
     rows: List[str],
@@ -29,7 +29,7 @@ def append_svg_glyph_paths(
             "SVG path glyph mode requires fonttools. Install it and retry."
         ) from exc
 
-    resolved_font = self._resolve_svg_font_path(
+    resolved_font = renderer._resolve_svg_font_path(
         font_family=font_family,
         font_path=font_path,
     )
@@ -54,7 +54,7 @@ def append_svg_glyph_paths(
 
                 cache_item = glyph_cache.get(ch)
                 if ch not in glyph_cache:
-                    cache_item = self._glyph_outline_for_char(
+                    cache_item = renderer._glyph_outline_for_char(
                         ch=ch,
                         cmap=cmap,
                         glyph_set=glyph_set,
@@ -73,9 +73,11 @@ def append_svg_glyph_paths(
                 ty = (y * cell_px) + ((cell_px - glyph_h_px) / 2.0) + (y_max * scale)
 
                 fill = fg_color
-                if y < len(self._color_canvas) and x < len(self._color_canvas[y]):
-                    ansi = self._color_canvas[y][x]
-                    parsed = self._ansi_to_hex(ansi) if ansi else None
+                if y < len(renderer._color_canvas) and x < len(
+                    renderer._color_canvas[y]
+                ):
+                    ansi = renderer._color_canvas[y][x]
+                    parsed = renderer._ansi_to_hex(ansi) if ansi else None
                     if parsed:
                         fill = parsed
 

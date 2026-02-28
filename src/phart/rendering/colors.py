@@ -104,7 +104,7 @@ def paint_cell(
     renderer: ASCIIRenderer, x: int, y: int, char: str, color: Optional[str] = None
 ) -> None:
     renderer.canvas[y][x] = char
-    if not (renderer._use_ansi_colors or renderer.options.edge_color_mode):
+    if not (renderer._use_ansi_colors() or renderer.options.edge_color_mode):
         return
     renderer._color_canvas[y][x] = color
     renderer._edge_conflict_cells.discard((x, y))

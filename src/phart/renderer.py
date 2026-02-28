@@ -3,7 +3,7 @@ from __future__ import annotations
 import io
 import os
 import sys
-from html import escape as html_escape
+
 from typing import Any, ClassVar, Dict, List, Optional, Set, TextIO, Tuple, cast
 
 import networkx as nx  # type: ignore
@@ -168,9 +168,6 @@ class ASCIIRenderer:
             return text.encode("ascii", errors="replace").decode("ascii")
 
     def _use_ansi_colors(self) -> bool:
-        print(
-            f"DEBUG:  soa={self.options.ansi_colors}, sou={self.options.use_ascii}, aaa={self.options.allow_ansi_in_ascii}"
-        )
         return bool(
             self.options.ansi_colors
             and (not self.options.use_ascii or self.options.allow_ansi_in_ascii)
@@ -294,7 +291,7 @@ class ASCIIRenderer:
         return nodes_mod.get_display_node_text(self, node)
 
     def _get_widest_node_text_width(self) -> Optional[int]:
-        nodes_mod.get_widest_node_text_width(self)
+        return nodes_mod.get_widest_node_text_width(self)
 
     def _get_node_dimensions(self, node: Any) -> Tuple[int, int]:
         return nodes_mod.get_node_dimensions(self, node)
@@ -446,7 +443,7 @@ class ASCIIRenderer:
 
         return "\n".join(
             self._render_row(row, colors)
-            for row, colors in zip(self.canvas, self._color_canvas)
+            for row, colors in zip(self.canvas, self._color_canvas, strict=True)
         )
 
     def draw(self, file: Optional[TextIO] = None) -> None:
@@ -530,12 +527,20 @@ class ASCIIRenderer:
         fg_color: str,
     ) -> None:
         svg_mod.append_svg_glyph_paths(
-            self, lines, rows, cell_px, font_family, font_path, fg_color
+            renderer=self,
+            lines=lines,
+            rows=rows,
+            cell_px=cell_px,
+            font_family=font_family,
+            font_path=font_path,
+            fg_color=fg_color,
         )
 
     @staticmethod
     def _resolve_svg_font_path(*, font_family: str, font_path: Optional[str]) -> str:
-        return svg_mod.resolve_svg_font_path(font_family, font_path)
+        return svg_mod.resolve_svg_font_path(
+            font_family=font_family, font_path=font_path
+        )
 
     @staticmethod
     def _glyph_outline_for_char(

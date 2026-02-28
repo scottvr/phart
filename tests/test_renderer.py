@@ -1211,7 +1211,7 @@ class TestASCIIRenderer(unittest.TestCase):
         with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", delete=False) as f:
             name = f.name
         try:
-            renderer.write_to_file(name)
+            write_to_file(renderer, filename=name)
             with open(name, "r", encoding="utf-8") as f2:
                 content = f2.read()
                 self.assertEqual(content, renderer.render())

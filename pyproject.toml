@@ -90,9 +90,10 @@ packages = ["src/phart"]
 [tool.ruff.lint]
 select = ["E4", "E7", "E9", "F", "B"]
 
-ignore = ["F401"]
+ignore = ["F401", "B010"]
 #ignore = ["E501"]
 unfixable = ["B"]
+
 
 # 4. Ignore `E402` (import violations) in all `__init__.py` files, and in selected subdirectories.
 [tool.ruff.lint.per-file-ignores]
