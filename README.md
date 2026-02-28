@@ -291,12 +291,6 @@ the output:
 phart --bboxes --btree --no-color-nodes --charset unicode  --layer-spacing 4 --colors attr --output-format html --svg-bg black --edge-color-rule side:left=bright_red,right=bright_green examples/collatz.py
 ```
 
-$${\color{red}Color \space your \space \color{green}.md \space file \space \color{blue}in \space Github}$$
-
-<pre>
-$${\color{red}Color \space your \space \color{green}.md \space file \space \color{blue}in \space Github}$$
-</pre>
-
 There are more examples scripts in the repo, along with a README in the examples/ directory
 
 ---
