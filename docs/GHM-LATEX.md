@@ -99,6 +99,7 @@ typed the word `math` inside the triple-tickls. All I acually wrote in that area
 ```
 _TILDE_SPACE_RATIO = 32.0 / 15.0
 run_len = max(4, int(math.ceil((j - i) * _TILDE_SPACE_RATIO)))
+
 ```
 yeah. Its the ratio describfing the tilde character which coerces the LateX renderer behind the mathjax/ghfm backend system to actually predictably spit
 out space characters and respect them (so long as they are surrounded by sentiual dots. It seems fitting somehow that then I'd paste some straightforward 
