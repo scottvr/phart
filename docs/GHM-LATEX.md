@@ -76,17 +76,20 @@ ${\mathtt{\textbf{\textcolor{#111111}{depth:~~~~5~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 - ${\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.}}}}$
 
 
+----
+
 
 Lol, it's not perfectly aligned, and I've put the puzzle of the non-fixed-width-but-superficially-resmbling-one-font that is used to display my 
 GHFMD-MathJax-Latex "equation", and just stopped wiutha napkin-math equation that alllows it to look as close to correct as it does now, which is
 to say it came a long way since my first attempt at pasting a phart diagram in here. FWIW, just using straight-up markdown fences for a pre-formatted block:
+
+
 ``` math
 _TILDE_SPACE_RATIO = 32.0 / 15.0
 run_len = max(4, int(math.ceil((j - i) * _TILDE_SPACE_RATIO)))
-
-
-
 ```
+
+
 That's the lilttle equation I'm using to accomplish getting around every piece of that GH/MD/MJ/Latex/Tex/HTML pipeline you're reading this through.
 What's funny, especially in light of the preposterous process I just described tfor getting that nonsense graph to display in color, centered, in 
 teletype font on this page without using an embedded graphics file format, which _really _wanted to collapse any two-or-more consecutive spaces down 
@@ -99,11 +102,12 @@ What's funny is that that strange, complicated looking math syntax where I paste
 glyph-widths to get that almost-"right" diagram to displaay here in test and in color, not centered, and all that stuff ...What's funny us that strangfe
 mish-mash of mathematical notation under the image is actully just this, in a markdown fenced block that for grins I thought I'd see wht happened if I 
 typed the word `math` inside the triple-tickls. All I acually wrote in that area above with the dquiggly math letters was:
+
 ```
 _TILDE_SPACE_RATIO = 32.0 / 15.0
 run_len = max(4, int(math.ceil((j - i) * _TILDE_SPACE_RATIO)))
-
 ```
+
 yeah. Its the ratio describfing the tilde character which coerces the LateX renderer behind the mathjax/ghfm backend system to actually predictably spit
 out space characters and respect them (so long as they are surrounded by sentiual dots. It seems fitting somehow that then I'd paste some straightforward 
 text into a rfened block designed to display it just right, and I'd end up getting properly ty[eset and renderer-as-math nonsense out of it. 
