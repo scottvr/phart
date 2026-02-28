@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import re
 from html import escape as html_escape
 from typing import Optional
@@ -10,6 +11,7 @@ from phart.core.contracts import OutputRenderConfig
 from phart.rendering.ansi import ANSI_ESCAPE_RE, UNICODE_DITAA_MAP, ansi_to_hex
 
 _ANSI_TOKEN_RE = re.compile(r"\x1b\[[0-9;]*m|.", re.DOTALL)
+_TILDE_SPACE_RATIO = 32.0 / 15.0
 
 
 def _rows_and_colors_from_ansi_text(
@@ -142,6 +144,89 @@ def _render_html(
     return "".join(html_lines)
 
 
+def _latex_escape_text(text: str) -> str:
+    escaped: list[str] = []
+    i = 0
+    while i < len(text):
+        ch = text[i]
+        if ch == " ":
+            j = i
+            while j < len(text) and text[j] == " ":
+                j += 1
+            run_len = max(4, int(math.ceil((j - i) * _TILDE_SPACE_RATIO)))
+            escaped.append("~" * run_len)
+            i = j
+            continue
+
+        if ch == "\\":
+            escaped.append(r"\textbackslash{}")
+        elif ch == "_":
+            escaped.append("-")
+        elif ch == "#":
+            escaped.append("-")
+        elif ch in {"{", "}", "$", "#", "%", "&"}:
+            escaped.append(f"\\{ch}")
+        elif ch == "^":
+            escaped.append(r"\^{}")
+        else:
+            escaped.append(ch)
+        i += 1
+
+    encoded = "".join(escaped)
+    if encoded.startswith("~"):
+        encoded = "." + encoded
+    if encoded.endswith("~"):
+        encoded += "."
+    return encoded
+
+
+def _render_latex_markdown(
+    rows: list[str],
+    color_canvas: list[list[Optional[str]]],
+    *,
+    config: OutputRenderConfig,
+) -> str:
+    latex_lines: list[str] = []
+    for y, row in enumerate(rows):
+        row_colors = color_canvas[y] if y < len(color_canvas) else [None] * len(row)
+
+        segments: list[str] = []
+        current_color: Optional[str] = None
+        current_text: list[str] = []
+        for ch, ansi in zip(row, row_colors):
+            target_color = config.svg_fg
+            parsed = ansi_to_hex(ansi) if ansi else None
+            if parsed:
+                target_color = parsed
+
+            if target_color != current_color:
+                if current_text:
+                    escaped = _latex_escape_text("".join(current_text))
+                    segments.append(
+                        r"\mathtt{\textbf{\textcolor{"
+                        f"{current_color}"
+                        r"}{"
+                        f"{escaped}"
+                        r"}}}"
+                    )
+                    current_text = []
+                current_color = target_color
+            current_text.append(ch)
+
+        if current_text and current_color is not None:
+            escaped = _latex_escape_text("".join(current_text))
+            segments.append(
+                r"\mathtt{\textbf{\textcolor{"
+                f"{current_color}"
+                r"}{"
+                f"{escaped}"
+                r"}}}"
+            )
+
+        latex_lines.append("${" + "".join(segments) + "}$")
+    return "\n- ".join(latex_lines) + ("\n" if latex_lines else "")
+
+
 def render_captured_text(raw_text: str, *, config: OutputRenderConfig) -> str:
     """Convert captured text output into the selected output format."""
     if config.output_format == "text":
@@ -156,5 +241,7 @@ def render_captured_text(raw_text: str, *, config: OutputRenderConfig) -> str:
         return _render_svg(rows, color_canvas, config=config)
     if config.output_format == "html":
         return _render_html(rows, color_canvas, config=config)
+    if config.output_format == "latex-markdown":
+        return _render_latex_markdown(rows, color_canvas, config=config)
 
     raise ValueError(f"Unsupported output format '{config.output_format}'")

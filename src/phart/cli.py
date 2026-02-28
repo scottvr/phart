@@ -1,19 +1,20 @@
 """Command line interface for PHART."""
 
-import sys
 import argparse
+import sys
 from pathlib import Path
 from typing import Optional
 
+from phart import __version__ as version
+
+from .charset import CharSet
 from .core.contracts import OutputRenderConfig, RendererOutputConfig
 from .io.input import load_renderer_from_file, run_python_source
 from .io.output import render_captured_text, render_renderer_output
-from .styles import NodeStyle, LayoutOptions
-from .charset import CharSet
-from phart import __version__ as version
+from .styles import LayoutOptions, NodeStyle
 
 COLOR_MODES = {"none", "source", "target", "path", "attr"}
-OUTPUT_FORMATS = {"text", "ditaa", "ditaa-puml", "svg", "html"}
+OUTPUT_FORMATS = {"text", "ditaa", "ditaa-puml", "svg", "html", "latex-markdown"}
 LAYOUT_STRATEGIES = {
     "auto",
     "bfs",
@@ -176,7 +177,10 @@ def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
         "--output-format",
         choices=sorted(OUTPUT_FORMATS),
         default="text",
-        help="Output format: text (default), ditaa, ditaa-puml, svg, or html",
+        help=(
+            "Output format: text (default), ditaa, ditaa-puml, "
+            "svg, html, or latex-markdown"
+        ),
     )
     parser.add_argument(
         "--style",
@@ -414,7 +418,8 @@ def create_layout_options(
     if args.layout_strategy == "btree":
         binary_tree_layout = True
         layout_strategy = "auto"
-    allow_ansi_in_ascii = args.charset == CharSet.ANSI and not args.use_legacy_ascii
+    allow_ansi_in_ascii = args.charset == CharSet.ANSI 
+    print(f"DEBUG.CLI[1]:  {allow_ansi_in_ascii}")
     options = LayoutOptions(
         node_style=node_style,
         node_spacing=args.node_spacing,
@@ -431,7 +436,7 @@ def create_layout_options(
         use_labels=args.labels,
         ansi_colors=(color_mode != "none"),
         allow_ansi_in_ascii=allow_ansi_in_ascii,
-        edge_color_mode="source" if color_mode == "none" else color_mode,
+        #edge_color_mode="source" if color_mode == "none" else color_mode,
         edge_color_rules=edge_color_rules,
         color_nodes=color_nodes,
     )

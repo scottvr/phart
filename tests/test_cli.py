@@ -247,6 +247,19 @@ def main():
         self.assertIn("<!DOCTYPE html>", output)
         self.assertIn("<pre", output)
 
+    def test_output_format_latex_markdown(self):
+        sys.argv = [
+            "phart",
+            "--output-format",
+            "latex-markdown",
+            str(self.test_text_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertIn(r"\textcolor", output)
+        self.assertIn("$", output)
+
     def test_style_option(self):
         """Test node style option."""
         sys.argv = ["phart", "--style", "round", str(self.test_text_file)]
@@ -349,6 +362,20 @@ def main():
         output = self.stdout.getvalue()
         self.assertIn("<svg", output)
         self.assertIn("<text", output)
+        self.assertNotIn("Error", self.stderr.getvalue())
+
+    def test_output_format_latex_markdown_for_py_input(self):
+        sys.argv = [
+            "phart",
+            "--output-format",
+            "latex-markdown",
+            str(self.py_main_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertIn(r"\textcolor", output)
+        self.assertIn("$", output)
         self.assertNotIn("Error", self.stderr.getvalue())
 
     def test_invalid_file(self):

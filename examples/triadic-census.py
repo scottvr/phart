@@ -2,6 +2,9 @@ from phart import ASCIIRenderer, LayoutOptions  # type: ignore
 import networkx as nx  # type:ignore
 from typing import Dict
 
+
+DISABLE_TABLE = False
+
 options = LayoutOptions(
     bboxes=True,
     hpad=2,
@@ -12,30 +15,31 @@ options = LayoutOptions(
     edge_anchor_mode="ports",
 )
 
+triadstr = {
+    "003": [],  # Empty triad
+    "012": [(1, 2)],  # Single edge
+    "102": [(1, 2), (2, 1)],  # Mutual edge
+    "021D": [(3, 1), (3, 2)],  # Two edges down
+    "021U": [(1, 3), (2, 3)],  # Two edges up
+    "021C": [(1, 3), (3, 2)],  # Two edges chain
+    "111D": [(1, 2), (2, 1), (3, 1)],  # Mutual + single down
+    "111U": [(1, 2), (2, 1), (1, 3)],  # Mutual + single up
+    "030T": [(1, 2), (3, 2), (1, 3)],  # Three edges triangle
+    "030C": [(1, 3), (3, 2), (2, 1)],  # Three edges cyclic
+    "201": [(1, 2), (2, 1), (3, 1), (1, 3)],  # Four edges
+    "120D": [(1, 2), (2, 1), (3, 1), (3, 2)],  # Four edges down
+    "120U": [(1, 2), (2, 1), (1, 3), (2, 3)],  # Four edges up
+    "120C": [(1, 2), (2, 1), (1, 3), (3, 2)],  # Four edges cycle
+    "210": [(1, 2), (2, 1), (1, 3), (3, 2), (2, 3)],  # Five edges
+    "300": [(1, 2), (2, 1), (2, 3), (3, 2), (1, 3), (3, 1)],  # Complete
+}
+
 
 def generate_triads() -> Dict:
     """Generate all 16 possible directed triads with their standard naming."""
-    triads = {
-        "003": [],  # Empty triad
-        "012": [(1, 2)],  # Single edge
-        "102": [(1, 2), (2, 1)],  # Mutual edge
-        "021D": [(3, 1), (3, 2)],  # Two edges down
-        "021U": [(1, 3), (2, 3)],  # Two edges up
-        "021C": [(1, 3), (3, 2)],  # Two edges chain
-        "111D": [(1, 2), (2, 1), (3, 1)],  # Mutual + single down
-        "111U": [(1, 2), (2, 1), (1, 3)],  # Mutual + single up
-        "030T": [(1, 2), (3, 2), (1, 3)],  # Three edges triangle
-        "030C": [(1, 3), (3, 2), (2, 1)],  # Three edges cyclic
-        "201": [(1, 2), (2, 1), (3, 1), (1, 3)],  # Four edges
-        "120D": [(1, 2), (2, 1), (3, 1), (3, 2)],  # Four edges down
-        "120U": [(1, 2), (2, 1), (1, 3), (2, 3)],  # Four edges up
-        "120C": [(1, 2), (2, 1), (1, 3), (3, 2)],  # Four edges cycle
-        "210": [(1, 2), (2, 1), (1, 3), (3, 2), (2, 3)],  # Five edges
-        "300": [(1, 2), (2, 1), (2, 3), (3, 2), (1, 3), (3, 1)],  # Complete
-    }
 
     graphs = {}
-    for name, edge_list in triads.items():
+    for name, edge_list in triadstr.items():
         G = nx.DiGraph()
         G.add_nodes_from([1, 2, 3])  # Always add all three nodes
         G.add_edges_from(edge_list)
@@ -56,13 +60,19 @@ def render_all_triads() -> str:
     output = []
     current_row = []
 
+    if not DISABLE_TABLE:
+        print(f"{'name':<6} |  edges")
+        print("-" * width * 4)
     for name, graph in triads.items():
         renderer = ASCIIRenderer(graph, options=options)
         rendered = renderer.render()
 
         # Add title above the diagram
+        diastr = f"{name:<6} |  {triadstr[name]}"
+
         diagram_lines = [f"{name:^{width}}"]
-        print(f"{diagram_lines}")
+        if not DISABLE_TABLE:
+            print(f"{diastr:<{width}}")
         diagram_lines.extend(line.ljust(width) for line in rendered.split("\n"))
 
         current_row.append(diagram_lines)
@@ -79,7 +89,9 @@ def render_all_triads() -> str:
         for i in range(len(current_row[0])):
             output.append("".join(diag[i] for diag in current_row))
 
-    return "\n".join(output)
+    if not DISABLE_TABLE:
+        print("-" * width * 4)
+    return f"\n\n{'\n'.join(output)}"
 
 
 if __name__ == "__main__":

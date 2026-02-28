@@ -4,8 +4,8 @@ from .contracts import (
     CapturedOutputFormatter,
     GraphLoader,
     OutputRenderConfig,
-    RendererOutputConfig,
     PythonEntryRunner,
+    RendererOutputConfig,
 )
 
 __all__ = [

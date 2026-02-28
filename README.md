@@ -283,8 +283,20 @@ This gives us:
                                     <#L1>    <#L2>
 ```
 
-There are plenty more examples in the repo, along with a README in the examples/ directory
-that includes the output of a very early release of phart.
+Now that phart has ANSI color support, we can also use the same 'side' edge attribute 
+that enables the left/right sorting to apply color to the paths representing edges in
+the output:
+```bash
+phart --bboxes --btree --no-color-nodes --charset unicode  --layer-spacing 4 --colors attr --output-format html --svg-bg black --edge-color-rule side:left=bright_red,right=bright_green examples/collatz.py
+```
+
+$${\color{red}Color \space your \space \color{green}.md \space file \space \color{blue}in \space Github}$$
+
+<pre>
+$${\color{red}Color \space your \space \color{green}.md \space file \space \color{blue}in \space Github}$$
+</pre>
+
+There are more examples scripts in the repo, along with a README in the examples/ directory
 
 ---
 
@@ -332,6 +344,14 @@ python -mvenv .venv
 # or .venv\Scripts\activate on Windows
 pip install .
 ```
+
+For your convenience, any 'extra' requirements can be installed bundled by category.
+For instance, if you require DOT file support to have phart use one of the dot files
+from the `examples/` directory, all requirements, including pydot, to use the examples
+can be installed with `piip install -e .'[examples]'`.
+
+To install all `extra` requirements (e.g., `fonttools` for svg rendering support, `scipy` for  Kamada-Kawai layout support), you can install them all with `pip instaall -e .'[extra]'`. Additionally, there are `[developer]` and `[test]` module requirements that can be installed, or to get _everything-everywhere-all-at-once_, you can `pip install -e .'[all]'`. (Note: If installing from PyPi, you would use `pip install 'phart[all]'` rather than the `-e .` syntax for installing from source.)
+
 
 ## The CLI
 

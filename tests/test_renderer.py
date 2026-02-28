@@ -12,7 +12,7 @@ import networkx as nx  # type: ignore
 from phart import ASCIIRenderer, LayoutOptions, NodeStyle
 from phart.styles import FlowDirection
 from phart.renderer import merge_layout_options
-
+from phart.io.files import write_to_file
 from pathlib import Path
 
 import tempfile
@@ -292,10 +292,13 @@ class TestASCIIRenderer(unittest.TestCase):
         )
         svg = renderer.render_svg()
         html = renderer.render_html()
+        latex_md = renderer.render_latex_markdown()
         self.assertIn("<svg", svg)
         self.assertIn("<text", svg)
         self.assertIn("<!DOCTYPE html>", html)
         self.assertIn("<pre", html)
+        self.assertIn(r"\textcolor", latex_md)
+        self.assertIn("$", latex_md)
 
     def test_ansi_to_hex_supports_named_and_bright_ansi_codes(self):
         self.assertEqual(ASCIIRenderer._ansi_to_hex("\x1b[31m"), "#800000")
