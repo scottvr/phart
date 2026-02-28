@@ -226,7 +226,7 @@ switches meant for phart from any switches meant for the script it is loading by
 
 `phart --charset unicode --style minimal  --hpad 1 --binary-tree
   --node-spacing 1 --layer-spacing 4  --vpad 0  --edge-anchors ports --bboxes
-  deostroll/collatz.py -- `
+  examples/collatz.py -- `
 
 This results in the following graph:
 
