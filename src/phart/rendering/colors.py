@@ -83,7 +83,7 @@ def initialize_color_maps(
         ),
     )
 
-# see TODO in styles.py re: edge_color_mode, etc
+    # see TODO in styles.py re: edge_color_mode, etc
     edge_mode = renderer.options.edge_color_mode
     for idx, edge in enumerate(sorted_edges):
         if edge_mode == "target":

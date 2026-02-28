@@ -1351,14 +1351,14 @@ class TestLayoutOptions(unittest.TestCase):
     def test_merge_layout_options_respects_explicit_cli_fields(self):
         script_options = LayoutOptions(binary_tree_layout=True, use_ascii=True)
         cli_options = LayoutOptions(binary_tree_layout=False, use_ascii=True)
-        setattr(cli_options, "_explicit_cli_fields", {"use_ascii"}) # noqa: B010
+        setattr(cli_options, "_explicit_cli_fields", {"use_ascii"})  # noqa: B010
         merged = merge_layout_options(script_options, cli_options)
         self.assertTrue(merged.binary_tree_layout)
 
     def test_merge_layout_options_respects_explicit_color_nodes_field(self):
         script_options = LayoutOptions(color_nodes=True, use_ascii=True)
         cli_options = LayoutOptions(color_nodes=False, use_ascii=True)
-        setattr(cli_options, "_explicit_cli_fields", {"color_nodes"}) # noqa: B010
+        setattr(cli_options, "_explicit_cli_fields", {"color_nodes"})  # noqa: B010
         merged = merge_layout_options(script_options, cli_options)
         self.assertFalse(merged.color_nodes)
 
@@ -1367,7 +1367,7 @@ class TestLayoutOptions(unittest.TestCase):
     ):
         script_options = LayoutOptions(use_ascii=True)
         cli_options = LayoutOptions(bboxes=True, use_ascii=True)
-        setattr(cli_options, "_explicit_cli_fields", {"bboxes"}) # nnoqa: B010
+        setattr(cli_options, "_explicit_cli_fields", {"bboxes"})  # nnoqa: B010
         merged = merge_layout_options(script_options, cli_options)
         self.assertTrue(merged.bboxes)
         self.assertEqual(merged.node_style, NodeStyle.MINIMAL)
@@ -1375,7 +1375,7 @@ class TestLayoutOptions(unittest.TestCase):
     def test_merge_layout_options_bboxes_cli_preserves_explicit_script_style(self):
         script_options = LayoutOptions(node_style=NodeStyle.ROUND, use_ascii=True)
         cli_options = LayoutOptions(bboxes=True, use_ascii=True)
-        setattr(cli_options, "_explicit_cli_fields", {"bboxes"}) # nnoqa: B010
+        setattr(cli_options, "_explicit_cli_fields", {"bboxes"})  # nnoqa: B010
         merged = merge_layout_options(script_options, cli_options)
         self.assertTrue(merged.bboxes)
         self.assertEqual(merged.node_style, NodeStyle.ROUND)

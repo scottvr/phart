@@ -168,7 +168,9 @@ class ASCIIRenderer:
             return text.encode("ascii", errors="replace").decode("ascii")
 
     def _use_ansi_colors(self) -> bool:
-        print(f"DEBUG:  soa={self.options.ansi_colors}, sou={self.options.use_ascii}, aaa={self.options.allow_ansi_in_ascii}")
+        print(
+            f"DEBUG:  soa={self.options.ansi_colors}, sou={self.options.use_ascii}, aaa={self.options.allow_ansi_in_ascii}"
+        )
         return bool(
             self.options.ansi_colors
             and (not self.options.use_ascii or self.options.allow_ansi_in_ascii)

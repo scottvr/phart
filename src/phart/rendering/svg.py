@@ -1,8 +1,10 @@
 """ASCIIRenderer helper for svg-related functiosn."""
+
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple, cast
+from html import escape as html_escape
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, cast
 
 if TYPE_CHECKING:
     from phart.renderer import ASCIIRenderer

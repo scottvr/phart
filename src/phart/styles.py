@@ -128,17 +128,17 @@ class LayoutOptions:
     allow_ansi_in_ascii: bool = field(
         default=False
     )  # Allow ANSI color escapes even when glyphs are ASCII
-# TODO:
-# We should probably introduce the concept of node_color_mode.
-# We already allow for coloring only of edges by  passing --no-color-nodes,
-# So we should probably full embrace the distinction and allow for separate 
-# coloring rules for nodes and edges in "colors attr" mode. 
-# and on that node, maybe --colors attr is an awkward implementation;
-# that is, maybe --colors should accept "", "none", "path", "node", "edge"
-# as the options and allow for --color-rules --edge-color-rules and --node-color-rules
-# to each accept a rule as currently implemented,  or "none" to allow for the default 
-# --colors path|source|target to work, but for edges or nodes to be individually 
-# affected by rules or "none"
+    # TODO:
+    # We should probably introduce the concept of node_color_mode.
+    # We already allow for coloring only of edges by  passing --no-color-nodes,
+    # So we should probably full embrace the distinction and allow for separate
+    # coloring rules for nodes and edges in "colors attr" mode.
+    # and on that node, maybe --colors attr is an awkward implementation;
+    # that is, maybe --colors should accept "", "none", "path", "node", "edge"
+    # as the options and allow for --color-rules --edge-color-rules and --node-color-rules
+    # to each accept a rule as currently implemented,  or "none" to allow for the default
+    # --colors path|source|target to work, but for edges or nodes to be individually
+    # affected by rules or "none"
     edge_color_mode: str = field(default="source")  # target, source, path, or attr
     edge_color_rules: Dict[str, Dict[str, str]] = field(
         default_factory=dict

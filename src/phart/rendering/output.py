@@ -207,7 +207,7 @@ def render_latex_markdown(
         segments: List[str] = []
         current_color: Optional[str] = None
         current_text: List[str] = []
-        for ch, ansi in zip(row, row_colors):
+        for ch, ansi in zip(row, row_colors, strict=True):
             target_color = fg_color
             parsed = ansi_to_hex(ansi) if ansi else None
             if parsed:

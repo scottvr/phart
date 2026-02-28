@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple
 if TYPE_CHECKING:
     from phart.renderer import ASCIIRenderer
 
+
 def normalize_label_value(label: Any) -> str:
     """Normalize node labels for single-line display."""
     text = str(label).strip()
@@ -74,8 +75,8 @@ def draw_node(renderer: ASCIIRenderer, node: Any, x: int, y: int) -> None:
     node_width, node_height = renderer._get_node_dimensions(node)
     node_color = renderer._node_color_map.get(node)
 
-    #if  renderer._use_ansi_colors and not renderer.options.bboxes:
-    if  not renderer.options.bboxes:
+    # if  renderer._use_ansi_colors and not renderer.options.bboxes:
+    if not renderer.options.bboxes:
         for i, char in enumerate(label):
             renderer._paint_cell(x + i, y, char, node_color)
         return

@@ -418,7 +418,7 @@ def create_layout_options(
     if args.layout_strategy == "btree":
         binary_tree_layout = True
         layout_strategy = "auto"
-    allow_ansi_in_ascii = args.charset == CharSet.ANSI 
+    allow_ansi_in_ascii = args.charset == CharSet.ANSI
     print(f"DEBUG.CLI[1]:  {allow_ansi_in_ascii}")
     options = LayoutOptions(
         node_style=node_style,
@@ -436,7 +436,7 @@ def create_layout_options(
         use_labels=args.labels,
         ansi_colors=(color_mode != "none"),
         allow_ansi_in_ascii=allow_ansi_in_ascii,
-        #edge_color_mode="source" if color_mode == "none" else color_mode,
+        # edge_color_mode="source" if color_mode == "none" else color_mode,
         edge_color_rules=edge_color_rules,
         color_nodes=color_nodes,
     )
