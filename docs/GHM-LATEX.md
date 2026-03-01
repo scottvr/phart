@@ -62,9 +62,9 @@ Now, if you're still with  me this far.. Here _bear Witness_ to **phart**'s new 
 ----
 
 
-### Einstein's Tilde-Space Narrow-Space Time Conjecture
+### Einstein's Tilde-Space/Narrow-Space Time Conjecture
 
-_Lol_. It's not perfectly aligned, but I have for the time being postponed my quest for the full solution to the puzzle of the _non-fixed-width-but-superficially-resembling-one font_ that is used to display my GHFMD-MathJax-Latex _text-diagram-posing-as-equation_, and just stop-gapped it for now with a napkin-math equation that alllows it to look as close to correct as you see here now, which is to say it long enough since that start of my first attempt at pasting a **phart diagram** in here just a few - ok several - short, sleepless hours ago. It's not a highly _complex_ "solution", but it did take some tedious, error-filled exploration of a system I knew nothing about, and getting a bit creative in the process. **FWIW**, just using straight-up markdown fences for a pre-formatted block here I can show you this:
+_Lol_. It's not perfectly aligned, but I have for the time being postponed my quest for the full solution to the puzzle of the _non-fixed-width-but-superficially-resembling-one font_ that is used to display my GHFMD-MathJax-Latex _text-diagram-posing-as-equation_, and just stop-gapped it for now with an _actual_ **napkin-math** _equation_ that alllows the diagram to look _close-ish_ to correct as you see here now, which is to say it has been  long enough since the start of my first attempt at pasting a **phart diagram** in here, just a few - ok **several** - _short, sleepless hours_ ago. It's not a highly _complex_ "solution", but it did take some tedious, error-filled exploration of a system I knew nothing about, and allowed me to get a bit creative in the process. **FWIW**, going back to utilizing GHMD features _as intended_, by just using straight-up markdown fences for a `pre-formatted block` here I can show you this:
 
 
 ``` math
