@@ -32,7 +32,7 @@ _frustration that ensued_:  You may notice that the diagram, while it _is_ text 
 
 ## A BULLET TO THE `<HEAD>`
 
-The bulleted list, as it turns out, takes up less vertical space than the blank line between such **GHFMDMJ**L_OMG_ lines. It all fits very well within the generally unnecessary constraints within which **phart** _voluntarily_ does its work, though, _doesn't it_? It's also a little glitchy and kludgy; no comment on whether that also correlates to some properties of PHART as well.
+The bulleted list, as it turns out, takes up less vertical space than the blank line between such **GHFMDMJ**L_OMG_ lines. It all fits very well within the generally unnecessary constraints within which **phart** _voluntarily_ does its work, though, _doesn't it_? It's also a little _glitchy and kludgy_; no comment on whether that also correlates to some properties of PHART as well.
 
 Now, if you're still with  me this far.. Here _bear Witness_ to **phart**'s new output target `markdown-latex` as it _was meant to be seen_, which is to say, under very _narrow constraints in suboptimal conditions_:
 
