@@ -22,15 +22,19 @@ I'm almost there... Long story a little less long that it could be, _**GitHub-Fl
 
 So, I also learned that **GHFM** supports a **G**itHub-**F**lavored subset of **M**ath**J**ax while trying to see how I could use **HTML/CSS** or somesuch to aadd color to text in **GHFM**x (or is that **GHMD**? It's got some common abbreviation I'm sure,)  Having been playing with LaTex for the last year or so, by which for a momeent I thought there might be a solution therein. And there sorta was, insofar as it can be exploited for text-colorization, so long as you want to make that text inside of pretty-looking _math-formulas_, centered on the screeen and otherwise styled in ways that you cannnot control.    
 
-## A Glitch in the Matrice
+## A GLITCH IN THE MATRICE
 
 Fast-foward _a few **hours**_ and here we are, with what I arrived at: a hacky, glitchy to paste plain **ASCII text** in a GHMD document, and to have it display in a fixed(ish)-width font, and in colors of one's own choosing. One hint at the grueling
 frustration that ensued: You may notice that the diagram, while it _is_ text and _in color_ and all of the things I described, it is also strangely situated within a Markdown _bullet-list_, one bullet per screen row. (The _reason_ for this, not that any of this is justified within _reason_, is that without an extra newline at every row, **GHMD-MathJax Flavors** will either _1)_ display your **LaTex** equation in Math-mode, with automagic _typesetting_ and centering, which works against my goal of a fixed witdth alignment, or _2)_ it will put a very thick blank line (like a **Paragraph indicator** `<P />`) between every line of **Tex**, or perhaps _Both_,  or _even more_ unwanted things. 
+
+## A BULLET TO THE `<HEAD>`
 
 The bulleted list, as it turns out, takes up less vertical space than the blank line between such **GHFMDMJ**L_OMG_ lines. It all fits very well within the generally unnecessary constraints within which **phart** _voluntarily_ does its work, though, _doesn't it_?
 
 Now, if you're still with  me this far.. Here bear Witness to **phart**'s new output target `markdown-latex` as it was meant to be seen, under very _narrow constraints in suboptimal conditions_:
 
+
+Narrow Constraints, Sub-optimal Conditions
 ----
 
 ${\mathtt{\textbf{\textcolor{#111111}{depth:~~~~5~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.}}}}$
