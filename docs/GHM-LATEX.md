@@ -76,15 +76,12 @@ run_len = max(4, int(math.ceil((j i) * _TILDE_SPACE_RATIO)))
 ```
 
 
+<br />
 
 That's the lilttle equation I'm using to accomplish getting around the many obstacles to having what I wanted from that GH/MD/MJ/Latex/Tex/HTML pipeline you're reading this through.
 
 
-What's funny, especially in light of the preposterous process I just described for getting that nonsense **phart graph** to display in color, centered, in 
-teletype font on _this_ page without using an embedded graphics file format, and which really, _really_ wanted to collapse any _two-or-more_ consecutive whitespaces down 
-to one, a la **html**. That u;timaately, coupled with the bullet list, and whhat I'm calling here now the **tilde-space narrow-space compensation factor**, and judicious application of  `.` as a sentinal character at the beginning and end of each run of such _whitespaces_
- so that some other strange, finicky, not-well-publicized security and style-compliance policy doesn't _suddenly appear 20 rows in_ to wreck it **all to 
-hell** by printing my text to the screen like some _explosion in a punctuation factory_... No, that's not what's funny. I mean, yeah.. it *is* funny, but it's not what i was leading up to when I said **"what's funny is...**__" 
+What's funny, especially in light of the preposterous process I just described for getting that nonsense **phart graph** to display in color, entered, in teletype font on _this_ page without using an embedded graphics file format, and which really, _really_ wanted to collapse any _two-or-more_ consecutive whitespaces down to one, a la **html**. That u;timaately, coupled with the bullet list, and whhat I'm calling here now the **tilde-space narrow-space compensation factor**, and judicious application of  `.` as a sentinal character at the beginning and end of each run of such _whitespaces_  so that some other strange, finicky, not-well-publicized security and style-compliance policy doesn't _suddenly appear 20 rows in_ to wreck it **all to hell** by printing my text to the screen like some _explosion in a punctuation factory_... No, that's not what's funny. I mean, yeah.. it *is* funny, but it's not what i was leading up to when I said **"what's funny is...**__" 
 
 What's funny is that that strange, complicated looking math syntax where I pasted the equation I'm using for compensating for strangely-varying 
 **glyph-widths**__ to get that _almost-"right"_ diagram to displaay here in **text** and in **color**, **_not_ centered**, and all that other stuff ... No. What's funny us that the strange
@@ -95,23 +92,24 @@ _TILDE_SPACE_RATIO = 32.0 / 15.0
 run_len = max(4, int(math.ceil((j - i) * _TILDE_SPACE_RATIO)))
 ```
 
-Yeah. Its the ratio describfing the tilde character which coerces the LateX renderer behind the **mathjax/ghfm** backend system to actually 
+Yeah. Its just the ratio describfing the tilde character which coerces the LateX renderer behind the **mathjax/ghfm** backend system to actually 
 predictably spit out space characters and respect them (_so long as they are surrounded by **sentinal dots**._) It seems fitting somehow that then I'd paste some straightforward text into a fenced block designed to display it just right, and I'd end up getting properly typeset and renderer-as-math **nonsense** out of it. I had to work so hard for the _nonsense **I wanted**_. 
+
+
+### I AM IRONIC MAN
 
 Some sort of ironic coincidence.  Anyway, as you see... **Phart is exploring New Media **to express itself through _Math, Science, and Visual Arts_.
 
-We hope you'll join us again _Next Time_! 
+We hope you'll join us again _for our next adventure_ through needless _**ASCII** Adventures_! 
 
-****
-----
 
-*****You may notice that throught the code and the supporting documentation I interchangeably swap in and out the words _"Rendering"_ and _"Representation". _
+\*\*You may notice that through the code and the supporting documentation I interchangeably swap in and out the words _"Rendering"_ and _"Representation". _
 So which is it? I'm not sure, but I've been unsure and consistent about mixing it up unintentionally, just using whichever word comes to mind at
 the time of writing. It's obviously less important now that the acronym, but it seem a gift when I asked myself "So, what should I call a [**Python Hierarchical ASCII [Representation|Rendering] Tool**](https://github.com/scottvr/phart), anyway?" and noticed the freebie acronym.
-__
 
 
-And just for fun, if you scrolled this far,  Here's the text that creates that image (just the bottom row):
+And just for fun, if you scrolled _this far_,  Here's the text that creates that image (just the bottom row):
+
 
 ```
 - ${\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~┌─────┐~~~~~~~~~~~~~~~~~~~~~~~~┌─────┐~~~~~~~~~~~~~~~~~~~~~~~~~~.}}}}$
@@ -125,3 +123,5 @@ And just for fun, if you scrolled this far,  Here's the text that creates that i
 - ${\mathtt{\textbf{\textcolor{#111111}{└─────┘~~~~~└─────┘~~~~~└─────┘~~~~~└─────┘~~~~~~~~~~~~~~~.}}}}$
 - ${\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.}}}}$
 ```
+
+----
