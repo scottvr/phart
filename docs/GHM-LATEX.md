@@ -50,20 +50,18 @@ Now, if you're still with  me this far.. Here _bear Witness_ to **phart**'s new 
 - ${\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~┌─────┐~~~~~~~~~~~.}}}}$
 - ${\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~│~~~~001~~~~│~~~~~~~~~~~.}}}}$
 - ${\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~└─────┘~~~~~~~~~~~.}}}}$
-- ${\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.}}}\mathtt{\textbf{\textcolor{#008000}{┌───}}}\mathtt{\textbf{\textcolor{#111111}{┤~~~~~~~~~~~~~~~~~~.}}}}$
-- ${\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.}}}\mathtt{\textbf{\textcolor{#008000}{│}}}\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~.}}}\mathtt{\textbf{\textcolor{#800000}{└────┐}}}\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~.}}}}$
-- ${\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.}}}\mathtt{\textbf{\textcolor{#008000}{v}}}\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~~~~~~~~~~.}}}\mathtt{\textbf{\textcolor{#800000}{v}}}\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~.}}}}$
+- ${\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.}}}\mathtt{\textbf{\textcolor{#00A000}{┌───}}}\mathtt{\textbf{\textcolor{#111111}{┤~~~~~~~~~~~~~~~~~~.}}}}$
+- ${\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.}}}\mathtt{\textbf{\textcolor{#00A000}{│}}}\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~.}}}\mathtt{\textbf{\textcolor{#A00000}{└────┐}}}\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~.}}}}$
+- ${\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.}}}\mathtt{\textbf{\textcolor{#00A000}{v}}}\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~~~~~~~~~~.}}}\mathtt{\textbf{\textcolor{#A00000}{v}}}\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~.}}}}$
 - ${\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~┌─────┐~~~~~┌─────┐}}}}$
 - ${\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~│~~~~002~~~~│~~~~~│~~~~-Z1~~~~│}}}}$
 - ${\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~└─────┘~~~~~└─────┘}}}}$
-- ${\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.}}}\mathtt{\textbf{\textcolor{#008000}{┌───}}}\mathtt{\textbf{\textcolor{#111111}{┤~~~~~~~~~~~~~~~~~~~~~~~~~~.}}}}$
-- ${\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.}}}\mathtt{\textbf{\textcolor{#008000}{│}}}\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~.}}}\mathtt{\textbf{\textcolor{#800000}{└────┐}}}\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~~~~~~~.}}}}$
-- ${\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.}}}\mathtt{\textbf{\textcolor{#008000}{v}}}\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~~~~~~~~~~.}}}\mathtt{\textbf{\textcolor{#800000}{v}}}\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~~~~~~~.}}}}$
+- ${\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.}}}\mathtt{\textbf{\textcolor{#00A000}{┌───}}}\mathtt{\textbf{\textcolor{#111111}{┤~~~~~~~~~~~~~~~~~~~~~~~~~~.}}}}$
+- ${\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.}}}\mathtt{\textbf{\textcolor{#00A000}{│}}}\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~.}}}\mathtt{\textbf{\textcolor{#A00000}{└────┐}}}\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~~~~~~~.}}}}$
+- ${\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.}}}\mathtt{\textbf{\textcolor{#00A000}{v}}}\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~~~~~~~~~~.}}}\mathtt{\textbf{\textcolor{#A00000}{v}}}\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~~~~~~~.}}}}$
 - ${\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~┌─────┐~~~~~┌─────┐~~~~~~~~~.}}}}$
 - ${\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~│~~~~004~~~~│~~~~~│~~~~-F1~~~~│~~~~~~~~~.}}}}$
 - ${\mathtt{\textbf{\textcolor{#111111}{.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~└─────┘~~~~~└─────┘~~~~~~~~~.}}}}$
-
-(the left paths are green, the right paths are red, I swear; they're just very subdued, dark shades.)
 
 ----
 
@@ -75,7 +73,7 @@ One unintended side-effect of the **Bullet Magic** to get narrower vertical line
 
 ### Einstein's Tilde-Space/Narrow-Space Time Conjecture
 
-_Lol_. So, the diagram is not perfectly aligned, but I have for the time-being postponed my quest for the full solution to the puzzle of the _non-fixed-width-but-superficially-resembling-one font_ that is used to display my GHFMD-MathJax-Latex _text-diagram-posing-as-equation_, and just stop-gapped it for now with an _actual_ **napkin-math** _equation_ that alllows the diagram to look _close-ish_ to correct as you see here now, which is to say it has been  long enough since the start of my first attempt at pasting a **phart diagram** in here, just a few - ok **several** - _short, sleepless hours_ overnight. It's not a highly _complex_ "solution", but it did take some tedious, error-filled exploration of a system I knew nothing about, and allowed me to get a bit creative in the process. 
+OK so, the diagram is not perfectly aligned, and I have some tweaking to do on the calculation I came up with to account for the fact that the `teletype` font being used by the **GFM+MJ** backend is _not_ actually a `monospaced` font.  I had to stop-gap for now with an _actual_ **napkin-math** _equation_ (as opposed to just some ascii art that I managed to get colors on in the manner describe by masquerading as several bullet-pointed individual math equations) that alllows the diagram to look _close-ish_ to correct as you see here now, which is to say it has been  long enough since the start of my first attempt at pasting a **phart diagram** in here, just a few - ok **several** - _short, sleepless hours_ overnight. It's not a highly _complex_ "solution", but it did take some tedious, error-filled exploration of a system I knew nothing about, and allowed me to get a bit creative in the process.  
 
 
 **FWIW**, and utilizing a GHMD feature _as intended_, by just using straight-up markdown fences for a `pre-formatted block` here,  I can show you this:
@@ -106,7 +104,11 @@ _TILDE_SPACE_RATIO = 32.0 / 15.0
 run_len = max(4, int(math.ceil((j - i) * _TILDE_SPACE_RATIO)))
 ```
 
-Yeah. Its just the ratio describfing the width of the whitespace for each tilde character that coerces the LateX renderer behind the **mathjax/ghfm** backend system to actually predictably spit out space characters and respect them (_so long as they are surrounded by **sentinal dots**._) It seems fitting somehow that then I'd paste some straightforward text into a fenced block designed to display it just right, and I'd end up getting properly typeset-as-math **nonsense** out of it. I had to work _so hard_ for the _nonsense **I wanted**_.  That is clearly some sort of _ironic coincidence_.  
+Yeah. Its just the ratio describfing the width of the whitespace for each tilde character that coerces the LateX renderer behind the **mathjax/ghfm** backend system to actually predictably spit out space characters and respect them (_so long as they are surrounded by **sentinal dots**._) It seems fitting somehow that then I'd paste some straightforward text into a fenced block designed to display it just right, and I'd end up getting properly typeset-as-math **nonsense** out of it. I had to work _so hard_ for the _nonsense **I wanted**_.  That is fittingly _**IRONIC, man**_.  
+
+The obvious finishing move is going to be to make one of those "SPACE_RATIO"s for all characters, and  not just the `-` or whatever I measured, I don't remember now but I do recall there was an even larger discrepency between the displayed letter 'M' and the width of the space and the `-`both, so I'll want to generate a map of all the characters in phart's character set and put each character * 80, one per row, measure that against what's actually displayed on the screen, and auto-generate a mapping, so all images will be square and true instead of slightly disheveled like in this first attempt.
+
+Curious if anyone thinks up any other tricks similar to abusing bullet points to get a better vertical resolution out of **GFM*. Honestly, that was the first thing other than newlines, `<BR />`, div and span that I tried, so there may be a better way than I have found, but honestly this hacky display is aesthetically aligned with phart's principles, so I'm ok with it.
 
 
 ### I AM _IRONIC_ MAN
@@ -124,7 +126,8 @@ So which is the correct word in **phart**'s expanded name? I'm not sure, but at 
 ----
 ### Epilogue: _Latex Skidmarks_
 
-And just for fun, if you scrolled _this far_:  here is the text inside the Markdown that creates that diagram with the _I-swear-they're-there_ colors (they just aren't very bright. Next time I'll use ANSI's "bright_" variants for each color.) For the sake of not making you read something ludicrous and _silly ;-)_ I only reproduce the bottom layer of nodes here; you can click to view the source of the page if you really gotta see it all:
+And just for fun, if you scrolled _this far_:  here is the text inside the Markdown that creates that diagram in the bullet points up above.  
+For the sake of not making you read something ludicrous and _silly ;-)_ I only reproduce the bottom layer of nodes here; you can click to view the source of the page if you really gotta see it all:
 
 
 ```
