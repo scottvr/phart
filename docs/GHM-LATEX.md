@@ -106,7 +106,7 @@ Anyway, as you see... **Phart is exploring New Media** to express itself through
 We hope you'll join us again _for our next adventure_ through **needless _ASCII Adventures_**! 
 
 
-**\*\***You may notice that through the code and the supporting documentation I interchangeably swap in and out the words _"Rendering"_ and _"Representation"_. So which is it? I'm not sure, but at leasst I've been unsure and _consistent_ about being ambiguous unintentionally, just using whichever word comes to mind at the time of writing. It's obviously less important now that the acronym is its full name, but it seemed a gift when I asked myself "So, what should I call a [**Python Hierarchical ASCII [Representation|Rendering] Tool**](https://github.com/scottvr/phart), anyway?" and the acronym just came as a freebie.
+**\*\*You** may notice that through the code and the supporting documentation I interchangeably swap in and out the words _"Rendering"_ and _"Representation"_. So which is it? I'm not sure, but at leasst I've been unsure and _consistent_ about being ambiguous unintentionally, just using whichever word comes to mind at the time of writing. It's obviously less important now that the acronym is its full name, but it seemed a gift when I asked myself "So, what should I call a [**Python Hierarchical ASCII [Representation|Rendering] Tool**](https://github.com/scottvr/phart), anyway?" and the acronym just came as a freebie.
 
 
 ----
