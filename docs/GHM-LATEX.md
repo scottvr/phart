@@ -93,12 +93,12 @@ run_len = max(4, int(math.ceil((j - i) * _TILDE_SPACE_RATIO)))
 ```
 
 Yeah. Its just the ratio describfing the tilde character which coerces the LateX renderer behind the **mathjax/ghfm** backend system to actually 
-predictably spit out space characters and respect them (_so long as they are surrounded by **sentinal dots**._) It seems fitting somehow that then I'd paste some straightforward text into a fenced block designed to display it just right, and I'd end up getting properly typeset and renderer-as-math **nonsense** out of it. I had to work so hard for the _nonsense **I wanted**_. 
+predictably spit out space characters and respect them (_so long as they are surrounded by **sentinal dots**._) It seems fitting somehow that then I'd paste some straightforward text into a fenced block designed to display it just right, and I'd end up getting properly typeset and renderer-as-math **nonsense** out of it. I had to work so hard for the _nonsense **I wanted**_.  That is clearly some sort of _ironic coincidence_.  
 
 
 ### I AM IRONIC MAN
 
-Some sort of ironic coincidence.  Anyway, as you see... **Phart is exploring New Media **to express itself through _Math, Science, and Visual Arts_.
+Anyway, as you see... **Phart is exploring New Media **to express itself through _Math, Science, and Visual Arts_.
 
 We hope you'll join us again _for our next adventure_ through needless _**ASCII** Adventures_! 
 
