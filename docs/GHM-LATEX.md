@@ -17,19 +17,14 @@ just in different text presentation systems. SO... Yes, phart now - instead of d
 
 So, not quite through doing silly things, I wanted to be able to somehow paste a `<pre>`-tagged, or fence-block of a diagram straight from my terminal (
 without having to take a screenshot of the ones with color), and paste the text right into theae GitHub Markdown pages. I know I said I'd be quick...
-I'm almost there... Long story a little less long that it could be, ** GitHub-Flavored Markdown **__ - while it does allow embedding of, yup, _mermaid syntax_,
-which it will then convert to an SVG in your markdown using the **mermaidjsAPI**, and it's not what I wanted. I wanted the text, as it came out. 
+I'm almost there... Long story a little less long that it could be, _** GitHub-Flavored Markdown **__ *(_GHFM_)* - while it does allow embedding of, wouldn't-chs-know, _mermaid syntax_, which then converts your short little text-symbolic description of the flow to an SVG in your markdown using the **mermaidjsAPI**, but it's not what I wanted. I wanted the text, as it came out of **phart**. 
 
-So, I also learned that **GHFM **supports a GitHub-Flavored subset of MathJax. Having been playing with LaTex for the last year or so, I though there might
-be a solution there (which itself could make this go on way longer if I tried to document it all.) Fast-fowarding to now, what I arrived at is a
-hacky, glitchy way so that I can paste plain **ASCII text** in here, and have it display in a fixed(ish)-width font, and in color. One hint at the grueling
-frtustration that ensued: Yo may notice that the diagram, while it is text and in color and all of the things I described, it is also strangely situated
-in a Markdown bullet-list, one bullet per row. (The reason for this, not that any of this is justified, is that without an extra newline at every row,
-**GHM-MathJax** will either 1) display your **LaTex** equation in Math-mode, with automagic setting and centering, which works against my goal of a fixed witdth
-alignment, or 2) it will but a very thick blank line (like a **Paragraph indicator**) between every line of text. The bulleted list takes up less vertical 
-space than a blank line does. It all fits very well within the generally unnecessary constraints within phart voluntarily works, though doesn't it?
+So, I also learned that **GHFM** supports a **G**itHub-**F**lavored subset of **M**ath**J**a while trying to see how I could use HTML/CSS or somesuch to aadd color to text in **GHFM**x (or is that **GHMD**? It's got some common abbreviation I'm sure,)  Having been playing with LaTex for the last year or so, by which for a momeent I thought there might be a solution therein. And there sorta was, insofar as it can be exploited for text-colorization, so long as you want to make that text inside of pretty-looking math-formulas, centered on the screeen and otherwise styled in ways that you cannnot control.    Fast-foward a few hours and here we are, with what I arrived at: a hacky, glitchy to paste plain **ASCII text** in a GHMD document, and to have it display in a fixed(ish)-width font, and in colors of one's own choosing. One hint at the grueling
+frtustration that ensued: Yo may notice that the diagram, while it _is _text and in color and all of the things I described, it is also strangely situated within a Markdown bullet-list, one bullet per row. (The reason for this, not that any of this is justified, is that without an extra newline at every row, **GHMD-MathJax Flavors** will either _1)_ display your **LaTex** equation in Math-mode, with automagic setting and centering, which works against my goal of a fixed witdth alignment, or _2)_ it will but a very thick blank line (like a **Paragraph indicator**) between every line of tex, or perhaps _Both_ or more unwanted things. 
 
-Now, if you're still with  me this far.. Witness **phart**'s new output target `markdown-latex` as it was meant to be seen, under very narrow suboptimal conditions:
+The bulleted list, as it turns out, takes up less vertical space than the blank line between such **GHFMDMJ**L_OMG_ lines. It all fits very well within the generally unnecessary constraints within which **phart** _voluntarily_ does its work, though, _doesn't it_?
+
+Now, if you're still with  me this far.. Here bear Witness to **phart**'s new output target `markdown-latex` as it was meant to be seen, under very narrow suboptimal conditions:
 
 ----
 
@@ -55,9 +50,7 @@ ${\mathtt{\textbf{\textcolor{#111111}{depth:~~~~5~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ----
 
 
-Lol, it's not perfectly aligned, and I've put the puzzle of the _non-fixed-width-but-superficially-resembling-one font_ that is used to display my 
-GHFMD-MathJax-Latex "equation", and just stop-gapped for now with a napkin-math equation that alllows it to look as close to correct as it does now, which is
-to say it came a long way since my first attempt at pasting a **phart diagram** in here. It's not a highly complex "solution", but it did take exploring a system I knew nothing about and getting a bit creative. FWIW, just using straight-up markdown fences for a pre-formatted block:
+_Lol_. It's not perfectly aligned, and I've postponed my quest for the full solution to the puzzle of the _non-fixed-width-but-superficially-resembling-one font_ that is used to display my GHFMD-MathJax-Latex "equation", and just stop-gapped it for now with a napkin-math equation that alllows it to look as close to correct as you see here now, which is to say it long enough since that start of my first attempt at pasting a **phart diagram** in here just a few - ok several - short, sleepless hours ago. It's not a highly _complex_ "solution", but it did take some tedious, error-filled exploration of a system I knew nothing about, and getting a bit creative in the process. **FWIW**, just using straight-up markdown fences for a pre-formatted block here I can show you this:
 
 
 ``` math
@@ -67,26 +60,26 @@ run_len = max(4, int(math.ceil((j i) * _TILDE_SPACE_RATIO)))
 
 ----
 
-That's the lilttle equation I'm using to accomplish getting around every piece of that GH/MD/MJ/Latex/Tex/HTML pipeline you're reading this through.
-What's funny, especially in light of the preposterous process I just described tfor getting that nonsense graph to display in color, centered, in 
-teletype font on this page without using an embedded graphics file format, which _really _wanted to collapse any two-or-more consecutive spaces down 
-to one. That, coupled with the bullet list, the **tilde-space narrow-space compensation**, and `.` as sentinal characters at the end of each run of spaces
-so that some other strange, finicky, not-well-publicized security and style-compliance policy doesn't suddenly appear 20 rows in to wreck it all to 
-hell printing to the screen an explosion in a punctuation factory. No, that's not what's funny. I mean, yeah.. it *is* funny, but it's not what i was 
-leading up to when I said **"what's funny is...**__" 
+That's the lilttle equation I'm using to accomplish getting around the many obstacles to having what I wanted from that GH/MD/MJ/Latex/Tex/HTML pipeline you're reading this through.
+
+
+What's funny, especially in light of the preposterous process I just described for getting that nonsense **phart graph** to display in color, centered, in 
+teletype font on _this_ page without using an embedded graphics file format, and which really, _really_ wanted to collapse any _two-or-more_ consecutive whitespaces down 
+to one, a la **html**. That u;timaately, coupled with the bullet list, and whhat I'm calling here now the **tilde-space narrow-space compensation factor**, and judicious application of  `.` as a sentinal character at the beginning and end of each run of such _whitespaces_
+ so that some other strange, finicky, not-well-publicized security and style-compliance policy doesn't _suddenly appear 20 rows in_ to wreck it **all to 
+hell** by printing my text to the screen like some _explosion in a punctuation factory_... No, that's not what's funny. I mean, yeah.. it *is* funny, but it's not what i was leading up to when I said **"what's funny is...**__" 
 
 What's funny is that that strange, complicated looking math syntax where I pasted the equation I'm using for compensating for strangely-varying 
-**glyph-widths**__ to get that almost-"right" diagram to displaay here in test and in color, not centered, and all that stuff ...What's funny us that strange
-**mish-mash**__ of mathematical notation under the image is actully just this, in a markdown fenced block that for grins I thought I'd see wht happened if I 
-typed the word `math` inside the **triple-ticks**__. All I acually wrote in that area above with the _squiggly math letters_ was:
+**glyph-widths**__ to get that _almost-"right"_ diagram to displaay here in **text** and in **color**, **_not_ centered**, and all that other stuff ... No. What's funny us that the strange
+**mish-mash**__ of mathematical notation above is actually just this, in a _markdown fenced block_. that appeared when for grins I thought I'd see what happened if I typed the word `math` inside the **triple-ticks**__ for automatic lexxing and syntax highlighting. All I actually typed in that area above with the _squiggly math letters_ was:
 
 ```
 _TILDE_SPACE_RATIO = 32.0 / 15.0
 run_len = max(4, int(math.ceil((j - i) * _TILDE_SPACE_RATIO)))
 ```
 
-Yeah. Its the ratio describfing the tilde character which coerces the LateX renderer behind the mathjax/ghfm backend system to actually 
-predictably spit out space characters and respect them (so long as they are surrounded by sentiual dots. It seems fitting somehow that then I'd paste some straightforward  text into a fenced block designed to display it just right, and I'd end up getting properly ty[eset and renderer-as-math nonsense out of it. 
+Yeah. Its the ratio describfing the tilde character which coerces the LateX renderer behind the **mathjax/ghfm** backend system to actually 
+predictably spit out space characters and respect them (_so long as they are surrounded by **sentinal dots**._) It seems fitting somehow that then I'd paste some straightforward text into a fenced block designed to display it just right, and I'd end up getting properly typeset and renderer-as-math **nonsense** out of it. I had to work so hard for the _nonsense **I wanted**_. 
 
 Some sort of ironic coincidence.  Anyway, as you see... **Phart is exploring New Media **to express itself through _Math, Science, and Visual Arts_.
 
