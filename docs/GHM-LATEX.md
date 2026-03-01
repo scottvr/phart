@@ -66,9 +66,15 @@ Now, if you're still with  me this far.. Here _bear Witness_ to **phart**'s new 
 ----
 
 
+### Bonus Mini-Game: The Magic Bullet
+
+One unintended side-effectof the **Bullet Magic** to get narrower vertical line-spacing, is that if you view this document on a portrait-oriented phone-screen where the entire diagram does not fit within the screen-space, you can side-swipe each line/row individually to scroll horizontally. I spent more time than I should have briskly swiping the rows of text to the left and watching pieces of the nodes bounce off the edge of the frame. 
+
+
 ### Einstein's Tilde-Space/Narrow-Space Time Conjecture
 
-_Lol_. It's not perfectly aligned, but I have for the time being postponed my quest for the full solution to the puzzle of the _non-fixed-width-but-superficially-resembling-one font_ that is used to display my GHFMD-MathJax-Latex _text-diagram-posing-as-equation_, and just stop-gapped it for now with an _actual_ **napkin-math** _equation_ that alllows the diagram to look _close-ish_ to correct as you see here now, which is to say it has been  long enough since the start of my first attempt at pasting a **phart diagram** in here, just a few - ok **several** - _short, sleepless hours_ overnight. It's not a highly _complex_ "solution", but it did take some tedious, error-filled exploration of a system I knew nothing about, and allowed me to get a bit creative in the process. 
+_Lol_. So, the diagram is not perfectly aligned, but I have for the time being postponed my quest for the full solution to the puzzle of the _non-fixed-width-but-superficially-resembling-one font_ that is used to display my GHFMD-MathJax-Latex _text-diagram-posing-as-equation_, and just stop-gapped it for now with an _actual_ **napkin-math** _equation_ that alllows the diagram to look _close-ish_ to correct as you see here now, which is to say it has been  long enough since the start of my first attempt at pasting a **phart diagram** in here, just a few - ok **several** - _short, sleepless hours_ overnight. It's not a highly _complex_ "solution", but it did take some tedious, error-filled exploration of a system I knew nothing about, and allowed me to get a bit creative in the process. 
+
 
 **FWIW**, and utilizing a GHMD feature _as intended_, by just using straight-up markdown fences for a `pre-formatted block` here,  I can show you this:
 
