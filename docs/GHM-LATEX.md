@@ -108,7 +108,7 @@ the time of writing. It's obviously less important now that the acronym, but it 
 
 
 ----
-### Epilogue: Latex Skidmarks
+### Epilogue: _Latex Skidmarks_
 
 And just for fun, if you scrolled _this far_,  Here's the text that creates that diagram with the _I-swear-they're=-there_ colors. For the sake of not making you read something ludicrous anad silly, I only reproduce the bottom row of nodes here; you can click to view the source of the page if you really gotta see it all:
 
