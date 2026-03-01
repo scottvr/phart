@@ -7,6 +7,8 @@ consumed by another tool that outputs a **Scalable Vector Graphic** - AND, while
 
 Oh, just in case you arrived here by chance and fortune and have no idea what this is about, and should you wish to know whether you will have in any interest in reading this before you do so, this is a **Text Adventure** _(no, sorry. Not that kind)_  with [**Python Hierarchical ASCII [Representation|Rendering] Tool**](https://github.com/scottvr/phart).
 
+## Mermaid in a Manhole
+
 So, I'll get to the mermaid topic later, and I'll skip a lot of the exposition that I want to give, and instead will just say that phart now _can_ output
 SVGs - but they're essentially virtual framebuffers for a terminal display, and instead of drawing the text to your tty, it draws them to an **SVG**
 of what ***would* be on your screen**. So that's silly and all, but sillier is that the first SVG style it output was really cheating, because it just
