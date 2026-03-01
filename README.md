@@ -275,7 +275,8 @@ the output:
 phart --bboxes --btree --no-color-nodes --charset unicode  --layer-spacing 4 --colors attr --output-format html --svg-bg black --edge-color-rule side:left=bright_red,right=bright_green examples/collatz.py
 ```
 
-=======
+----
+
 This gives us the following output, which I'll share via screenshot, because GitHub is picky about letting one color a markdown document:
 
 <img width="325" height="218" alt="collatz-5-tail-15" src="https://github.com/user-attachments/assets/bcd4cd1b-322a-464a-b1b6-e0e1359332a0" />
