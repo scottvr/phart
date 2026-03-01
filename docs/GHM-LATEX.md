@@ -23,8 +23,8 @@ So, I also learned that **GHFM** supports a **G**itHub-**F**lavored subset of **
 
 ## A GLITCH IN THE MATRICE
 
-Fast-foward _a few **hours**_ and here we are, with what I arrived at: a _hacky, glitchy_ method to paste plain **ASCII text** in a GHMD document, and to have it display in a fixed(ish)-width font, and in colors of one's own choosing. One hint at the grueling
-frustration that ensued: You may notice that the diagram, while it _is_ text and _in color_ and all of the things I described, it is also strangely situated within a Markdown _bullet-list_, one bullet per screen row. (The _reason_ for this, not that any of this is justified within _reason_, is that without an extra newline at every row, **GHMD-MathJax Flavors** will either _1)_ display your **LaTex** equation in Math-mode, with automagic _typesetting_ and centering, which works against my goal of a fixed witdth alignment, or _2)_ it will put a very thick blank line (like a **Paragraph indicator** `<P />`) between every line of **Tex**, or perhaps _Both_,  or _even more_ unwanted things. 
+Fast-foward _a few **hours**_ and here we are, with what I arrived at: a _hacky, glitchy_ method to paste plain **ASCII text** in a GHMD document, and to have it display in a fixed(_ish_)-width font, and in colors of _one's own choosing_.  A glimpse inside of the grueling
+_frustration that ensued_:  You may notice that the diagram, while it _is_ text and _in color_ and all of the things I described, it is also strangely situated within a Markdown _bullet-list_, one bullet per screen row. (The _reason_ for this, not that any of this is justified within _reason_, is that without an extra newline at every row, **GHMD-MathJax Flavors** will either _1)_ display your **LaTex** equation in Math-mode, with automagic _typesetting_ and centering, which works against my goal of a fixed witdth alignment, or _2)_ it will put a very thick blank line (like a **Paragraph indicator** `<P />`) between every line of **Tex**, or perhaps _Both_,  or _even more_ unwanted things. 
 
 ## A BULLET TO THE `<HEAD>`
 
