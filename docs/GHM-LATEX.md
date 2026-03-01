@@ -3,7 +3,7 @@
 As I was tossing around some ideas stemming from someone asking for **phart** to add _mermaid script_ to its list of text formats it handles
 (and I have to admit, that's another one of those things that sounds ludicrous - a tool that takes graph objects and renders visualizations of them, 
 using plain text to illustrate charts and diagrams in a lo-fi way, could output more compact text language describing the graph, that is then 
-consumed by another tool that outputs a **Scalable Vector Graphic** - AND, while _ludicrous_, does actually sound useful. 
+consumed by another tool that outputs a **Scalable Vector Graphic** - AND, while _ludicrous_, does actually sound useful.) 
 
 Oh, just in case you arrived here by _chance and fortune_ and have no idea what this is about, and should you wish to know whether you will have in any interest in reading this before you do so, this is a **Text Adventure** _(no, sorry. Not that kind)_  with [**Python Hierarchical ASCII [Representation|Rendering] Tool**](https://github.com/scottvr/phart).
 
