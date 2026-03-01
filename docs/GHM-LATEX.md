@@ -70,7 +70,7 @@ Now, if you're still with  me this far.. Here _bear Witness_ to **phart**'s new 
 
 ### Bonus Mini-Game: The Magic Bullet
 
-One unintended side-effectof the **Bullet Magic** to get narrower vertical line-spacing, is that if you view this document on a portrait-oriented phone-screen where the entire diagram does not fit within the screen-space, you can side-swipe each line/row individually to scroll horizontally. I spent more time than I should have briskly swiping the rows of text to the left and watching pieces of the nodes bounce off the edge of the frame. 
+One unintended side-effect of the **Bullet Magic** to get narrower vertical line-spacing, is that if you view this document on a portrait-oriented phone-screen where the entire diagram does not fit within the screen-space, you can side-swipe each line/row individually to scroll horizontally. I spent more time than I should have briskly swiping the rows of text to the left and watching pieces of the nodes bounce off the edge of the frame. 
 
 
 ### Einstein's Tilde-Space/Narrow-Space Time Conjecture
