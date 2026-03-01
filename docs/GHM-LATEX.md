@@ -15,7 +15,7 @@ Cuz then of course, instead of just writing pretty, styled _**HTML** of the Grap
 
 ## OH, YOU SILLY THING
 
-So, not quite through with doing silly things, I also wanted to be able to somehow paste a `<pre>`-tagged, or fence-block of a diagram straight from my terminal (
+So, not quite through with doing silly things, I also wanted to be able to somehow paste a `<pre>`-tagged, or fenced-block of a diagram straight from my terminal (
 without having to take a screenshot of the ones with color), and paste the text right into theae GitHub Markdown pages. I know I said I'd be skipping a lot of explanation, sorry...
 I'm almost there... Long story a little less long that it could be, _**GitHub-Flavored Markdown**_ **(_GHFM_)** - while it does allow embedding of, wouldn't-chs-know, _mermaid syntax_, which then converts your short little text-symbolic description of the flow to an SVG in your markdown using the **mermaidjsAPI**, but it's not what I wanted. I wanted the text, as it came out of **phart**. 
 
