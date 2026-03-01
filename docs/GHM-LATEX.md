@@ -106,7 +106,9 @@ Anyway, as you see... **Phart is exploring New Media** to express itself through
 We hope you'll join us again _for our next adventure_ through **needless _ASCII Adventures_**! 
 
 
-**&ast;&ast;** You may be the astute observer who notices that throughout the code and the supporting documentation, I repeatedly swap the words _"Rendering"_ and _"Representation"_ interchangeably as if I don't know the name of my own tool, or that perhaps the name has changed but the documentation updates lag. So which is the correct word in **phart**'s expanded name? I'm not sure, but at least I've been unsure and _consistent_ about being ambiguous unintentionally, just using whichever word comes to mind at the time of writing since day one. It's obviously less important now that the acronym _is_ for all intents its full name, but it seemed a gift when I asked myself "So, what should I call a [**Python Hierarchical ASCII [Representation|Rendering] Tool**](https://github.com/scottvr/phart), anyway?" and the acronym just came as a freebie.
+**&ast;&ast;** You may be the astute observer who notices that throughout the code and the supporting documentation, I repeatedly swap the words _"Rendering"_ and _"Representation"_ interchangeably as if I don't know the name of my own tool, or that perhaps the name has changed but the documentation updates lag behind the truth. 
+
+So which is the correct word in **phart**'s expanded name? I'm not sure, but at least I've been unsure and _consistent_ about being ambiguous unintentionally, just using whichever word comes to mind at the time of writing since day one. It's obviously less important now that the acronym _is_ for all intents its full name, but it seemed a gift when I asked myself "So, what should I call a [**Python Hierarchical ASCII [Representation|Rendering] Tool**](https://github.com/scottvr/phart), anyway?" and the acronym just came as a freebie.
 
 
 ----
