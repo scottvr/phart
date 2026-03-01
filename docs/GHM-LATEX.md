@@ -97,7 +97,7 @@ predictably spit out space characters and respect them (_so long as they are sur
 
 ### I AM _IRONIC_ MAN
 
-Anyway, as you see... **Phart is exploring New Media **to express itself through _Math, Science, and Visual Arts_.
+Anyway, as you see... **Phart is exploring New Media** to express itself through _Math, Science, and Visual Arts_!
 
 We hope you'll join us again _for our next adventure_ through needless _**ASCII** Adventures_! 
 
