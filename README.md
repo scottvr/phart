@@ -49,7 +49,6 @@ Having rambled on long enough now, let me show you phart's latest masterpiece of
 
 <br />  
 
-Maybe someday phart will get official acknowledgement from the folks in the space, such as NetworkX or GraphViz, by way of displaying some of its more pleasing and interesting output in their own Galleries. Maybe.
 
 
 ---  
