@@ -990,7 +990,7 @@ class LayoutManager:
         try:
             coord_map = nx.planar_layout(planar_graph)
             return self._layout_from_coordinate_map(coord_map, spacing)
-        except (nx.NetworkXException, ValueError):
+        except nx.NetworkXException, ValueError:
             return self._layout_hierarchical(graph, spacing)
 
     def _layout_spring(
@@ -1041,7 +1041,7 @@ class LayoutManager:
         """Kamada-Kawai force-directed layout."""
         try:
             coord_map = nx.kamada_kawai_layout(nx.Graph(graph), weight=None)
-        except (ModuleNotFoundError, ImportError):
+        except ModuleNotFoundError, ImportError:
             # NetworkX's Kamada-Kawai solver depends on SciPy; fallback keeps
             # the strategy usable in minimal environments.
             coord_map = nx.spring_layout(nx.Graph(graph), seed=42)
