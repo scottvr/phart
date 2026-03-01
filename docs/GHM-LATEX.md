@@ -102,7 +102,7 @@ _TILDE_SPACE_RATIO = 32.0 / 15.0
 run_len = max(4, int(math.ceil((j - i) * _TILDE_SPACE_RATIO)))
 ```
 
-Yeah. Its just the ratio describfing the width of the whitespace for each tilde character that coerces the LateX renderer behind the **mathjax/ghfm** backend system to actually predictably spit out space characters and respect them (_so long as they are surrounded by **sentinal dots**._) It seems fitting somehow that then I'd paste some straightforward text into a fenced block designed to display it just right, and I'd end up getting properly typeset and typeset-as-math **nonsense** out of it. I had to work _so hard_ for the _nonsense **I wanted**_.  That is clearly some sort of _ironic coincidence_.  
+Yeah. Its just the ratio describfing the width of the whitespace for each tilde character that coerces the LateX renderer behind the **mathjax/ghfm** backend system to actually predictably spit out space characters and respect them (_so long as they are surrounded by **sentinal dots**._) It seems fitting somehow that then I'd paste some straightforward text into a fenced block designed to display it just right, and I'd end up getting properly typeset-as-math **nonsense** out of it. I had to work _so hard_ for the _nonsense **I wanted**_.  That is clearly some sort of _ironic coincidence_.  
 
 
 ### I AM _IRONIC_ MAN
