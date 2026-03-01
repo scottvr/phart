@@ -1,6 +1,6 @@
 # An ASCII-Representation* Experiment 
 
-As I was tossing around some ideas stemming from someone asking for phart to add mermaid script to its list of text formats it handles
+As I was tossing around some ideas stemming from someone asking for phart to add _mermaid script_ to its list of text formats it handles
 (and I have to admit, that's another one of those things that sounds ludicrous - a tool that takes graph objects and renders visualizations of them, 
 using plain text to illustrate charts and diagrams in a lo-fi way, could output more compact text language describing the graph, that is then 
 consumed by another tool that outputs a **Scalable Vector Graphic** - AND, while _ludicrous_, does actually sound useful. 
