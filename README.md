@@ -262,7 +262,7 @@ the output. (And, because it is simply console text, you can pipe it elsewhere, 
 As we'll see here, I will `tail` to just the last 15 lines of output so I can just see
 something new and interesting, further down the tree:
 
-```bash
+``` bash
 $ phart --colors attr --edge-color-rule side:left=green,right=red --bbox --btree \
  --charset unicode --no-color-nodes examples/collatz.py -- 5 | tail -15
 ```
@@ -271,11 +271,12 @@ Now that phart has ANSI color support, we can also use the same 'side' edge attr
 that enables the left/right sorting to apply color to the paths representing edges in
 the output:
 
-```bash
-phart --bboxes --btree --no-color-nodes --charset unicode  --layer-spacing 4 --colors attr --output-format html --svg-bg black --edge-color-rule side:left=bright_red,right=bright_green examples/collatz.py
+``` bash
+$ phart --bboxes --btree --no-color-nodes --charset unicode  --layer-spacing 4 \
+ --colors attr --output-format html --svg-bg black --edge-color-rule \
+ side:left=bright_red,right=bright_green examples/collatz.py
 ```
 
-----
 
 This gives us the following output, which I'll share via screenshot, because GitHub is picky about letting one color a markdown document:
 
