@@ -34,8 +34,12 @@ The bulleted list, as it turns out, takes up less vertical space than the blank 
 Now, if you're still with  me this far.. Here bear Witness to **phart**'s new output target `markdown-latex` as it was meant to be seen, under very _narrow constraints in suboptimal conditions_:
 
 
-Narrow Constraints, Sub-optimal Conditions
 ----
+
+### Narrow Constraints, Sub-optimal Conditions
+
+----
+
 
 ${\mathtt{\textbf{\textcolor{#111111}{depth:~~~~5~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.}}}}$
 - ${\mathtt{\textbf{\textcolor{#111111}{max-depth:~~~~5~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.}}}}$
