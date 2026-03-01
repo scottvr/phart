@@ -107,6 +107,8 @@ So which is it? I'm not sure, but I've been unsure and consistent about mixing i
 the time of writing. It's obviously less important now that the acronym, but it seem a gift when I asked myself "So, what should I call a [**Python Hierarchical ASCII [Representation|Rendering] Tool**](https://github.com/scottvr/phart), anyway?" and noticed the freebie acronym.
 
 
+### Epilogue: LATEX TREADMARKS
+
 And just for fun, if you scrolled _this far_,  Here's the text that creates that diagram with the _I-swear-they're=-there_ colors. For the sake of not making you read something ludicrous anad silly, I only reproduce the bottom row of nodes here; you can click to view the source of the page if you really gotta see it all:
 
 
