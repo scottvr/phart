@@ -84,6 +84,8 @@ So, I inadvertently merged some code into main that was not intended to be relea
 
 Nevertheless, some might notice the command-line options, when runnning ``phart --help`` for example,  and try to use some of the features, so I figured I may as well explain one of the goofier ones. I've written about it here in [GHM-LAtEX.md](https://github.com/scottvr/phart/blob/main/docs/GHM-LATEX.md).
 
+I just finished updating the SVG documentation with a couple of surprising results achieved by what was intended to be a silly and useless feature that I didn't actually plan to release. Check out the two vector diagrams at the top of [svg-renderer.md](https://github.com/scottvr/phart/blob/main/docs/svg-renderer.md).
+
 
 ---
 
