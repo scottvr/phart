@@ -34,7 +34,7 @@ _frustration that ensued_:  You may notice that the diagram, while it _is_ text 
 
 The bulleted list, as it turns out, takes up less vertical space than the blank line between such **GHFMDMJ**L_OMG_ lines. It all fits very well within the generally unnecessary constraints within which **phart** _voluntarily_ does its work, though, _doesn't it_?
 
-Now, if you're still with  me this far.. Here _bear Witness_ to **phart**'s new output target `markdown-latex` as it was meant to be seen, under very _narrow constraints in suboptimal conditions_:
+Now, if you're still with  me this far.. Here _bear Witness_ to **phart**'s new output target `markdown-latex` as it _was meant to be seen_, which is to say, under very _narrow constraints in suboptimal conditions_:
 
 
 ----
