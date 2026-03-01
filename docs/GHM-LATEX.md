@@ -99,7 +99,7 @@ What's funny - especially in light of the preposterous process I just described 
 What's funny is that the strange, complicated looking math syntax where I pasted the equation I'm using for compensating for the strangely-varying 
 _**glyph-widths**_ to get that _almost-"right"_ diagram to display here in **text** and in **color**, **_not_ centered**, and all that other stuff ... No. What's funny is that the strange **_mish-mash_** of mathematical notation above is not the complicated equation it appears to be; but it _is_ a corollary to a theme of this document: _displaying text with non-intuitive or ill-fitting lexical formatting can yield surprising (and sometimes useful) results_. 
 
-That "equation" is actually just _this_, in a _markdown fenced block_. that just happened to appear that way when for grins I thought I'd see what would appear if I typed the word `math` inside the **triple-ticks** for automatic lexxing and syntax highlighting. All I actually pasted in that area above with the _squiggly math letters_ was not complicated math, just code copied straight from my IDE:
+That "equation" is actually just _this_, in a _markdown fenced block_. that just happened to appear that way when for grins I thought I'd see what would appear if I typed the word `math` instead of `python` inside the **triple-ticks** for automatic lexxing and syntax highlighting. All I actually pasted in that area above with the _squiggly math letters_ was not complicated math, just code copied straight from my IDE:
 
 ``` python
 _TILDE_SPACE_RATIO = 32.0 / 15.0
