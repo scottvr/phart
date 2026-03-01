@@ -47,6 +47,7 @@ Having rambled on long enough now, let me show you phart's latest masterpiece of
 
 <img width="800" height="800" alt="NX-complete-graph" src="https://github.com/user-attachments/assets/ac28aa5c-b6b2-4a23-a03f-4a6839076c55" />  
 
+<br />  
 
 Maybe someday phart will get official acknowledgement from the folks in the space, such as NetworkX or GraphViz, by way of displaying some of its more pleasing and interesting output in their own Galleries. Maybe.
 
