@@ -1,4 +1,4 @@
-# An ASCII-Representation* Experiment 
+# An ASCII-Representation\*\* Experiment 
 
 As I was tossing around some ideas stemming from someone asking for **phart** to add _mermaid script_ to its list of text formats it handles
 (and I have to admit, that's another one of those things that sounds ludicrous - a tool that takes graph objects and renders visualizations of them, 
@@ -106,7 +106,7 @@ Anyway, as you see... **Phart is exploring New Media** to express itself through
 We hope you'll join us again _for our next adventure_ through **needless _ASCII Adventures_**! 
 
 
-\*\*You may notice that through the code and the supporting documentation I interchangeably swap in and out the words _"Rendering"_ and _"Representation"_. So which is it? I'm not sure, but at leasst I've been unsure and _consistent_ about being ambiguous unintentionally, just using whichever word comes to mind at the time of writing. It's obviously less important now that the acronym is its full name, but it seemed a gift when I asked myself "So, what should I call a [**Python Hierarchical ASCII [Representation|Rendering] Tool**](https://github.com/scottvr/phart), anyway?" and the acronym just came as a freebie.
+**\*\***You may notice that through the code and the supporting documentation I interchangeably swap in and out the words _"Rendering"_ and _"Representation"_. So which is it? I'm not sure, but at leasst I've been unsure and _consistent_ about being ambiguous unintentionally, just using whichever word comes to mind at the time of writing. It's obviously less important now that the acronym is its full name, but it seemed a gift when I asked myself "So, what should I call a [**Python Hierarchical ASCII [Representation|Rendering] Tool**](https://github.com/scottvr/phart), anyway?" and the acronym just came as a freebie.
 
 
 ----
