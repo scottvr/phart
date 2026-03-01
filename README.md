@@ -78,7 +78,7 @@ ANSI color support turned out more interesting than I expected. Not completely s
 
 I'm not sure it's all _that_ much easier to discern what goes to where, but it sure is fun to look at.
 
-### NEWER! - Accidental Features 
+## NEWER! - Accidental Features 
 
 So, I inadvertently merged some code into main that was not intended to be released yet, because it's - while not _not_ working, per se - still a little half-baked, and not documented well. 
 
