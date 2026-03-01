@@ -10,7 +10,7 @@ SVGs - but they're essentially virtual framebuffers for a terminal display, and 
 of what ***would* be on your screen**. So that's silly and all, but sillier is that the first SVG style it output was really cheating, because it just
 captured the text output, and wrapped it in `<PRE>` tags, and embeded the html inside an svg container. Voila! :-)
 
-Cuz then of course, instead of just writing pretty styled **HTML of the Graph,** I wanted to capture the full **ASCII** glory - and **ANSI** glory too - 
+Cuz then of course, instead of just writing pretty, styled _**HTML** of the Graph_, I wanted to capture the full **ASCII** glory - and **ANSI** glory too - 
 just in different text presentation systems. So... _Yes,_  **phart** now - instead of directly outputting colorful _HTML_, it captures any **ANSI** _ESC sequences_ along with the text, and then does a little translation to convert the codes from their _Named Colo_r to the _HTML named color_ equivalent. 
 
 
