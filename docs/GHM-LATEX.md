@@ -6,12 +6,13 @@ using plain text to illustrate charts and diagrams in a lo-fi way, could output 
 consumed by another tool that outputs a **Scalable Vector Graphic** - AND, while _ludicrous_, does actually sound useful. 
 
 So, I'll get to the mermaid topic later, and I'll skip a lot of the explanation I want to give, and instead will just say that phart now can output
-SVGs - but they're essentially virtual framebuffers for a terminal display, and instead of drawing the text to your tty, it draws them to an SVG
+SVGs - but they're essentially virtual framebuffers for a terminal display, and instead of drawing the text to your tty, it draws them to an **SVG**
 of what ***would* be on your screen**. So that's silly and all, but sillier is that the first SVG style it output was really cheating, because it just
 captured the text output, and wrapped it in `<PRE>` tags, and embeded the html inside an svg container. Voila! :-)
 
-Cuz then of course, instead of just writing pretty styled **HTML of the Graph,** I wanted to capture the full ASCII glory - and ANSI glory too - 
-just in different text presentation systems. SO... Yes, phart now - instead of directly outputting colorful HTML, it captures any ANSI ESC sequences along with the text, and  does a little translation to convert the codes from their Named Color to the HTML named color equivalent. 
+Cuz then of course, instead of just writing pretty styled **HTML of the Graph,** I wanted to capture the full **ASCII** glory - and **ANSI** glory too - 
+just in different text presentation systems. So... _Yes,_  **phart** now - instead of directly outputting colorful _HTML_, it captures any **ANSI** _ESC sequences_ along with the text, and then does a little translation to convert the codes from their _Named Colo_r to the _HTML named color_ equivalent. 
+
 
 ## OH, YOU SILLY THING
 
