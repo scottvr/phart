@@ -3,7 +3,9 @@ import networkx as nx
 from phart import ASCIIRenderer, LayoutOptions
 
 if len(sys.argv) > 1:
-    nnodes = sys.argv[1]
+    nnodes = int(sys.argv[1])
+    if nnodes % 2 == 0:
+        nnodes = nnodes + 1
 else:
     nnodes = 13
 
@@ -20,11 +22,10 @@ node_dist_to_color = {
 }
 
 # Create a complete graph with an odd number of nodes
-nnodes = 13
 G = nx.complete_graph(nnodes)
 
 # A graph with (2n + 1) nodes requires n colors for the edges
-n = (nnodes - 1) // 2
+n = (nnodes - 1) // 2 % len(node_dist_to_color)
 ndist_iter = list(range(1, n + 1))
 
 # Take advantage of circular symmetry in determining node distances

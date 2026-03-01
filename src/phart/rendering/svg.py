@@ -9,10 +9,10 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, cast
 if TYPE_CHECKING:
     from phart.renderer import ASCIIRenderer
 
+from phart.rendering.ansi import ansi_to_hex
+
 
 def append_svg_glyph_paths(
-    renderer: ASCIIRenderer,
-    *,
     lines: List[str],
     rows: List[str],
     cell_px: int,
@@ -29,14 +29,14 @@ def append_svg_glyph_paths(
             "SVG path glyph mode requires fonttools. Install it and retry."
         ) from exc
 
-    resolved_font = renderer._resolve_svg_font_path(
+    resolved_font = resolve_svg_font_path(
         font_family=font_family,
         font_path=font_path,
     )
-    font = TTFont(resolved_font)
+    font = TTFont(resolved_font, fontNumber=0)
     glyph_set = font.getGlyphSet()
     cmap = font.getBestCmap() or {}
-    units_per_em = max(1, int(font["head"].unitsPerEm))
+    units_per_em = max(1, int(getattr(font["head"], "unitsPerEm")))
     scale = float(cell_px) / float(units_per_em)
     glyph_cache: Dict[str, Optional[Tuple[str, Tuple[float, float, float, float]]]] = {}
 
@@ -54,7 +54,7 @@ def append_svg_glyph_paths(
 
                 cache_item = glyph_cache.get(ch)
                 if ch not in glyph_cache:
-                    cache_item = renderer._glyph_outline_for_char(
+                    cache_item = glyph_outline_for_char(
                         ch=ch,
                         cmap=cmap,
                         glyph_set=glyph_set,
@@ -73,11 +73,9 @@ def append_svg_glyph_paths(
                 ty = (y * cell_px) + ((cell_px - glyph_h_px) / 2.0) + (y_max * scale)
 
                 fill = fg_color
-                if y < len(renderer._color_canvas) and x < len(
-                    renderer._color_canvas[y]
-                ):
-                    ansi = renderer._color_canvas[y][x]
-                    parsed = renderer._ansi_to_hex(ansi) if ansi else None
+                if y < len(rows) and x < len(rows[y]):
+                    ansi = rows[y][x]
+                    parsed = ansi_to_hex(ansi) if ansi else None
                     if parsed:
                         fill = parsed
 

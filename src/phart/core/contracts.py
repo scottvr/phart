@@ -22,6 +22,8 @@ class OutputRenderConfig:
     output_format: str
     svg_cell_size: int = 12
     svg_font_family: str = "monospace"
+    svg_text_mode: str = "text"
+    svg_font_path: str | None = None
     svg_fg: str = "#111111"
     svg_bg: str = "#ffffff"
 

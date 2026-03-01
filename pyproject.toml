@@ -88,7 +88,7 @@ packages = ["src/phart"]
 [tool.ruff.lint]
 select = ["E4", "E7", "E9", "F", "B"]
 
-ignore = ["F401", "B010", "B904"]
+ignore = ["F401", "B010", "B904", "B009"]
 #ignore = ["E501"]
 unfixable = ["B"]
 

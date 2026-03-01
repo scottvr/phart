@@ -561,7 +561,7 @@ class ASCIIRenderer:
         fg_color: str,
     ) -> None:
         svg_mod.append_svg_glyph_paths(
-            renderer=self,
+            #    renderer=self,
             lines=lines,
             rows=rows,
             cell_px=cell_px,

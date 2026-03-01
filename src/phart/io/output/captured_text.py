@@ -14,6 +14,7 @@ from phart.rendering.ansi import (
     UNICODE_DITAA_MAP,
     ansi_to_hex,
 )
+from phart.rendering.svg import append_svg_glyph_paths
 
 _TILDE_SPACE_RATIO = 32.0 / 15.0
 
@@ -54,55 +55,6 @@ def _render_ditaa(raw_text: str, *, wrap_plantuml: bool) -> str:
     if wrap_plantuml:
         return f"@startditaa\n{body}\n@endditaa\n"
     return body + ("\n" if body else "")
-
-
-def _render_svg(
-    rows: list[str],
-    color_canvas: list[list[Optional[str]]],
-    *,
-    config: OutputRenderConfig,
-) -> str:
-    height = len(rows)
-    width = max((len(row) for row in rows), default=0)
-    cell_px = config.svg_cell_size
-    svg_w = width * cell_px
-    svg_h = height * cell_px
-    text_x = cell_px / 2
-    text_y0 = cell_px * 0.8
-
-    lines: list[str] = []
-    lines.append('<?xml version="1.0" encoding="UTF-8"?>')
-    lines.append(
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{svg_w}" height="{svg_h}" '
-        f'viewBox="0 0 {svg_w} {svg_h}">'
-    )
-    lines.append(
-        f'  <rect x="0" y="0" width="{svg_w}" height="{svg_h}" fill="{html_escape(config.svg_bg)}" />'
-    )
-    lines.append(
-        "  <g "
-        f'font-family="{html_escape(config.svg_font_family)}" '
-        f'font-size="{cell_px}" fill="{html_escape(config.svg_fg)}" '
-        'text-anchor="middle" xml:space="preserve">'
-    )
-    for y, row in enumerate(rows):
-        for x, ch in enumerate(row):
-            if ch == " ":
-                continue
-            cx = text_x + x * cell_px
-            cy = text_y0 + y * cell_px
-            fill = config.svg_fg
-            if y < len(color_canvas) and x < len(color_canvas[y]):
-                ansi = color_canvas[y][x]
-                parsed = ansi_to_hex(ansi) if ansi else None
-                if parsed:
-                    fill = parsed
-            lines.append(
-                f'    <text x="{cx:.2f}" y="{cy:.2f}" fill="{html_escape(fill)}">{html_escape(ch)}</text>'
-            )
-    lines.append("  </g>")
-    lines.append("</svg>")
-    return "\n".join(lines) + "\n"
 
 
 def _render_html(
@@ -249,3 +201,65 @@ def render_captured_text(raw_text: str, *, config: OutputRenderConfig) -> str:
         return _render_latex_markdown(rows, color_canvas, config=config)
 
     raise ValueError(f"Unsupported output format '{config.output_format}'")
+
+
+def _render_svg(
+    rows: list[str],
+    color_canvas: list[list[Optional[str]]],
+    *,
+    config: OutputRenderConfig,
+) -> str:
+    height = len(rows)
+    width = max((len(row) for row in rows), default=0)
+    cell_px = config.svg_cell_size
+    svg_w = width * cell_px
+    svg_h = height * cell_px
+    text_x = cell_px / 2
+    text_y0 = cell_px * 0.8
+
+    if config.svg_text_mode == "text":
+        lines: list[str] = []
+        lines.append('<?xml version="1.0" encoding="UTF-8"?>')
+        lines.append(
+            f'<svg xmlns="http://www.w3.org/2000/svg" width="{svg_w}" height="{svg_h}" '
+            f'viewBox="0 0 {svg_w} {svg_h}">'
+        )
+        lines.append(
+            f'  <rect x="0" y="0" width="{svg_w}" height="{svg_h}" fill="{html_escape(config.svg_bg)}" />'
+        )
+        lines.append(
+            "  <g "
+            f'font-family="{html_escape(config.svg_font_family)}" '
+            f'font-size="{cell_px}" fill="{html_escape(config.svg_fg)}" '
+            'text-anchor="middle" xml:space="preserve">'
+        )
+        for y, row in enumerate(rows):
+            for x, ch in enumerate(row):
+                if ch == " ":
+                    continue
+                cx = text_x + x * cell_px
+                cy = text_y0 + y * cell_px
+                fill = config.svg_fg
+                if y < len(color_canvas) and x < len(color_canvas[y]):
+                    ansi = color_canvas[y][x]
+                    parsed = ansi_to_hex(ansi) if ansi else None
+                    if parsed:
+                        fill = parsed
+                lines.append(
+                    f'    <text x="{cx:.2f}" y="{cy:.2f}" fill="{html_escape(fill)}">{html_escape(ch)}</text>'
+                )
+        lines.append("  </g>")
+    elif config.svg_text_mode == "path":
+        lines = []
+        append_svg_glyph_paths(
+            lines=lines,
+            rows=rows,
+            cell_px=cell_px,
+            font_family=config.svg_font_family,
+            font_path=config.svg_font_path,
+            fg_color=config.svg_fg,
+        )
+    else:
+        raise ValueError("text_mode must be one of: text, path")
+    lines.append("</svg>")
+    return "\n".join(lines) + "\n"

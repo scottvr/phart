@@ -450,6 +450,8 @@ def main() -> Optional[int]:
             output_format=args.output_format,
             svg_cell_size=args.svg_cell_size,
             svg_font_family=args.svg_font_family,
+            svg_text_mode=args.svg_text_mode,
+            svg_font_path=args.svg_font_path,
             svg_fg=args.svg_fg,
             svg_bg=args.svg_bg,
         )
@@ -517,8 +519,6 @@ def main() -> Optional[int]:
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         return 1
-
-    return None
 
 
 if __name__ == "__main__":
