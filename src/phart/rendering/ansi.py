@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from typing import Optional
 
+ANSI_TOKEN_RE = re.compile(r"\x1b\[[0-9;]*m|.", re.DOTALL)
 ANSI_RESET = "\x1b[0m"
 ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;]*m")
 ANSI_SUBWAY_PALETTE = (

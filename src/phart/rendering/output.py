@@ -11,8 +11,7 @@ from .ansi import ANSI_ESCAPE_RE, UNICODE_DITAA_MAP, ansi_to_hex
 if TYPE_CHECKING:
     from phart.renderer import ASCIIRenderer
 
-
-_TILDE_SPACE_RATIO = 30.0 / 22.0
+_TILDE_SPACE_RATIO = 32.0 / 15.0
 
 
 def normalized_canvas_rows(renderer: ASCIIRenderer) -> List[str]:

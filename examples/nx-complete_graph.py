@@ -39,7 +39,7 @@ def cycle(nlist, n):
 # node distance
 nodes = list(G.nodes())
 for i, nd in enumerate(ndist_iter):
-    for u, v in zip(nodes, cycle(nodes, i + 1)):
+    for u, v in zip(nodes, cycle(nodes, i + 1), strict=True):
         G[u][v]["color"] = node_dist_to_color[nd]
 
 options = LayoutOptions(

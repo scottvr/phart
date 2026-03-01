@@ -8,9 +8,13 @@ from html import escape as html_escape
 from typing import Optional
 
 from phart.core.contracts import OutputRenderConfig
-from phart.rendering.ansi import ANSI_ESCAPE_RE, UNICODE_DITAA_MAP, ansi_to_hex
+from phart.rendering.ansi import (
+    ANSI_ESCAPE_RE,
+    ANSI_TOKEN_RE,
+    UNICODE_DITAA_MAP,
+    ansi_to_hex,
+)
 
-_ANSI_TOKEN_RE = re.compile(r"\x1b\[[0-9;]*m|.", re.DOTALL)
 _TILDE_SPACE_RATIO = 32.0 / 15.0
 
 
@@ -23,7 +27,7 @@ def _rows_and_colors_from_ansi_text(
         row_chars: list[str] = []
         row_colors: list[Optional[str]] = []
         active_ansi: Optional[str] = None
-        for token in _ANSI_TOKEN_RE.findall(line):
+        for token in ANSI_TOKEN_RE.findall(line):
             if token.startswith("\x1b["):
                 active_ansi = None if token == "\x1b[0m" else token
                 continue
@@ -193,7 +197,7 @@ def _render_latex_markdown(
         segments: list[str] = []
         current_color: Optional[str] = None
         current_text: list[str] = []
-        for ch, ansi in zip(row, row_colors):
+        for ch, ansi in zip(row, row_colors, strict=True):
             target_color = config.svg_fg
             parsed = ansi_to_hex(ansi) if ansi else None
             if parsed:
