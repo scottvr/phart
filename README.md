@@ -274,22 +274,14 @@ $ phart --colors attr --edge-color-rule side:left=green,right=red --bbox --btree
  --charset unicode --no-color-nodes examples/collatz.py -- 5 | tail -15
 ```
 
-Now that phart has ANSI color support, we can also use the same 'side' edge attribute
-that enables the left/right sorting to apply color to the paths representing edges in
-the output:
 
-``` bash
-$ phart --bboxes --btree --no-color-nodes --charset unicode  --layer-spacing 4 \
- --colors attr --output-format html --svg-bg black --edge-color-rule \
- side:left=bright_red,right=bright_green examples/collatz.py
-```
-
-
-This gives us the following output, which I'll share via screenshot, because GitHub is picky about letting one color a markdown document:
+This gives us the following output, which I'll share via screenshot, because GitHub is picky&ast;&ast; about letting one color a markdown document:
 
 <img width="325" height="218" alt="collatz-5-tail-15" src="https://github.com/user-attachments/assets/bcd4cd1b-322a-464a-b1b6-e0e1359332a0" />
 
 There are more examples scripts in the repo, along with a README in the examples/ directory
+
+&ast;&ast; [There's' an app for that!(tm)](https://github.com/scottvr/phart/blob/main/docs/GHM-LATEX.md)
 
 ---
 
