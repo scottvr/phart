@@ -120,7 +120,7 @@ So which is the correct word in **phart**'s expanded name? I'm not sure, but at 
 ----
 ### Epilogue: _Latex Skidmarks_
 
-And just for fun, if you scrolled _this far_:  here is the text inside the Markdown that creates that diagram with the _I-swear-they're=-there_ colors (they just aren't very bright. Next time I'll use ANSI's "bright_" variants for each color.) For the sake of not making you read something ludicrous anad _silly ;-)_ I only reproduce the bottom row of nodes here; you can click to view the source of the page if you really gotta see it all:
+And just for fun, if you scrolled _this far_:  here is the text inside the Markdown that creates that diagram with the _I-swear-they're-there_ colors (they just aren't very bright. Next time I'll use ANSI's "bright_" variants for each color.) For the sake of not making you read something ludicrous anad _silly ;-)_ I only reproduce the bottom row of nodes here; you can click to view the source of the page if you really gotta see it all:
 
 
 ```
