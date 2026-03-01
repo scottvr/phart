@@ -63,15 +63,19 @@ ${\mathtt{\textbf{\textcolor{#111111}{depth:~~~~5~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ----
 
 
+### Einstein's Tilde-Space Narrow-Space Time Conjecture
+
 _Lol_. It's not perfectly aligned, but I have for the time being postponed my quest for the full solution to the puzzle of the _non-fixed-width-but-superficially-resembling-one font_ that is used to display my GHFMD-MathJax-Latex "equation", and just stop-gapped it for now with a napkin-math equation that alllows it to look as close to correct as you see here now, which is to say it long enough since that start of my first attempt at pasting a **phart diagram** in here just a few - ok several - short, sleepless hours ago. It's not a highly _complex_ "solution", but it did take some tedious, error-filled exploration of a system I knew nothing about, and getting a bit creative in the process. **FWIW**, just using straight-up markdown fences for a pre-formatted block here I can show you this:
 
 
 ``` math
+
 _TILDE_SPACE_RATIO = 32.0 / 15.0
 run_len = max(4, int(math.ceil((j i) * _TILDE_SPACE_RATIO)))
+
 ```
 
-----
+
 
 That's the lilttle equation I'm using to accomplish getting around the many obstacles to having what I wanted from that GH/MD/MJ/Latex/Tex/HTML pipeline you're reading this through.
 
