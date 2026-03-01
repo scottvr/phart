@@ -95,7 +95,7 @@ Yeah. Its just the ratio describfing the tilde character which coerces the LateX
 predictably spit out space characters and respect them (_so long as they are surrounded by **sentinal dots**._) It seems fitting somehow that then I'd paste some straightforward text into a fenced block designed to display it just right, and I'd end up getting properly typeset and renderer-as-math **nonsense** out of it. I had to work so hard for the _nonsense **I wanted**_.  That is clearly some sort of _ironic coincidence_.  
 
 
-### I AM IRONIC MAN
+### I AM _IRONIC_, MAN
 
 Anyway, as you see... **Phart is exploring New Media **to express itself through _Math, Science, and Visual Arts_.
 
