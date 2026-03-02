@@ -68,7 +68,7 @@ flowchart TD
 ```
 ----
 
-Here is the plain text `--bboxes` version with `--node-spaces 3` and `--layer-spaces 3` and PHART's default (legacy/auto) layout strategy:
+Here is the plain text with `--bboxes` and default (legacy/auto) layout strategy:
 
 ```
                                  ┌────────┐
@@ -106,7 +106,51 @@ Here is the plain text `--bboxes` version with `--node-spaces 3` and `--layer-sp
                           └────────┘    └─────────┘
 ```
 
-Changing a few options to make some things less ambiguous (also, using color would eliminate the ambiguities and allow the layout to remain compact. Also also, in context, where you know this is a directed graph, it really isn't any more ambiguous than the mermaid SVG above, since if there is no arrowhead at aan intersection, then the path does not terminate there - it is either originating there or "just passing through", but sometimes due to the low grid reolution and forgetting that context, we might look for other layout options):
+Changing a few options to make some things less ambiguous (also, using color would eliminate the ambiguities and allow the layout to remain compact. Also also, in context, where you know this is a directed graph, it really isn't any more ambiguous than the mermaid SVG above, since if there is no arrowhead at aan intersection, then the path does not terminate there - it is either originating there or "just passing through", but sometimes due to the low grid reolution and forgetting that context, we might look for other layout options). In fact, having said thaat I realize that the context makes the bottom layer unclear - how many edges terminate at unsafe vs how many at runtime? We can clarify that with `--edge-anchors ports`:
+```
+ $ phart --bboxes --layer-spacing 4 --vpad 0 --hpad 2    --node-spacing 4  --labels --edge-anchors ports go-package.dot
+                                     ┌──────────┐
+                                     │  regexp  │
+                                     └──────────┘
+                                ┌─────┼┘ ││└┼┼┼┼─┐
+                                │     │  ││ ││││ │
+                                v     │  ││ ││││ v
+                          ┌─────────┐─┘  ┌─────────────────┐
+                          │ │bytes  │    ││ regexp/syntax  │
+                          └─────────┘    └─────────────────┘
+                  ┌────────┘│    └┼┼─────┤││ │││     │ ├─┘└──────────────┐
+                  │         │┌────┼┼─────┼┼┼─┼┤│     │ │                 │
+                  │         vv    ││     ││v │v│     v v                 │
+                  │  ┌────────┐   │┌───────────┐────┌───────────┐───┐    │
+                  │  │  sort│ │   ││  strconv└─│────│─┐strings  │   │    │
+                  │  └────────┘   │└───────────┘    └───────────┘   │    │
+                  │       │ │     ││││││ ││   ││     ││││ │   ││    │    │
+                  │┌┬─────┼─┼───┬─┴┴┴┼┴┼─┼┼───┼┴─────┼┼┼┴─┼───┼┴────┼─┬┬┬┼┐
+                  vvv     │ │   v    │ │ vv   v      vvv  v   │     │ vvvvv
+┌────────────────────┐────┌────────┐ │ │┌──────┐    ┌───────────┐   │┌────────────────┐
+│  internal/bytealg  │    │  math  │ │ ││  io  │    │ │unicode│ │   ││  unicode/utf8  │
+└────────────────────┘    └────────┘ │ │└──────┘    └───────────┘   │└────────────────┘
+                 │ ├┼─────┼────┼─┼┼──┼─┼─┘    │       ││      │     │
+                 │┌┼┼─────┼────┼─┼┴──┴─┼──────┼┬──────┴┼──────┴─────┼┬┐
+                 vvvv     │    v┌┘     v      vv       │            vvv
+          ┌──────────┐    ┌─────────────┐────┌────────────────┐    ┌────────┐
+          │  errors│ │    │  math/bits  │    │  internal/cpu  │    │  sync  │
+          └──────────┘    └─────────────┘    └────────────────┘    └────────┘
+                │  │      │     ││   │          ┌───────────────────┼┘├┘
+                │  │      │     ││   │          │       ┌───────────┼─┤
+                v  │      v     ││   │          v       │           │ v
+        ┌────────────────────────┐   │┌─────────────────┐    ┌───────────────┐
+        │  internal/reflectlite ││   ││  internal/race  │    │  sync/atomic  │
+        └────────────────────────┘   │└─────────────────┘    └───────────────┘
+                              ││││   │        │         │           │
+                              ││├┼──┬┼┬┬──────┼─────────┼───────────┘
+                              vvvv  vvvv      v         v
+                             ┌──────────┐    ┌───────────┐
+                             │  unsafe  │    │  runtime  │
+                             └──────────┘    └───────────┘
+```
+
+Alles Klar? Nein?  We can go bigger:
 
 ```
 $  phart --bboxes --layer-spacing 4 --vpad 1 --hpad 2    --node-spacing 4  --labels --edge-anchors ports --uniform go-package.dot
@@ -162,6 +206,7 @@ $  phart --bboxes --layer-spacing 4 --vpad 1 --hpad 2    --node-spacing 4  --lab
                                              │                        │    │                        │
                                              │         unsafe         │    │        runtime         │
                                              │                        │    │                        │
+                                             └────────────────────────┘    └────────────────────────┘
 ```
 
 At first glance that one looks great to me, but then when I look longer I think there's some ambiguity, and then when looking longer I realize that 
@@ -171,9 +216,7 @@ experiment with other layouts. Using the `circular` layout strategy perhaps make
 Here's the plain-text `circular` strategy:
 
 ```
-  phart --bboxes --layer-spacing 2 --vpad 0 --hpad 2 --node-spacing 2 --labels --edge-anchors ports --layout circular    go-package.dot
-
-
+$ phart --bboxes --layer-spacing 2 --vpad 0 --hpad 2 --node-spacing 2 --labels --edge-anchors ports --layout circular    go-package.dot
 
                                                                                                                  ┌──────────┐
                                                                                                                  │  regexp  │
