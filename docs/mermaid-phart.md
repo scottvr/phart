@@ -106,7 +106,7 @@ Here is the plain text `--bboxes` version with `--node-spaces 3` and `--layer-sp
                           └────────┘    └─────────┘
 ```
 
-Changing a few options to make some things less ambiguous (also, using color would eliminate the ambiguities and allow the layout to remain small):
+Changing a few options to make some things less ambiguous (also, using color would eliminate the ambiguities and allow the layout to remain compact. Also also, in context, where you know this is a directed graph, it really isn't any more ambiguous than the mermaid SVG above, since if there is no arrowhead at aan intersection, then the path does not terminate there - it is either originating there or "just passing through", but sometimes due to the low grid reolution and forgetting that context, we might look for other layout options):
 
 ```
 $  phart --bboxes --layer-spacing 4 --vpad 1 --hpad 2    --node-spacing 4  --labels --edge-anchors ports --uniform go-package.dot
