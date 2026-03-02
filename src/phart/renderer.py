@@ -435,7 +435,7 @@ class ASCIIRenderer:
 
     def _compute_edge_anchor_map(
         self, positions: Dict[Any, Tuple[int, int]]
-    ) -> Dict[Tuple[Any, Any], Dict[str, Tuple[int, int]]]:
+    ) -> Dict[Tuple[Any, Any], Dict[str, Any]]:
         return ports_mod.compute_edge_anchor_map(self, positions)
 
     def _get_edge_anchor_points(
@@ -819,6 +819,7 @@ def merge_layout_options(
         "vpad",
         "uniform",
         "edge_anchor_mode",
+        "minimize_shared_ports",
         "use_labels",
         "ansi_colors",
         "allow_ansi_in_ascii",

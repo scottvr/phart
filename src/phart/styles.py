@@ -123,6 +123,7 @@ class LayoutOptions:
     vpad: int = field(default=0)  # Vertical inner padding for boxed nodes
     uniform: bool = field(default=False)  # Use widest node text width for all boxes
     edge_anchor_mode: str = field(default="auto")  # auto, center, or ports
+    minimize_shared_ports: bool = field(default=False)
     use_labels: bool = field(default=False)  # Prefer node labels for display text
     ansi_colors: bool = field(default=False)  # ANSI colorized render output
     allow_ansi_in_ascii: bool = field(

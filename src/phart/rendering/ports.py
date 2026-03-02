@@ -51,6 +51,31 @@ def get_side_port_values(
     return [bounds["center_y"]]
 
 
+def counter_for_side(
+    bounds: Dict[str, int], peer_bounds: Dict[str, int], side: str
+) -> int:
+    """Project the peer center onto the routing axis for the given side."""
+    if side in ("top", "bottom"):
+        return peer_bounds["center_x"]
+    return peer_bounds["center_y"]
+
+
+def side_change_penalty(default_side: str, candidate_side: str) -> int:
+    """Prefer keeping the default face, then adjacent faces, then the opposite face."""
+    if default_side == candidate_side:
+        return 0
+
+    opposite_sides = {
+        ("top", "bottom"),
+        ("bottom", "top"),
+        ("left", "right"),
+        ("right", "left"),
+    }
+    if (default_side, candidate_side) in opposite_sides:
+        return 6
+    return 3
+
+
 def port_value_to_xy(
     renderer: ASCIIRenderer, bounds: Dict[str, int], side: str, value: int
 ) -> Tuple[int, int]:
@@ -261,27 +286,126 @@ def assign_monotone_port_indices(
     return chosen
 
 
+def rebalance_edge_end_faces(
+    renderer: ASCIIRenderer,
+    edge_specs: List[Dict[str, Any]],
+    positions: Dict[Any, Tuple[int, int]],
+) -> None:
+    """Move oversubscribed destination endpoints to alternate faces when possible."""
+    face_capacity: Dict[Tuple[Any, str], int] = {}
+    face_counts: Dict[Tuple[Any, str], int] = {}
+    node_bounds_cache: Dict[Any, Dict[str, int]] = {}
+    face_order = ("top", "right", "bottom", "left")
+
+    def _get_bounds(node: Any) -> Dict[str, int]:
+        if node not in node_bounds_cache:
+            node_bounds_cache[node] = renderer._get_node_bounds(node, positions)
+        return node_bounds_cache[node]
+
+    def _get_capacity(node: Any, side: str) -> int:
+        key = (node, side)
+        if key not in face_capacity:
+            bounds = _get_bounds(node)
+            candidates = sorted(set(renderer._get_side_port_values(bounds, side)))
+            face_capacity[key] = len(candidates) if candidates else 1
+        return face_capacity[key]
+
+    for spec in edge_specs:
+        end_key = (spec["end_node"], spec["end_side"])
+        face_counts[end_key] = face_counts.get(end_key, 0) + 1
+
+    while True:
+        oversubscribed_faces = sorted(
+            (
+                face
+                for face, count in face_counts.items()
+                if count > _get_capacity(face[0], face[1])
+            ),
+            key=lambda face: (str(face[0]), face[1]),
+        )
+        if not oversubscribed_faces:
+            return
+
+        best_move: Optional[
+            Tuple[Tuple[int, int, int, str, str], Dict[str, Any], str, int, List[int]]
+        ] = None
+
+        for face in oversubscribed_faces:
+            node, current_side = face
+            node_bounds = _get_bounds(node)
+            for spec in edge_specs:
+                if spec["end_node"] != node or spec["end_side"] != current_side:
+                    continue
+
+                peer_bounds = _get_bounds(spec["start_node"])
+                peer_center = (peer_bounds["center_x"], peer_bounds["center_y"])
+
+                for alt_side in face_order:
+                    if alt_side == current_side:
+                        continue
+
+                    alt_face = (node, alt_side)
+                    if face_counts.get(alt_face, 0) >= _get_capacity(node, alt_side):
+                        continue
+
+                    alt_candidates = sorted(
+                        set(renderer._get_side_port_values(node_bounds, alt_side))
+                    )
+                    if not alt_candidates:
+                        alt_candidates = [renderer._side_center_value(node_bounds, alt_side)]
+
+                    alt_counter = counter_for_side(node_bounds, peer_bounds, alt_side)
+                    alt_value = renderer._nearest_candidate_to_center(
+                        alt_candidates, alt_counter
+                    )
+                    alt_anchor = renderer._port_value_to_xy(
+                        node_bounds, alt_side, alt_value
+                    )
+                    score = (
+                        abs(alt_anchor[0] - peer_center[0])
+                        + abs(alt_anchor[1] - peer_center[1])
+                        + side_change_penalty(spec["default_end_side"], alt_side)
+                        + (2 * face_counts.get(alt_face, 0))
+                    )
+                    move_key = (
+                        score,
+                        face_counts.get(alt_face, 0),
+                        face_order.index(alt_side),
+                        str(spec["edge_key"][0]),
+                        str(spec["edge_key"][1]),
+                    )
+
+                    if best_move is None or move_key < best_move[0]:
+                        best_move = (
+                            move_key,
+                            spec,
+                            alt_side,
+                            alt_counter,
+                            alt_candidates,
+                        )
+
+        if best_move is None:
+            return
+
+        _move_key, spec, alt_side, alt_counter, alt_candidates = best_move
+        old_face = (spec["end_node"], spec["end_side"])
+        new_face = (spec["end_node"], alt_side)
+        face_counts[old_face] -= 1
+        face_counts[new_face] = face_counts.get(new_face, 0) + 1
+        spec["end_side"] = alt_side
+        spec["end_counter"] = alt_counter
+        spec["end_candidates"] = alt_candidates
+        spec["axis_delta"] = abs(spec["start_counter"] - alt_counter)
+
+
 def compute_edge_anchor_map(
     renderer: ASCIIRenderer, positions: Dict[Any, Tuple[int, int]]
-) -> Dict[Tuple[Any, Any], Dict[str, Tuple[int, int]]]:
+) -> Dict[Tuple[Any, Any], Dict[str, Any]]:
     """Precompute deterministic per-edge anchors for edges that use ports."""
     if not renderer.options.bboxes:
         return {}
 
-    edge_specs: List[
-        Tuple[
-            Tuple[Any, Any],
-            Any,
-            str,
-            int,
-            List[int],
-            Any,
-            str,
-            int,
-            List[int],
-            int,
-        ]
-    ] = []
+    edge_specs: List[Dict[str, Any]] = []
 
     for start, end in sorted(
         renderer.graph.edges(), key=lambda edge: (str(edge[0]), str(edge[1]))
@@ -295,16 +419,8 @@ def compute_edge_anchor_map(
         end_bounds = renderer._get_node_bounds(end, positions)
         start_side, end_side = renderer._get_edge_sides(start_bounds, end_bounds)
 
-        start_counter = (
-            end_bounds["center_x"]
-            if start_side in ("top", "bottom")
-            else end_bounds["center_y"]
-        )
-        end_counter = (
-            start_bounds["center_x"]
-            if end_side in ("top", "bottom")
-            else start_bounds["center_y"]
-        )
+        start_counter = counter_for_side(start_bounds, end_bounds, start_side)
+        end_counter = counter_for_side(end_bounds, start_bounds, end_side)
         start_candidates = renderer._get_side_port_values(start_bounds, start_side)
         end_candidates = renderer._get_side_port_values(end_bounds, end_side)
         if not start_candidates:
@@ -313,21 +429,25 @@ def compute_edge_anchor_map(
             end_candidates = [end_counter]
 
         edge_specs.append(
-            (
-                (start, end),
-                start,
-                start_side,
-                start_counter,
-                start_candidates,
-                end,
-                end_side,
-                end_counter,
-                end_candidates,
-                abs(start_counter - end_counter),
-            )
+            {
+                "edge_key": (start, end),
+                "start_node": start,
+                "start_side": start_side,
+                "start_counter": start_counter,
+                "start_candidates": start_candidates,
+                "end_node": end,
+                "end_side": end_side,
+                "default_end_side": end_side,
+                "end_counter": end_counter,
+                "end_candidates": end_candidates,
+                "axis_delta": abs(start_counter - end_counter),
+            }
         )
 
-    edge_anchor_map: Dict[Tuple[Any, Any], Dict[str, Tuple[int, int]]] = {}
+    if renderer.options.minimize_shared_ports:
+        rebalance_edge_end_faces(renderer, edge_specs, positions)
+
+    edge_anchor_map: Dict[Tuple[Any, Any], Dict[str, Any]] = {}
     used_by_side: Dict[Tuple[Any, str], List[int]] = {}
     min_port_separation = 1
     wiggle_radius = 1
@@ -335,18 +455,14 @@ def compute_edge_anchor_map(
     face_requirements: Dict[
         Tuple[Any, str], List[Tuple[Tuple[Any, Any], str, int, str]]
     ] = {}
-    for (
-        edge_key,
-        start_node,
-        start_side,
-        start_counter,
-        _start_candidates_unused,
-        end_node,
-        end_side,
-        end_counter,
-        _end_candidates_unused,
-        _axis_delta,
-    ) in edge_specs:
+    for spec in edge_specs:
+        edge_key = spec["edge_key"]
+        start_node = spec["start_node"]
+        start_side = spec["start_side"]
+        start_counter = spec["start_counter"]
+        end_node = spec["end_node"]
+        end_side = spec["end_side"]
+        end_counter = spec["end_counter"]
         face_requirements.setdefault((start_node, start_side), []).append(
             (edge_key, "start", start_counter, str(end_node))
         )
@@ -399,28 +515,26 @@ def compute_edge_anchor_map(
     edge_specs_sorted = sorted(
         edge_specs,
         key=lambda spec: (
-            spec[9],
-            str(spec[1]),
-            spec[2],
-            str(spec[5]),
-            spec[6],
-            str(spec[0][0]),
-            str(spec[0][1]),
+            spec["axis_delta"],
+            str(spec["start_node"]),
+            spec["start_side"],
+            str(spec["end_node"]),
+            spec["end_side"],
+            str(spec["edge_key"][0]),
+            str(spec["edge_key"][1]),
         ),
     )
 
-    for (
-        edge_key,
-        start_node,
-        start_side,
-        start_counter,
-        start_candidates,
-        end_node,
-        end_side,
-        end_counter,
-        end_candidates,
-        _axis_delta,
-    ) in edge_specs_sorted:
+    for spec in edge_specs_sorted:
+        edge_key = spec["edge_key"]
+        start_node = spec["start_node"]
+        start_side = spec["start_side"]
+        start_counter = spec["start_counter"]
+        start_candidates = spec["start_candidates"]
+        end_node = spec["end_node"]
+        end_side = spec["end_side"]
+        end_counter = spec["end_counter"]
+        end_candidates = spec["end_candidates"]
         start_key = (start_node, start_side)
         end_key = (end_node, end_side)
         used_start_values = used_by_side.get(start_key, [])
@@ -450,6 +564,8 @@ def compute_edge_anchor_map(
         used_by_side.setdefault(start_key, []).append(start_value)
         used_by_side.setdefault(end_key, []).append(end_value)
 
+        edge_anchor_map.setdefault(edge_key, {})["start_side"] = start_side
+        edge_anchor_map.setdefault(edge_key, {})["end_side"] = end_side
         edge_anchor_map.setdefault(edge_key, {})["start"] = renderer._port_value_to_xy(
             start_bounds, start_side, start_value
         )
@@ -469,11 +585,6 @@ def get_edge_anchor_points(
     start_bounds = renderer._get_node_bounds(start, positions)
     end_bounds = renderer._get_node_bounds(end, positions)
     start_side, end_side = renderer._get_edge_sides(start_bounds, end_bounds)
-
-    horizontal_sides = (start_side, end_side) in {
-        ("left", "right"),
-        ("right", "left"),
-    }
     overlap_top = max(start_bounds["top"], end_bounds["top"])
     overlap_bottom = min(start_bounds["bottom"], end_bounds["bottom"])
     has_vertical_overlap = overlap_top <= overlap_bottom
@@ -486,6 +597,12 @@ def get_edge_anchor_points(
         start_anchor = cached.get("start")
         end_anchor = cached.get("end")
         if start_anchor is not None and end_anchor is not None:
+            cached_start_side = str(cached.get("start_side", start_side))
+            cached_end_side = str(cached.get("end_side", end_side))
+            horizontal_sides = (cached_start_side, cached_end_side) in {
+                ("left", "right"),
+                ("right", "left"),
+            }
             if (
                 horizontal_sides
                 and has_vertical_overlap
@@ -498,6 +615,10 @@ def get_edge_anchor_points(
 
     start_anchor = renderer._get_center_anchor_for_side(start_bounds, start_side)
     end_anchor = renderer._get_center_anchor_for_side(end_bounds, end_side)
+    horizontal_sides = (start_side, end_side) in {
+        ("left", "right"),
+        ("right", "left"),
+    }
     if horizontal_sides and has_vertical_overlap:
         target_y = (overlap_top + overlap_bottom) // 2
         start_anchor = (start_anchor[0], target_y)
