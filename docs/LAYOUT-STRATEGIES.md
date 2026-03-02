@@ -199,3 +199,14 @@ I hope you enjoyed taking a look at how different layouts effect legibility of t
 ## Other layouts
 Let me know if you wan't to discuss implementing another layout strategy
 by opening an Issue or starting a Discussion thread. Cheers!
+
+
+###
+For more examples in copy/pasted text and screenshots, checkout these other pages
+
+(the first link explains why some of these examples are images, even though it's all plain text and should be pasteable inline)
+
+- https://github.com/scottvr/phart/blob/main/docs/GHM-LATEX.md
+- https://github.com/scottvr/phart/blob/main/docs/TRIADIC-CENSUS.md
+- https://github.com/scottvr/phart/blob/main/docs/svg-renderer.md
+- https://github.com/scottvr/phart/blob/main/docs/index.md 
