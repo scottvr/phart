@@ -10,6 +10,8 @@ def render_renderer_output(
     renderer: ASCIIRenderer, *, config: RendererOutputConfig
 ) -> str:
     """Render output from ``renderer`` according to ``config.output_format``."""
+    if config.output_format == "mmd":
+        return "" + str(renderer.mermaid_out())
     if config.output_format == "text":
         return renderer.render()
     if config.output_format == "ditaa":

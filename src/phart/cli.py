@@ -14,7 +14,7 @@ from .io.output import render_captured_text, render_renderer_output
 from .styles import LayoutOptions, NodeStyle
 
 COLOR_MODES = {"none", "source", "target", "path", "attr"}
-OUTPUT_FORMATS = {"text", "ditaa", "ditaa-puml", "svg", "html", "latex-markdown"}
+OUTPUT_FORMATS = {"text", "ditaa", "ditaa-puml", "svg", "html", "latex-markdown", "mmd"}
 LAYOUT_STRATEGIES = {
     "auto",
     "bfs",
@@ -177,7 +177,7 @@ def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
         default="text",
         help=(
             "Output format: text (default), ditaa, ditaa-puml, "
-            "svg, html, or latex-markdown"
+            "svg, html, mmmd, or latex-markdown"
         ),
     )
     parser.add_argument(
