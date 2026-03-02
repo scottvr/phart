@@ -2,8 +2,8 @@
 
 By request, `--output` has another viable target in its `--output-format` list of choices, with the addition of `mmd`, which is a mermaid TD flowchart.
 
-It's not configurable in any way, but if you have a large graph, it can save you a ton of time since mmd is another plain text format, so you can search and replace to change the number of dashes in an edge (layout hint), or change it to a thick line (`-` to `==`), etc with a quick searach-and-replace op in your favorite 
-editor.  
+It's not configurable in any way, but if you have a large graph, it can save you a ton of time if what you want is a mermaid diagram; since mmd is another plain text format, you can search and replace to change the number of dashes in an edge (layout hint), or change it to a thick line (`-` to `==`), etc with a quick searach-and-replace op in your favorite editor. 
+
 
 Also, just like with screen renders, if you pass `--label` to the cli, or `use_labels=True` in your LayoutOptions programmatically, then whatever is in 
 the label attribute for any  given node will be displayed as appropriate. If there is no label, the string representation of whatever type of object it is is used 
