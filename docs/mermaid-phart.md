@@ -12,7 +12,7 @@ or quotes in it, they were normalized away.) Without enabling labels, the node n
 
 ----
 
-Below you see the ["Go Package Dependency" DAG DOT](https://raw.githubusercontent.com/scottvr/phart/refs/heads/main/examples/go-package.dot) that I've used for other tests in other documentation you will find here. Ive embedded the generated mmd inline in the markdown.
+Below you see the ["Go Package Dependency" DAG DOT](https://raw.githubusercontent.com/scottvr/phart/refs/heads/main/examples/go-package.dot) that I've used for other tests in other documentation you will find here. I have embedded the generated mmd inline in the markdown.
 
 
 ``` mermaid
