@@ -10,9 +10,59 @@ the label attribute for any  given node will be displayed as appropriate. If the
 (id, name, etc), though for mermaid, if there was a long and difficult identifier and no alternative label, the id may look a little wonky (e.g., if it had spaces
 or quotes in it, they were normalized away.) Without enabling labels, the node name/id is displayed, as with any other rendered output format.
 
-That is all for today. Carry on.  Oh... Below you see the "Go Package Dependency" DAG that I've used for other tests in other documentation you will find 
-here, with the mermaid live editor on the left anad vscode on the right. The DOT file that contains this 50-node graph is in the `examples/` directory in the repo.
+That is all for today. Carry on.  Oh... Below you see the "Go Package Dependency" DAG that I've used for other tests in other documentation you will find here. Ive embedded the generated mmd inline in the markdown.
 
 ----
 
-<img width="1207" height="600" alt="mermaid-pharts" src="https://github.com/user-attachments/assets/0b4f5e5b-4769-4c55-8419-1c4edbd33d6f" />
+``` mermaid
+flowchart TD
+    regexp["regexp"] ---> bytes["bytes"]
+    regexp["regexp"] ---> io["io"]
+    regexp["regexp"] ---> regexp/syntax["regexp/syntax"]
+    regexp["regexp"] ---> sort["sort"]
+    regexp["regexp"] ---> strconv["strconv"]
+    regexp["regexp"] ---> strings["strings"]
+    regexp["regexp"] ---> sync["sync"]
+    regexp["regexp"] ---> unicode["unicode"]
+    regexp["regexp"] ---> unicode/utf8["unicode/utf8"]
+    bytes["bytes"] ---> internal/bytealg["internal/bytealg"]
+    bytes["bytes"] ---> io["io"]
+    bytes["bytes"] ---> unicode["unicode"]
+    bytes["bytes"] ---> unicode/utf8["unicode/utf8"]
+    bytes["bytes"] ---> errors["errors"]
+    io["io"] ---> errors["errors"]
+    io["io"] ---> sync["sync"]
+    regexp/syntax["regexp/syntax"] ---> sort["sort"]
+    regexp/syntax["regexp/syntax"] ---> strconv["strconv"]
+    regexp/syntax["regexp/syntax"] ---> strings["strings"]
+    regexp/syntax["regexp/syntax"] ---> unicode["unicode"]
+    regexp/syntax["regexp/syntax"] ---> unicode/utf8["unicode/utf8"]
+    sort["sort"] ---> internal/reflectlite["internal/reflectlite"]
+    strconv["strconv"] ---> internal/bytealg["internal/bytealg"]
+    strconv["strconv"] ---> math["math"]
+    strconv["strconv"] ---> unicode/utf8["unicode/utf8"]
+    strconv["strconv"] ---> errors["errors"]
+    strconv["strconv"] ---> math/bits["math/bits"]
+    strings["strings"] ---> io["io"]
+    strings["strings"] ---> sync["sync"]
+    strings["strings"] ---> unsafe["unsafe"]
+    strings["strings"] ---> errors["errors"]
+    strings["strings"] ---> internal/bytealg["internal/bytealg"]
+    strings["strings"] ---> unicode["unicode"]
+    strings["strings"] ---> unicode/utf8["unicode/utf8"]
+    sync["sync"] ---> internal/race["internal/race"]
+    sync["sync"] ---> runtime["runtime"]
+    sync["sync"] ---> sync/atomic["sync/atomic"]
+    sync["sync"] ---> unsafe["unsafe"]
+    internal/bytealg["internal/bytealg"] ---> internal/cpu["internal/cpu"]
+    internal/bytealg["internal/bytealg"] ---> unsafe["unsafe"]
+    errors["errors"] ---> internal/reflectlite["internal/reflectlite"]
+    internal/reflectlite["internal/reflectlite"] ---> runtime["runtime"]
+    internal/reflectlite["internal/reflectlite"] ---> unsafe["unsafe"]
+    math["math"] ---> unsafe["unsafe"]
+    math["math"] ---> internal/cpu["internal/cpu"]
+    math["math"] ---> math/bits["math/bits"]
+    math/bits["math/bits"] ---> unsafe["unsafe"]
+    internal/race["internal/race"] ---> unsafe["unsafe"]
+    sync/atomic["sync/atomic"] ---> unsafe["unsafe"]
+```
