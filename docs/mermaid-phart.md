@@ -67,9 +67,10 @@ flowchart TD
     internal/race["internal/race"] ---> unsafe["unsafe"]
     sync/atomic["sync/atomic"] ---> unsafe["unsafe"]
 ```
-----
 
 I don't want to be defensive, but I didn't set out to build a mermaid diagram source generator, so here are a few plain-text diagrams from phart of the same input data. 
+
+----
 
 Here is the plain text with `--bboxes` and default (legacy/auto) layout strategy:
 
