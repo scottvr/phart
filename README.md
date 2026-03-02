@@ -16,6 +16,9 @@ _\*except NetworkX, which should be mentioned prominently, as rendering NX digra
 - Over ten layout strategies
 - Orthogonal edge paths (all 90 degree turns, "Manhattan" style)
 
+## New! mermaid output
+[`flowchart TD` is now a supported output. Read about it here.](https://github.com/scottvr/phart/blob/main/docs/mermaid-phart.md)
+
 ## New Layout Strategies
 
 See [LAYOUT-STRATEGIES.md](https://github.com/scottvr/phart/blob/main/LAYOUT-STRATEGIES.md) in the repo for some examples of output.
