@@ -226,7 +226,7 @@ it is _clear and correct_, but that if I had to look **thrice** to know that for
 experiment with other layouts, which can get huge, or we could use ANSI color (or html or SVG capture of such output) 
 
 
-But if you're going to have to compromise and use color, you could go instead compromise immediate clarity in plain text output and have that output be  mermaid that your reader can paste into a mermaid viewer, or if you're writing in markdown, you can just embed it as I've done above.  
+But if you're going to have to compromise straight plain-text output by using ANSI color, you could go instead compromise by having that output be  mermaid syntax (`mmd`) that your reader can paste into a mermaid viewer, or if you're writing in markdown, you can just embed it as I've done at the start of this document.  
 
 ----
 
