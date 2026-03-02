@@ -35,7 +35,7 @@ and maybe some other tools. Among the things in that Gallery I found was this de
 
 Pretty cool, huh? Well, one thing that was an early goal in the development of PHART was to be able to go to websites like the one linked above,and find demos of how these systems visualize various graphs, and then to try to get phart to ingest it and see how it works (or doesn't) to represent complex systems of relationships under the very tight constraints it is working with.. It does a pretty good job most of the time, and gets better as I and others attempt things that it hasn't yet done before.
 
-### It's not a Spirograph, it's not yarn art, but better than that - it's from P-HART
+### not a spirograph, it's not yarn art, not better than that - it's just p-hart
 
 So, of course when I saw the code used to generate the image above using NetworkX and matplotlib, I wanted to see if I could get **phart** to handle it. With the recent addition of ANSI color code escape sequences to its limited palettte with which to express itself, I am quite pleased to show you phart's interpretation of the geometric design made by the colored edge paths between nodes as in the image above. Recalll that while phart does have the capabilities originally planned for it - that of drawing rectangles with 7-bit terminal characters, and it has since acquired the ability to translate a graph into a circular layout within those means - still it is, after all, doing so using only orthogonal paths, 90 degree angles... "**Manhattan routing**", as it is sometimes called.
 

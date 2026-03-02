@@ -1,20 +1,288 @@
 # phart does mermaid. mermaid pharts. news at 11.
 
-By request, `--output-file` has another viable target in its `--output-format` directory, with the addition of `mmd`, which is a mermaid TD flowchart.
+By request, `--output` has another viable target in its `--output-format` list of choices, with the addition of `mmd`, which is a mermaid TD flowchart.
 
-It's not n in any way, but if you have a large graph, it can save you a ton of time already, and you can search and replace to change the length 
-suggestion you give to mermaid by the number ofo dashes in an edge, or change it to a thick line, etc with a quick searach-and-replace op in your favorite 
-editor.  
+It's not configurable in any way, but if you have a large graph, it can save you a ton of time if what you want is a mermaid diagram; since mmd is another plain text format, you can search and replace to change the number of dashes in an edge (layout hint), or change it to a thick line (`-` to `==`), etc with a quick searach-and-replace op in your favorite editor. 
 
-Also, just like with screen renders, if you pass -`-label` to the cli, or `use_labels=True` in your LayoutOptions programmatically, then whatever is in 
-the label sttribut for any  given node will be displayed as appropriate. If there is no label, the string representation of whatever type of object it is is used 
+
+Also, just like with screen renders, if you pass `--label` to the cli, or `use_labels=True` in your LayoutOptions programmatically, then whatever is in 
+the label attribute for any  given node will be displayed as appropriate. If there is no label, the string representation of whatever type of object it is is used 
 (id, name, etc), though for mermaid, if there was a long and difficult identifier and no alternative label, the id may look a little wonky (e.g., if it had spaces
-or quotes in it, they were normalized away.) Oh yeah, and if you want to use labels in the output, pass `--label` to the CLI, or set `use_labels=True` if you're 
-using the ASCIIRenderer class programmatically. without it, the node name/is displayed, as with any other rendered output format.
-
-That is all for today. Carry on.  Oh... Below you see the "Go Package Dependency" DAG that I've used for other tests in other documentation you will find 
-here, with the mermaid live editor on the left anad vscode on the right. The DOT file that contains this 50-node graph is in the `examples/` directory in the repo.
+or quotes in it, they were normalized away.) Without enabling labels, the node name/id is displayed, as with any other rendered output format.
 
 ----
 
-<img width="1207" height="600" alt="mermaid-pharts" src="https://github.com/user-attachments/assets/0b4f5e5b-4769-4c55-8419-1c4edbd33d6f" />
+Below you see the ["Go Package Dependency" DAG DOT](https://raw.githubusercontent.com/scottvr/phart/refs/heads/main/examples/go-package.dot) that I've used for other tests in other documentation you will find here. I have embedded the generated mmd inline in the markdown.
+
+
+``` mermaid
+flowchart TD
+    regexp["regexp"] ---> bytes["bytes"]
+    regexp["regexp"] ---> io["io"]
+    regexp["regexp"] ---> regexp/syntax["regexp/syntax"]
+    regexp["regexp"] ---> sort["sort"]
+    regexp["regexp"] ---> strconv["strconv"]
+    regexp["regexp"] ---> strings["strings"]
+    regexp["regexp"] ---> sync["sync"]
+    regexp["regexp"] ---> unicode["unicode"]
+    regexp["regexp"] ---> unicode/utf8["unicode/utf8"]
+    bytes["bytes"] ---> internal/bytealg["internal/bytealg"]
+    bytes["bytes"] ---> io["io"]
+    bytes["bytes"] ---> unicode["unicode"]
+    bytes["bytes"] ---> unicode/utf8["unicode/utf8"]
+    bytes["bytes"] ---> errors["errors"]
+    io["io"] ---> errors["errors"]
+    io["io"] ---> sync["sync"]
+    regexp/syntax["regexp/syntax"] ---> sort["sort"]
+    regexp/syntax["regexp/syntax"] ---> strconv["strconv"]
+    regexp/syntax["regexp/syntax"] ---> strings["strings"]
+    regexp/syntax["regexp/syntax"] ---> unicode["unicode"]
+    regexp/syntax["regexp/syntax"] ---> unicode/utf8["unicode/utf8"]
+    sort["sort"] ---> internal/reflectlite["internal/reflectlite"]
+    strconv["strconv"] ---> internal/bytealg["internal/bytealg"]
+    strconv["strconv"] ---> math["math"]
+    strconv["strconv"] ---> unicode/utf8["unicode/utf8"]
+    strconv["strconv"] ---> errors["errors"]
+    strconv["strconv"] ---> math/bits["math/bits"]
+    strings["strings"] ---> io["io"]
+    strings["strings"] ---> sync["sync"]
+    strings["strings"] ---> unsafe["unsafe"]
+    strings["strings"] ---> errors["errors"]
+    strings["strings"] ---> internal/bytealg["internal/bytealg"]
+    strings["strings"] ---> unicode["unicode"]
+    strings["strings"] ---> unicode/utf8["unicode/utf8"]
+    sync["sync"] ---> internal/race["internal/race"]
+    sync["sync"] ---> runtime["runtime"]
+    sync["sync"] ---> sync/atomic["sync/atomic"]
+    sync["sync"] ---> unsafe["unsafe"]
+    internal/bytealg["internal/bytealg"] ---> internal/cpu["internal/cpu"]
+    internal/bytealg["internal/bytealg"] ---> unsafe["unsafe"]
+    errors["errors"] ---> internal/reflectlite["internal/reflectlite"]
+    internal/reflectlite["internal/reflectlite"] ---> runtime["runtime"]
+    internal/reflectlite["internal/reflectlite"] ---> unsafe["unsafe"]
+    math["math"] ---> unsafe["unsafe"]
+    math["math"] ---> internal/cpu["internal/cpu"]
+    math["math"] ---> math/bits["math/bits"]
+    math/bits["math/bits"] ---> unsafe["unsafe"]
+    internal/race["internal/race"] ---> unsafe["unsafe"]
+    sync/atomic["sync/atomic"] ---> unsafe["unsafe"]
+```
+
+I don't want to be defensive, but I didn't set out to build a mermaid diagram source generator, so here are a few plain-text diagrams from phart of the same input data. 
+
+----
+
+Here is the plain text with `--bboxes` and default (legacy/auto) layout strategy:
+
+```
+                                 ┌────────┐
+                                 │ regexp │
+                                 └────────┘
+                           ┌──────────┼─────┐
+                           v          ├┐    v
+                       ┌───────┐────┌───────────────┐
+                       │ bytes │    │─regexp/syntax │
+                       └───────┘    └───────────────┘
+                       ├───┼────────┼─┼┼────┼──────┐
+                       v   │        v ││    │      v
+          ┌────────┌──────┐┤   ┌─────────┐  ├─┌─────────┐
+          │   ┌────│─sort─│┤   │ strconv │  │ │ strings │
+          │   │    └──────┘│   └─────────┘  │ └─────────┘
+          ├───┼───┬────┴───┴┬───────┼─┼┼────┴──────┼─────────────────┐
+          v   │   │         v┌──────┤ │v           v                 v
+┌──────────────────┐    ┌──────┐    ┌────┐────┌─────────┐────┌──────────────┐
+│ internal/bytealg││    │ math │    │ io │    │ unicode─│────│─unicode/utf8 │
+└──────────────────┘    └──────┘    └────┘    └─────────┘    └──────────────┘
+          ├───┼───┼─────────┼┼──────┴──┴────────┬──┼────────────┤
+          │   v   │         │v ┌────────────────v──┘            v
+         ┌────────┐    ┌───────────┐    ┌──────────────┐    ┌──────┐
+         ││errors │    │ math/bits │    │ internal/cpu │    │ sync │
+         └────────┘    └───────────┘    └──────────────┘    └──────┘
+          │   └───┤          └─┤          ┌───────────────────┬─┤
+          │       v            │          v  ┌────────────────v─┤
+      ┌──────────────────────┐─┤  ┌───────────────┐    ┌─────────────┐
+      │ internal/reflectlite │ │  │ internal/race │    │ sync/atomic │
+      └──────────────────────┘ │  └───────────────┘    └─────────────┘
+                  └────────────┼──────────┴──┼────────────────┴─┘
+                               v             v
+                          ┌────────┐    ┌─────────┐
+                          │ unsafe │    │ runtime │
+                          └────────┘    └─────────┘
+```
+
+We can change a few options to make some things less ambiguous. Using color would also eliminate the ambiguities and allow the layout to remain compact (and, in context, where you know this is a directed graph, it really isn't any more ambiguous than the mermaid SVG above, since if there is no arrowhead at an intersection, then the path does not terminate there - it is either originating there or "just passing through", but sometimes due to the low grid resolution and forgetting that context, we might look for other layout options).  In fact, having said that I realize that the context makes the bottom layer (above) unclear - how many edges terminate at [unsafe] vs how many at [runtime]? 
+
+----
+
+We can clarify that with `--edge-anchors ports`:
+
+```
+ $ phart --bboxes --layer-spacing 4 --vpad 0 --hpad 2    --node-spacing 4  --labels --edge-anchors ports go-package.dot
+                                     ┌──────────┐
+                                     │  regexp  │
+                                     └──────────┘
+                                ┌─────┼┘ ││└┼┼┼┼─┐
+                                │     │  ││ ││││ │
+                                v     │  ││ ││││ v
+                          ┌─────────┐─┘  ┌─────────────────┐
+                          │ │bytes  │    ││ regexp/syntax  │
+                          └─────────┘    └─────────────────┘
+                  ┌────────┘│    └┼┼─────┤││ │││     │ ├─┘└──────────────┐
+                  │         │┌────┼┼─────┼┼┼─┼┤│     │ │                 │
+                  │         vv    ││     ││v │v│     v v                 │
+                  │  ┌────────┐   │┌───────────┐────┌───────────┐───┐    │
+                  │  │  sort│ │   ││  strconv└─│────│─┐strings  │   │    │
+                  │  └────────┘   │└───────────┘    └───────────┘   │    │
+                  │       │ │     ││││││ ││   ││     ││││ │   ││    │    │
+                  │┌┬─────┼─┼───┬─┴┴┴┼┴┼─┼┼───┼┴─────┼┼┼┴─┼───┼┴────┼─┬┬┬┼┐
+                  vvv     │ │   v    │ │ vv   v      vvv  v   │     │ vvvvv
+┌────────────────────┐────┌────────┐ │ │┌──────┐    ┌───────────┐   │┌────────────────┐
+│  internal/bytealg  │    │  math  │ │ ││  io  │    │ │unicode│ │   ││  unicode/utf8  │
+└────────────────────┘    └────────┘ │ │└──────┘    └───────────┘   │└────────────────┘
+                 │ ├┼─────┼────┼─┼┼──┼─┼─┘    │       ││      │     │
+                 │┌┼┼─────┼────┼─┼┴──┴─┼──────┼┬──────┴┼──────┴─────┼┬┐
+                 vvvv     │    v┌┘     v      vv       │            vvv
+          ┌──────────┐    ┌─────────────┐────┌────────────────┐    ┌────────┐
+          │  errors│ │    │  math/bits  │    │  internal/cpu  │    │  sync  │
+          └──────────┘    └─────────────┘    └────────────────┘    └────────┘
+                │  │      │     ││   │          ┌───────────────────┼┘├┘
+                │  │      │     ││   │          │       ┌───────────┼─┤
+                v  │      v     ││   │          v       │           │ v
+        ┌────────────────────────┐   │┌─────────────────┐    ┌───────────────┐
+        │  internal/reflectlite ││   ││  internal/race  │    │  sync/atomic  │
+        └────────────────────────┘   │└─────────────────┘    └───────────────┘
+                              ││││   │        │         │           │
+                              ││├┼──┬┼┬┬──────┼─────────┼───────────┘
+                              vvvv  vvvv      v         v
+                             ┌──────────┐    ┌───────────┐
+                             │  unsafe  │    │  runtime  │
+                             └──────────┘    └───────────┘
+```
+
+----
+
+Alles Klar? Nein?  We can go bigger:
+
+```
+$  phart --bboxes --layer-spacing 4 --vpad 1 --hpad 2    --node-spacing 4  --labels --edge-anchors ports --uniform go-package.dot
+                                                            ┌────────────────────────┐
+                                                            │                        │
+                                                            │         regexp         │
+                                                            │                        │
+                                                            └────────────────────────┘
+                                                           ┌─┼┘         ││      └┼┼┼┼──┐
+                                                           │ │          ││       ││││  │
+                                                           v │          ││       ││││  v
+                                             ┌────────────────────────┐ ││ ┌────────────────────────┐
+                                             │       │                │ ││ │      │││      │        │
+                                             │       │ bytes          │ ││ │     regexp/syntax      │
+                                             │       │                │ ││ │      │││      │        │
+                                             └────────────────────────┘ ││ └────────────────────────┘
+                      ┌───────────────────────┘│     │       ┌─────┘││  ││  ││    │││      │┌────┘│└────────────────────────┐
+                      │             ┌──────────┘     │┌──────┼──────┼┼──┼┼──┘└────┼┼┤      ││┌────┘                         │
+                      │             │                vv      │      ││  │v        ││v      vv│                              │
+                      │       ┌────────────────────────┐    ┌────────────────────────┐────┌────────────────────────┐        │
+                      │       │     │                  │    ││      ││  │         └─┼│────│─┐│            │        │        │
+                      │       │     │    sort          │    ││      │strconv        ││    │ ││     strings│        │        │
+                      │       │     │                  │    ││      ││  │           ││    │ ││            │        │        │
+                      │       └────────────────────────┘    └────────────────────────┘    └────────────────────────┘        │
+                      │             │      │                 ││││   ││  │           │      ││││        │  │ ┌────┘│         │
+                      │┌┬───────────┼──────┼┬────────────────┼┼┴┼───┴┴──┼───────────┼──────┼┼┼┴────────┼──┼─┼─────┴──────┬┬┬┼┐
+                      vvv           │      │v                v│ └────┐  v           v      vvv         v  │ │            vvvvv
+┌────────────────────────┐    ┌────────────────────────┐    ┌────────────────────────┐    ┌────────────────────────┐    ┌────────────────────────┐
+│                        │    │     │      │           │    │ │      │               │    │ ││            │ │      │    │                        │
+│    internal/bytealg    │    │     │    math          │    │ │      │  io           │    │ ││     unicode│ │      │    │      unicode/utf8      │
+│                        │    │     │      │           │    │ │      │               │    │ ││            │ │      │    │                        │
+└────────────────────────┘    └────────────────────────┘    └────────────────────────┘    └────────────────────────┘    └────────────────────────┘
+                       ││           │┌─────┼────────┼┼┼──────┘│      │              │       ││            │ │
+                       │└───────────┼┼┬┬───┼──┬─────┴┼┴───────┴──────┼──────┬┬──────┴───────┴┼────────────┼┐│
+                       │            vvvv   │  v  ┌───┘               v      vv               │            vvv
+               ┌────────────────────────┐  │ ┌────────────────────────┐────┌────────────────────────┐    ┌────────────────────────┐
+               │       │                │  │ │   │                  │ │    │                        │    │                        │
+               │       │ errors         │  │ │   │   math/bits      │ │    │      internal/cpu      │    │          sync          │
+               │       │                │  │ │   │                  │ │    │                        │    │                        │
+               └────────────────────────┘  │ └────────────────────────┘    └────────────────────────┘    └────────────────────────┘
+                       │     └─┐           │     │        │         │     ┌───────────────────────────────┼┘││
+                       │       │           │     │        │         │     │                        ┌────┬─┼─┴┘
+                       │       v           v     │        │         │     v                        │    v │
+                       └──────┌────────────────────────┐  │ ┌────────────────────────┐    ┌────────────────────────┐
+                              │               │  │     │  │ │       │                │    │        │      │        │
+                              │  internal/reflectlite  │  │ │     internal/race      │    │      sync/atomic       │
+                              │               │  │     │  │ │       │                │    │        │      │        │
+                              └────────────────────────┘  │ └────────────────────────┘    └────────────────────────┘
+                                              │┌─┼───┘│   │         │   │                          │  │   │
+                                              ││ │    └───┼───────┬┬┼┬──┴───┬──────────────────────┼──┴───┘
+                                              vv v        v       vvvv      v                      v
+                                             ┌────────────────────────┐    ┌────────────────────────┐
+                                             │                        │    │                        │
+                                             │         unsafe         │    │        runtime         │
+                                             │                        │    │                        │
+                                             └────────────────────────┘    └────────────────────────┘
+```
+
+
+At first glance that one looks great to me, but then when I look longer I think there's some ambiguity, and then when looking longer I realize that 
+it is _clear and correct_, but that if I had to look **thrice** to know that for sure, it is then a little  "ambiguous" by definition, right? So we can 
+experiment with other layouts, which can get huge, or we could use ANSI color (or html or SVG capture of such output) 
+
+
+But if you're going to have to compromise straight plain-text output by using ANSI color, you could go instead compromise by having that output be  mermaid syntax (`mmd`) that your reader can paste into a mermaid viewer, or if you're writing in markdown, you can just embed it as I've done at the start of this document.  
+
+----
+
+And lastly, here's the raw `mmd` output, without letting markdown render it for us:
+
+```
+flowchart TD
+    regexp["regexp"] ---> bytes["bytes"]
+    regexp["regexp"] ---> io["io"]
+    regexp["regexp"] ---> regexp/syntax["regexp/syntax"]
+    regexp["regexp"] ---> sort["sort"]
+    regexp["regexp"] ---> strconv["strconv"]
+    regexp["regexp"] ---> strings["strings"]
+    regexp["regexp"] ---> sync["sync"]
+    regexp["regexp"] ---> unicode["unicode"]
+    regexp["regexp"] ---> unicode/utf8["unicode/utf8"]
+    bytes["bytes"] ---> internal/bytealg["internal/bytealg"]
+    bytes["bytes"] ---> io["io"]
+    bytes["bytes"] ---> unicode["unicode"]
+    bytes["bytes"] ---> unicode/utf8["unicode/utf8"]
+    bytes["bytes"] ---> errors["errors"]
+    io["io"] ---> errors["errors"]
+    io["io"] ---> sync["sync"]
+    regexp/syntax["regexp/syntax"] ---> sort["sort"]
+    regexp/syntax["regexp/syntax"] ---> strconv["strconv"]
+    regexp/syntax["regexp/syntax"] ---> strings["strings"]
+    regexp/syntax["regexp/syntax"] ---> unicode["unicode"]
+    regexp/syntax["regexp/syntax"] ---> unicode/utf8["unicode/utf8"]
+    sort["sort"] ---> internal/reflectlite["internal/reflectlite"]
+    strconv["strconv"] ---> internal/bytealg["internal/bytealg"]
+    strconv["strconv"] ---> math["math"]
+    strconv["strconv"] ---> unicode/utf8["unicode/utf8"]
+    strconv["strconv"] ---> errors["errors"]
+    strconv["strconv"] ---> math/bits["math/bits"]
+    strings["strings"] ---> io["io"]
+    strings["strings"] ---> sync["sync"]
+    strings["strings"] ---> unsafe["unsafe"]
+    strings["strings"] ---> errors["errors"]
+    strings["strings"] ---> internal/bytealg["internal/bytealg"]
+    strings["strings"] ---> unicode["unicode"]
+    strings["strings"] ---> unicode/utf8["unicode/utf8"]
+    sync["sync"] ---> internal/race["internal/race"]
+    sync["sync"] ---> runtime["runtime"]
+    sync["sync"] ---> sync/atomic["sync/atomic"]
+    sync["sync"] ---> unsafe["unsafe"]
+    internal/bytealg["internal/bytealg"] ---> internal/cpu["internal/cpu"]
+    internal/bytealg["internal/bytealg"] ---> unsafe["unsafe"]
+    errors["errors"] ---> internal/reflectlite["internal/reflectlite"]
+    internal/reflectlite["internal/reflectlite"] ---> runtime["runtime"]
+    internal/reflectlite["internal/reflectlite"] ---> unsafe["unsafe"]
+    math["math"] ---> unsafe["unsafe"]
+    math["math"] ---> internal/cpu["internal/cpu"]
+    math["math"] ---> math/bits["math/bits"]
+    math/bits["math/bits"] ---> unsafe["unsafe"]
+    internal/race["internal/race"] ---> unsafe["unsafe"]
+    sync/atomic["sync/atomic"] ---> unsafe["unsafe"]
+```
+
+Cheers!
