@@ -109,7 +109,7 @@ Here is the plain text with `--bboxes` and default (legacy/auto) layout strategy
                           └────────┘    └─────────┘
 ```
 
-Changing a few options to make some things less ambiguous (also, using color would eliminate the ambiguities and allow the layout to remain compact. Also also, in context, where you know this is a directed graph, it really isn't any more ambiguous than the mermaid SVG above, since if there is no arrowhead at aan intersection, then the path does not terminate there - it is either originating there or "just passing through", but sometimes due to the low grid reolution and forgetting that context, we might look for other layout options). In fact, having said that I realize that the context makes the bottom layer unclear - how many edges terminate at [unsafe] vs how many at [runtime]? 
+We can change a few options to make some things less ambiguous. Using color would also eliminate the ambiguities and allow the layout to remain compact (and, in context, where you know this is a directed graph, it really isn't any more ambiguous than the mermaid SVG above, since if there is no arrowhead at an intersection, then the path does not terminate there - it is either originating there or "just passing through", but sometimes due to the low grid reolution and forgetting that context, we might look for other layout options).  In fact, having said that I realize that the context makes the bottom layer (above) unclear - how many edges terminate at [unsafe] vs how many at [runtime]? 
 
 ----
 
