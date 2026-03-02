@@ -268,8 +268,8 @@ class ASCIIRenderer:
         return colors_mod.initialize_color_maps(self, positions)
 
     def mermaid_out(self: ASCIIRenderer) -> str:
+        str_ = "flowchart TD"
         try:
-            str_ = "flowchart TD"
             # maybe do something where we find the shortest and longest edges
             # and depending on the disparity, maybe we make them longer here. Or, we  couldl expose a flag
             for u, v in self.graph.edges():
