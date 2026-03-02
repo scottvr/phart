@@ -6,7 +6,7 @@ It's not n in any way, but if you have a large graph, it can save you a ton of t
 suggestion you give to mermaid by the number ofo dashes in an edge, or change it to a thick line, etc with a quick searach-and-replace op in your favorite 
 editor.  
 
-Also, just like with screen renders, if you pass -`-label` tp tje cli, or `use_labels=True` in your LayoutOptions programmatically, then whatever is in 
+Also, just like with screen renders, if you pass -`-label` to the cli, or `use_labels=True` in your LayoutOptions programmatically, then whatever is in 
 the label sttribut for any  given node will be displayed as appropriate. If there is no label, the string representation of whatever type of object it is is used 
 (id, name, etc), though for mermaid, if there was a long and difficult identifier and no alternative label, the id may look a little wonky (e.g., if it had spaces
 or quotes in it, they were normalized away.) Oh yeah, and if you want to use labels in the output, pass `--label` to the CLI, or set `use_labels=True` if you're 
