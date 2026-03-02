@@ -2,7 +2,7 @@
 
 By request, `--output-file` has another viable target in its `--output-format` directory, with the addition of `mmd`, which is a mermaid TD flowchart.
 
-It's not comfigurable in any way, but if you have a large graph, it can save you a ton of time already, and you can search and replace to change the length 
+It's not n in any way, but if you have a large graph, it can save you a ton of time already, and you can search and replace to change the length 
 suggestion you give to mermaid by the number ofo dashes in an edge, or change it to a thick line, etc with a quick searach-and-replace op in your favorite 
 editor.  
 
