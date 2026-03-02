@@ -13,7 +13,7 @@ or quotes in it, they were normalized away.) Oh yeah, and if you want to use lab
 using the ASCIIRenderer class programmatically. without it, the node name/is displayed, as with any other rendered output format.
 
 That is all for today. Carry on.  Oh... Below you see the "Go Package Dependency" DAG that I've used for other tests in other documentation you will find 
-here, with the mermaid live editor on tje left anad vscode on the right. The DOT file that contains this 50-node graph is in the `examples/` directory in the repo.
+here, with the mermaid live editor on the left anad vscode on the right. The DOT file that contains this 50-node graph is in the `examples/` directory in the repo.
 
 ----
 
