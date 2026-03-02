@@ -10,7 +10,7 @@ the label attribute for any  given node will be displayed as appropriate. If the
 (id, name, etc), though for mermaid, if there was a long and difficult identifier and no alternative label, the id may look a little wonky (e.g., if it had spaces
 or quotes in it, they were normalized away.) Without enabling labels, the node name/id is displayed, as with any other rendered output format.
 
-That is all for today. Carry on.  Oh... Below you see the "Go Package Dependency" DAG that I've used for other tests in other documentation you will find here. Ive embedded the generated mmd inline in the markdown.
+That is all for today. Carry on.  Oh... Below you see the ["Go Package Dependency" DAG DOT](https://raw.githubusercontent.com/scottvr/phart/refs/heads/main/examples/go-package.dot) that I've used for other tests in other documentation you will find here. Ive embedded the generated mmd inline in the markdown.
 
 ----
 
