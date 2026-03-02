@@ -286,12 +286,20 @@ def assign_monotone_port_indices(
     return chosen
 
 
-def rebalance_edge_end_faces(
+def rebalance_edge_face_role(
     renderer: ASCIIRenderer,
     edge_specs: List[Dict[str, Any]],
     positions: Dict[Any, Tuple[int, int]],
+    role: str,
 ) -> None:
-    """Move oversubscribed destination endpoints to alternate faces when possible."""
+    """Move oversubscribed edge endpoints for one role to alternate faces."""
+    node_key = f"{role}_node"
+    side_key = f"{role}_side"
+    default_side_key = f"default_{role}_side"
+    counter_key = f"{role}_counter"
+    candidates_key = f"{role}_candidates"
+    peer_role = "end" if role == "start" else "start"
+    peer_node_key = f"{peer_role}_node"
     face_capacity: Dict[Tuple[Any, str], int] = {}
     face_counts: Dict[Tuple[Any, str], int] = {}
     node_bounds_cache: Dict[Any, Dict[str, int]] = {}
@@ -311,8 +319,8 @@ def rebalance_edge_end_faces(
         return face_capacity[key]
 
     for spec in edge_specs:
-        end_key = (spec["end_node"], spec["end_side"])
-        face_counts[end_key] = face_counts.get(end_key, 0) + 1
+        face = (spec[node_key], spec[side_key])
+        face_counts[face] = face_counts.get(face, 0) + 1
 
     while True:
         oversubscribed_faces = sorted(
@@ -334,10 +342,10 @@ def rebalance_edge_end_faces(
             node, current_side = face
             node_bounds = _get_bounds(node)
             for spec in edge_specs:
-                if spec["end_node"] != node or spec["end_side"] != current_side:
+                if spec[node_key] != node or spec[side_key] != current_side:
                     continue
 
-                peer_bounds = _get_bounds(spec["start_node"])
+                peer_bounds = _get_bounds(spec[peer_node_key])
                 peer_center = (peer_bounds["center_x"], peer_bounds["center_y"])
 
                 for alt_side in face_order:
@@ -364,7 +372,7 @@ def rebalance_edge_end_faces(
                     score = (
                         abs(alt_anchor[0] - peer_center[0])
                         + abs(alt_anchor[1] - peer_center[1])
-                        + side_change_penalty(spec["default_end_side"], alt_side)
+                        + side_change_penalty(spec[default_side_key], alt_side)
                         + (2 * face_counts.get(alt_face, 0))
                     )
                     move_key = (
@@ -388,14 +396,14 @@ def rebalance_edge_end_faces(
             return
 
         _move_key, spec, alt_side, alt_counter, alt_candidates = best_move
-        old_face = (spec["end_node"], spec["end_side"])
-        new_face = (spec["end_node"], alt_side)
+        old_face = (spec[node_key], spec[side_key])
+        new_face = (spec[node_key], alt_side)
         face_counts[old_face] -= 1
         face_counts[new_face] = face_counts.get(new_face, 0) + 1
-        spec["end_side"] = alt_side
-        spec["end_counter"] = alt_counter
-        spec["end_candidates"] = alt_candidates
-        spec["axis_delta"] = abs(spec["start_counter"] - alt_counter)
+        spec[side_key] = alt_side
+        spec[counter_key] = alt_counter
+        spec[candidates_key] = alt_candidates
+        spec["axis_delta"] = abs(spec["start_counter"] - spec["end_counter"])
 
 
 def compute_edge_anchor_map(
@@ -433,6 +441,7 @@ def compute_edge_anchor_map(
                 "edge_key": (start, end),
                 "start_node": start,
                 "start_side": start_side,
+                "default_start_side": start_side,
                 "start_counter": start_counter,
                 "start_candidates": start_candidates,
                 "end_node": end,
@@ -445,7 +454,8 @@ def compute_edge_anchor_map(
         )
 
     if renderer.options.minimize_shared_ports:
-        rebalance_edge_end_faces(renderer, edge_specs, positions)
+        rebalance_edge_face_role(renderer, edge_specs, positions, "start")
+        rebalance_edge_face_role(renderer, edge_specs, positions, "end")
 
     edge_anchor_map: Dict[Tuple[Any, Any], Dict[str, Any]] = {}
     used_by_side: Dict[Tuple[Any, str], List[int]] = {}
