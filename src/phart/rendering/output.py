@@ -188,6 +188,18 @@ def _latex_escape_text(text: str) -> str:
     return encoded
 
 
+def render_as_mmd(
+    renderer: ASCIIRenderer,
+    *,
+    type: str = "flowchart",
+    direction: str = "TD",
+) -> str:
+    renderer.render()
+    type = "flowchart"
+    direction = "TD"
+    return "\n".join([type, direction])
+
+
 def render_latex_markdown(
     renderer: ASCIIRenderer,
     *,
@@ -237,5 +249,5 @@ def render_latex_markdown(
             )
 
         latex_lines.append("${" + "".join(segments) + "}$")
-    # Blank lines are required; otherwise GFM can merge adjacent math lines.
+        # Blank lines are required; otherwise GFM can merge adjacent math lines.
     return "\n\n".join(latex_lines) + ("\n" if latex_lines else "")

@@ -267,6 +267,34 @@ class ASCIIRenderer:
     def _initialize_color_maps(self, positions: Dict[Any, Tuple[int, int]]) -> None:
         return colors_mod.initialize_color_maps(self, positions)
 
+    def mermaid_out(self: ASCIIRenderer) -> str:
+        try:
+            str_ = "flowchart TD"
+            # maybe do something where we find the shortest and longest edges
+            # and depending on the disparity, maybe we make them longer here. Or, we  couldl expose a flag
+            for u, v in self.graph.edges():
+                ulabel = vlabel = ""
+                if self.options.use_labels:
+                    if "label" in self.graph.nodes[u]:
+                        ulabel = self.graph.nodes[u]["label"]
+                    if "label" in self.graph.nodes[v]:
+                        vlabel = self.graph.nodes[v]["label"]
+                if ulabel == "":
+                    ulabel = u
+                if vlabel == "":
+                    vlabel = v
+                unostr = ulabel.replace(" ", "")
+                vnostr = vlabel.replace(" ", "")
+                unostr = ulabel.replace('"', "")
+                vnostr = vlabel.replace('"', "")
+                str_ += f"\n    {unostr}[{ulabel}] ---> {vnostr}[{vlabel}]"
+        except nx.NetworkXError as e:
+            print(f"An error occurred: {e}")
+
+        finally:
+            pass
+        return str(str_)
+
     def _paint_cell(
         self, x: int, y: int, char: str, color: Optional[str] = None
     ) -> None:
