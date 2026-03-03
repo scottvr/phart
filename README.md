@@ -48,7 +48,7 @@ Regarding `shared_ports_mode` (added to LayoutOptions in styles.py) and exposed 
 - `minimize`: avoid reuse on the same face by expanding to the rest of that face before sharing a terminal slot.
 - `none`: do the minimize behavior, and also rebalance endpoints across other node faces so sharing is avoided until the node has no free terminal slots left anywhere.
 
-When debugging testing changes or debugging expected rendered graph output, I make use of
+When testing changes or debugging expected rendered graph output, I make use of
 variations on:
 
 ```bash
