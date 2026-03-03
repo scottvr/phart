@@ -1,7 +1,6 @@
 # phart
 
-**PHART:** The Python Hierarchical ASCII Representation Tool - A Pure Python graph visualization in ASCII, no external dependencies\*
-_\*except NetworkX, which should be mentioned prominently, as rendering NX digraphs as ASCII was the entire reason for phart's creation. but **phart** will **not** require you to stand up a webserver to run PHP and install Perl and some libraries just to render a Graph in 7-bit text (or UTF-8 or Unicode) from Python._
+**PHART:** The Python Hierarchical ASCII Representation Tool - A Pure Python tool for graph visualization via charts and diagrams rendered in ASCII.
 
 ## Features
 
