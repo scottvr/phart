@@ -44,6 +44,8 @@ CLI_LAYOUT_FIELD_MAP = {
     "--btree": {"binary_tree_layout"},
     "--layout": {"layout_strategy"},
     "--layout-strategy": {"layout_strategy"},
+    "--node-order": {"node_order_mode"},
+    "--node-order-attr": {"node_order_attr"},
     "--flow-direction": {"flow_direction"},
     "--flow": {"flow_direction"},
     "--bboxes": {"bboxes"},
@@ -233,6 +235,28 @@ def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
         dest="layout_strategy",
         default="auto",
         help="Node positioning strategy (default: auto)",
+    )
+    parser.add_argument(
+        "--node-order",
+        choices=[
+            "layout-default",
+            "preserve",
+            "alpha",
+            "natural",
+            "numeric",
+            "attr",
+        ],
+        default="layout-default",
+        help=(
+            "Node ordering policy: layout-default (default), preserve, alpha, "
+            "natural, numeric, or attr"
+        ),
+    )
+    parser.add_argument(
+        "--node-order-attr",
+        type=str,
+        default=None,
+        help="Node attribute name used when --node-order attr is selected",
     )
     parser.add_argument(
         "--flow-direction",
@@ -435,6 +459,8 @@ def create_layout_options(
         use_ascii=use_ascii,
         binary_tree_layout=binary_tree_layout,
         layout_strategy=layout_strategy,
+        node_order_mode=args.node_order,
+        node_order_attr=args.node_order_attr,
         flow_direction=args.flow_direction,
         bboxes=args.bboxes,
         hpad=args.hpad,

@@ -825,6 +825,8 @@ def merge_layout_options(
         "layer_spacing",
         "binary_tree_layout",
         "layout_strategy",
+        "node_order_mode",
+        "node_order_attr",
         "left_padding",
         "right_padding",
         "margin",

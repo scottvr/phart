@@ -1,5 +1,6 @@
 """Targeted tests for layout-specific branches."""
 
+import math
 import unittest
 
 import networkx as nx  # type: ignore
@@ -9,6 +10,24 @@ from phart.styles import LayoutOptions, NodeStyle
 
 
 class TestLayoutManager(unittest.TestCase):
+    @staticmethod
+    def _clockwise_order_from_top(
+        positions: dict[object, tuple[int, int]]
+    ) -> list[object]:
+        center_x = sum(x for x, _ in positions.values()) / max(len(positions), 1)
+        center_y = sum(y for _, y in positions.values()) / max(len(positions), 1)
+
+        return sorted(
+            positions,
+            key=lambda node: (
+                math.atan2(
+                    positions[node][0] - center_x,
+                    center_y - positions[node][1],
+                )
+                % (2 * math.pi)
+            ),
+        )
+
     def test_binary_tree_sorter_is_used_with_side_attributes(self):
         """When binary_tree_layout is enabled, side attributes beat alpha order."""
         graph = nx.DiGraph()
@@ -243,6 +262,64 @@ class TestLayoutManager(unittest.TestCase):
                 self.assertFalse(
                     manager._rectangles_overlap(rect_a, rect_b)  # noqa: SLF001
                 )
+
+    def test_circular_layout_uses_natural_order_by_default(self):
+        graph = nx.DiGraph()
+        graph.add_nodes_from([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+
+        manager = LayoutManager(
+            graph,
+            LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="circular",
+                use_ascii=True,
+            ),
+        )
+        positions, _, _ = manager.calculate_layout()
+
+        self.assertEqual(
+            self._clockwise_order_from_top(positions),
+            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+        )
+
+    def test_circular_layout_can_preserve_graph_insertion_order(self):
+        graph = nx.DiGraph()
+        insertion_order = [0, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
+        graph.add_nodes_from(insertion_order)
+
+        manager = LayoutManager(
+            graph,
+            LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="circular",
+                node_order_mode="preserve",
+                use_ascii=True,
+            ),
+        )
+        positions, _, _ = manager.calculate_layout()
+
+        self.assertEqual(self._clockwise_order_from_top(positions), insertion_order)
+
+    def test_node_order_attr_sorts_nodes_by_attribute_value(self):
+        graph = nx.DiGraph()
+        graph.add_node("third", rank=3)
+        graph.add_node("first", rank=1)
+        graph.add_node("second", rank=2)
+
+        manager = LayoutManager(
+            graph,
+            LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                node_order_mode="attr",
+                node_order_attr="rank",
+                use_ascii=True,
+            ),
+        )
+
+        self.assertEqual(
+            manager._ordered_nodes(graph.nodes(), default_mode="alpha"),  # noqa: SLF001
+            ["first", "second", "third"],
+        )
 
     def test_planar_layout_strategy_positions_nodes(self):
         graph = nx.DiGraph(
