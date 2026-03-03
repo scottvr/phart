@@ -42,7 +42,7 @@ Also added were:
                         at both ends; separate draws each direction independently
 ```
 
-Regarding `shared_ports_mode` (added to LayoutOptions in styles.py) and exposed in the cli as `--shared-ports <any|minimize|none>`:
+Regarding `shared_ports_mode` (added to LayoutOptions in styles.py) and exposed in the cli as `--shared-ports {any,minimize,none}`:
 
 - `any`: legacy compact behavior. Reuse within the local face pool is allowed once that local pool is exhausted. This is the default.
 - `minimize`: avoid reuse on the same face by expanding to the rest of that face before sharing a terminal slot.
