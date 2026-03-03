@@ -110,9 +110,7 @@ Having rambled on long enough now, let me show you phart's latest masterpiece of
 
 <img width="700" height="700" alt="rainbow-coloring-13-nodes-correct-sorting" src="https://github.com/user-attachments/assets/0673464c-aca2-48fe-a9bf-d600fe05373e" />
 
-Here is the original cool-but-incorrect render I had done before:
-
-[Original broken-sort image](https://github.com/user-attachments/assets/ac28aa5c-b6b2-4a23-a03f-4a6839076c55")
+Here is the original cool-but-incorrect render I had done before: [Original broken-sort image](https://github.com/user-attachments/assets/ac28aa5c-b6b2-4a23-a03f-4a6839076c55")
 
 <br />
 
