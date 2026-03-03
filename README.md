@@ -47,8 +47,13 @@ If you did the math, you know that there are 78 connections to account for in th
 
 Having rambled on long enough now, let me show you phart's latest masterpiece of ASCII Art (ok, I used Unicode characters in this one, and phart colored it them with ANSI color escape codes, but it's still plain text!). It's rendering is quite fetching in its own way I think.  
 
+(note: I had previously uploaded a cool-looking but incorrect due to incorrect node sorting I hadn't noticed at the time. I'll link the original uploaded image  so I don't look like I bait-and-switched anyone who saw my post about it which brought them here.)
 
-<img width="800" height="800" alt="NX-complete-graph" src="https://github.com/user-attachments/assets/ac28aa5c-b6b2-4a23-a03f-4a6839076c55" />  
+<img width="700" height="700" alt="rainbow-coloring-13-nodes-correct-sorting" src="https://github.com/user-attachments/assets/0673464c-aca2-48fe-a9bf-d600fe05373e" />
+
+Here is the original cool-but-incorrect render I had done before:
+
+[Original broken-sort image](https://github.com/user-attachments/assets/ac28aa5c-b6b2-4a23-a03f-4a6839076c55")
 
 <br />  
 
