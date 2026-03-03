@@ -405,7 +405,7 @@ To install all `extra` requirements (e.g., `fonttools` for svg rendering support
 
 ## The CLI
 
-````bash
+```bash
 usage: phart [-h] [--output OUTPUT] [--version] [--output-format {ditaa,ditaa-puml,html,latex-markdown,mmd,svg,text}]
              [--style {minimal,square,round,diamond,custom,bbox}] [--node-spacing NODE_SPACING]
              [--layer-spacing LAYER_SPACING] [--charset {ascii,ansi,unicode}] [--ascii] [--function FUNCTION]
@@ -483,7 +483,7 @@ options:
                         Font file path required when --svg-text-mode path is used
   --svg-fg SVG_FG       Foreground color for SVG/HTML/LaTeX output
   --svg-bg SVG_BG       Background color for SVG/HTML output
-  ```
+```
 
 ## Quick Start
 
@@ -681,4 +681,3 @@ do something cool with it, or if it breaks on your graph.
 ## License
 
 MIT License
-````
