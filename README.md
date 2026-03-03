@@ -108,11 +108,9 @@ Having rambled on long enough now, let me show you phart's latest masterpiece of
 
 (note: I had previously uploaded a cool-looking render that was incorrect node sorting I hadn't noticed at the time. I'll link the original uploaded image so I don't look like I bait-and-switched anyone who saw my post about it which brought them here.)
 
-<img width="700" height="700" alt="rainbow-coloring-13-nodes-correct-sorting" src="https://github.com/user-attachments/assets/41a402f1-4443-491e-9033-fa5795b7cf9d" />
+<img width="700" height="700" alt="rainbow-coloring-13-nodes-correct-sorting" src="https://github-production-user-asset-6210df.s3.amazonaws.com/7464239/557415439-0673464c-aca2-48fe-a9bf-d600fe05373e.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAVCODYLSA53PQK4ZA%2F20260303%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260303T122543Z&X-Amz-Expires=300&X-Amz-Signature=8fda4e9a903a6942f211a2c28bbfd97fdfe0e913150b0cb24afe7e1b67020d2f&X-Amz-SignedHeaders=host" />
 
-Here is the original cool-but-incorrect render I had done before: [Original broken-sort image](https://github.com/user-attachments/assets/ac28aa5c-b6b2-4a23-a03f-4a6839076c55")
-
-<br />
+Here is the original cool-but-incorrect render I had done before; the "rainbow" is not the same pattern due to some nodes being out if order, so the length-based color is askew for several edges: <img width="700" height="700"  src="https://github.com/user-attachments/assets/41a402f1-4443-491e-9033-fa5795b7cf9d" />
 
 ---
 
