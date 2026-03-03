@@ -72,6 +72,10 @@ You probably won't need it.
 
 [`flowchart TD` is now a supported output. Read about it here.](https://github.com/scottvr/phart/blob/main/docs/mermaid-phart.md)
 
+TL;DR:
+- `--output-format mmd` along with, optionally `--output yourfile.mmd` (or you can just redirect stdout with `> yourfile.md`
+Will generate a Mermaid `flowchart TD` from your graph.
+
 ## New Layout Strategies
 
 See [LAYOUT-STRATEGIES.md](https://github.com/scottvr/phart/blob/main/LAYOUT-STRATEGIES.md) in the repo for some examples of output.
