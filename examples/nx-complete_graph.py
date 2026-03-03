@@ -14,7 +14,7 @@ node_dist_to_color = {
     1: "red",
     2: "orange",
     3: "green",
-    4: "bright_green",
+    4: "light_green",
     5: "blue",
     6: "magenta",
 }
@@ -23,7 +23,7 @@ node_dist_to_color = {
 G = nx.complete_graph(nnodes)
 
 # make it directed, for colored spaghetti and testing node-pacement/routing changes
-G = G.to_directed()
+#G = G.to_directed()
 
 # A graph with (2n + 1) nodes requires n colors for the edges
 n = (nnodes - 1) // 2 % len(node_dist_to_color)
@@ -50,18 +50,21 @@ options = LayoutOptions(
     edge_color_rules={
         "color": {
             "red": "red",
-            "bright_green": "bright_green",
+            "light_green": "bright_+green",
             "green": "green",
             "orange": "orange",
             "blue": "blue",
             "magenta": "magenta",
         }
     },
-    node_spacing=8,
-    layer_spacing=4,
-    hpad=2,
+    layout_strategy="circular",
+    node_spacing=4,
+    bboxes=True,
+    layer_spacing=3,
+    hpad=4,
     vpad=2,
     edge_anchor_mode="ports",
+    shared_ports_mode="none"
 )
 
 R = ASCIIRenderer(G, options=options)

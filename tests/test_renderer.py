@@ -987,6 +987,56 @@ class TestASCIIRenderer(unittest.TestCase):
 
         self.assertEqual(start_anchor[1], end_anchor[1])
 
+    def test_get_edge_route_length_returns_horizontal_distance(self):
+        graph = nx.DiGraph([("A", "B")])
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                bboxes=True,
+                hpad=1,
+                vpad=1,
+                edge_anchor_mode="ports",
+                use_ascii=True,
+                layer_spacing=4,
+            ),
+        )
+        positions = {"A": (0, 0), "B": (18, 1)}
+
+        renderer.layout_manager.calculate_layout = lambda: (positions, 32, 8)
+
+        start_anchor, end_anchor = renderer._get_edge_anchor_points("A", "B", positions)  # noqa: SLF001
+        expected = abs(start_anchor[0] - end_anchor[0]) + abs(
+            start_anchor[1] - end_anchor[1]
+        )
+
+        self.assertEqual(renderer.get_edge_route_length("A", "B"), expected)
+
+    def test_get_edge_route_length_returns_vertical_jogged_distance(self):
+        graph = nx.DiGraph([("A", "B")])
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                bboxes=True,
+                hpad=1,
+                vpad=1,
+                edge_anchor_mode="ports",
+                use_ascii=True,
+                layer_spacing=4,
+            ),
+        )
+        positions = {"A": (0, 0), "B": (8, 10)}
+
+        renderer.layout_manager.calculate_layout = lambda: (positions, 32, 18)
+        renderer._edge_anchor_map = renderer._compute_edge_anchor_map(positions)  # noqa: SLF001
+        start_anchor, end_anchor = renderer._get_edge_anchor_points("A", "B", positions)  # noqa: SLF001
+        expected = abs(start_anchor[0] - end_anchor[0]) + abs(
+            start_anchor[1] - end_anchor[1]
+        )
+
+        self.assertEqual(renderer.get_edge_route_length("A", "B"), expected)
+
     def test_edge_anchor_ports_prefers_straight_vertical_pair_when_available(self):
         graph = nx.DiGraph([("1", "2"), ("1", "Z1"), ("2", "4"), ("2", "F1")])
         renderer = ASCIIRenderer(

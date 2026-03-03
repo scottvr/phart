@@ -456,6 +456,21 @@ class ASCIIRenderer:
     def _draw_node(self, node: Any, x: int, y: int) -> None:
         nodes_mod.draw_node(self, node, x, y)
 
+    def get_edge_route_length(self, start: Any, end: Any) -> int:
+        """Return the orthogonal route length for an edge."""
+        if not self.graph.has_edge(start, end):
+            raise KeyError(f"Edge not found: {start!r}->{end!r}")
+
+        positions, _width, _height = self.layout_manager.calculate_layout()
+        if start not in positions or end not in positions:
+            raise KeyError(
+                f"Node position not found: {start if start not in positions else end}"
+            )
+
+        self._edge_anchor_map = self._compute_edge_anchor_map(positions)
+        start_anchor, end_anchor = self._get_edge_anchor_points(start, end, positions)
+        return abs(start_anchor[0] - end_anchor[0]) + abs(start_anchor[1] - end_anchor[1])
+
     def render(self, print_config: Optional[bool] = False) -> str:
         """Render the graph as ASCII art."""
         positions, width, height = self.layout_manager.calculate_layout()
