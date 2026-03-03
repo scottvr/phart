@@ -26,6 +26,15 @@ class TestLayoutOptions(unittest.TestCase):
         self.assertEqual(options.node_order_mode, "natural")
         self.assertEqual(options.node_order_attr, "rank")
 
+    def test_bidirectional_mode_validates_and_normalizes(self):
+        options = LayoutOptions(bidirectional_mode="SEPARATE")
+
+        self.assertEqual(options.bidirectional_mode, "separate")
+
+    def test_invalid_bidirectional_mode_is_rejected(self):
+        with self.assertRaises(ValueError):
+            LayoutOptions(bidirectional_mode="split")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -50,13 +50,13 @@ options = LayoutOptions(
     edge_color_mode="attr",
     edge_color_rules={
         "color": {
-            "red": "red",
+            "red": "bright_red",
             "orange": "orange",
-            "green": "bright_green",
+            "green": "green",
             "light_green": "yellow",
-            "blue": "blue",
-            "magenta": "magenta",
-            "bright_magenta": "bright_blue",
+            "blue": "magenta",
+            "magenta": "blue",
+            "bright_magenta": "bright_magenta",
         }
     },
     layout_strategy="circular",

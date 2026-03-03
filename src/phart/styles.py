@@ -128,6 +128,7 @@ class LayoutOptions:
     uniform: bool = field(default=False)  # Use widest node text width for all boxes
     edge_anchor_mode: str = field(default="auto")  # auto, center, or ports
     shared_ports_mode: str = field(default="any")  # any, minimize, or none
+    bidirectional_mode: str = field(default="coalesce")  # coalesce or separate
     use_labels: bool = field(default=False)  # Prefer node labels for display text
     ansi_colors: bool = field(default=False)  # ANSI colorized render output
     allow_ansi_in_ascii: bool = field(
@@ -254,9 +255,12 @@ class LayoutOptions:
         if isinstance(self.shared_ports_mode, str):
             self.shared_ports_mode = self.shared_ports_mode.strip().lower()
         if self.shared_ports_mode not in {"any", "minimize", "none"}:
-            raise ValueError(
-                "shared_ports_mode must be one of: any, minimize, none"
-            )
+            raise ValueError("shared_ports_mode must be one of: any, minimize, none")
+
+        if isinstance(self.bidirectional_mode, str):
+            self.bidirectional_mode = self.bidirectional_mode.strip().lower()
+        if self.bidirectional_mode not in {"coalesce", "separate"}:
+            raise ValueError("bidirectional_mode must be one of: coalesce, separate")
 
         if isinstance(self.layout_strategy, str):
             self.layout_strategy = (

@@ -56,6 +56,7 @@ CLI_LAYOUT_FIELD_MAP = {
     "--size-to-widest": {"uniform"},
     "--edge-anchors": {"edge_anchor_mode"},
     "--shared-ports": {"shared_ports_mode"},
+    "--bidirectional-mode": {"bidirectional_mode"},
     "--labels": {"use_labels"},
     "--colors": {"ansi_colors", "edge_color_mode"},
     "--no-color-nodes": {"color_nodes"},
@@ -309,6 +310,16 @@ def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
         ),
     )
     parser.add_argument(
+        "--bidirectional-mode",
+        choices=["coalesce", "separate"],
+        default="coalesce",
+        help=(
+            "How to render reciprocal directed edges: coalesce (default) draws "
+            "one shared route with arrows at both ends; separate draws each "
+            "direction independently"
+        ),
+    )
+    parser.add_argument(
         "--labels",
         action="store_true",
         help="Use node labels (if present) for displayed node text",
@@ -467,6 +478,7 @@ def create_layout_options(
         uniform=args.uniform,
         edge_anchor_mode=args.edge_anchors,
         shared_ports_mode=args.shared_ports,
+        bidirectional_mode=args.bidirectional_mode,
         use_labels=args.labels,
         ansi_colors=(color_mode != "none"),
         allow_ansi_in_ascii=allow_ansi_in_ascii,

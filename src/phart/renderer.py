@@ -248,6 +248,8 @@ class ASCIIRenderer:
         """Determine whether an edge should render as bidirectional."""
         if not self.graph.is_directed():
             return True
+        if self.options.bidirectional_mode == "separate":
+            return False
         if (end, start) not in self.graph.edges():
             return False
         return self._attr_rules_match_for_reverse_edge(start, end)
@@ -262,6 +264,8 @@ class ASCIIRenderer:
             return False
         if (end, start) not in self.graph.edges():
             return False
+        if self.options.bidirectional_mode == "separate":
+            return True
         return not self._attr_rules_match_for_reverse_edge(start, end)
 
     def _initialize_color_maps(self, positions: Dict[Any, Tuple[int, int]]) -> None:
@@ -469,7 +473,9 @@ class ASCIIRenderer:
 
         self._edge_anchor_map = self._compute_edge_anchor_map(positions)
         start_anchor, end_anchor = self._get_edge_anchor_points(start, end, positions)
-        return abs(start_anchor[0] - end_anchor[0]) + abs(start_anchor[1] - end_anchor[1])
+        return abs(start_anchor[0] - end_anchor[0]) + abs(
+            start_anchor[1] - end_anchor[1]
+        )
 
     def render(self, print_config: Optional[bool] = False) -> str:
         """Render the graph as ASCII art."""
@@ -837,6 +843,7 @@ def merge_layout_options(
         "uniform",
         "edge_anchor_mode",
         "shared_ports_mode",
+        "bidirectional_mode",
         "use_labels",
         "ansi_colors",
         "allow_ansi_in_ascii",

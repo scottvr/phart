@@ -571,6 +571,17 @@ def main():
         self.assertEqual(exit_code, 0)
         self.assertNotIn("Error", self.stderr.getvalue())
 
+    def test_bidirectional_mode_flag(self):
+        sys.argv = [
+            "phart",
+            "--bidirectional-mode",
+            "separate",
+            str(self.test_text_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        self.assertNotIn("Error", self.stderr.getvalue())
+
     def test_labels_flag_uses_node_labels(self):
         sys.argv = ["phart", "--labels", str(self.labeled_dot_file)]
         exit_code = main()
