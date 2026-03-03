@@ -117,6 +117,10 @@ class LayoutOptions:
     layout_strategy: str = field(
         default="auto"
     )  # auto, bfs, bipartite, circular, hierarchical, planar, layered, kamada_kawai, spring, arf, spiral, shell, random, multipartite, vertical
+    node_order_mode: str = field(
+        default="layout_default"
+    )  # layout_default, preserve, alpha, natural, numeric
+    node_order_attr: Optional[str] = field(default=None)
     flow_direction: FlowDirection = field(default=FlowDirection.DOWN)
     bboxes: bool = field(default=False)  # Draw line-art boxes around nodes
     hpad: int = field(default=1)  # Horizontal inner padding for boxed nodes
@@ -124,6 +128,7 @@ class LayoutOptions:
     uniform: bool = field(default=False)  # Use widest node text width for all boxes
     edge_anchor_mode: str = field(default="auto")  # auto, center, or ports
     shared_ports_mode: str = field(default="any")  # any, minimize, or none
+    bidirectional_mode: str = field(default="coalesce")  # coalesce or separate
     use_labels: bool = field(default=False)  # Prefer node labels for display text
     ansi_colors: bool = field(default=False)  # ANSI colorized render output
     allow_ansi_in_ascii: bool = field(
@@ -250,9 +255,12 @@ class LayoutOptions:
         if isinstance(self.shared_ports_mode, str):
             self.shared_ports_mode = self.shared_ports_mode.strip().lower()
         if self.shared_ports_mode not in {"any", "minimize", "none"}:
-            raise ValueError(
-                "shared_ports_mode must be one of: any, minimize, none"
-            )
+            raise ValueError("shared_ports_mode must be one of: any, minimize, none")
+
+        if isinstance(self.bidirectional_mode, str):
+            self.bidirectional_mode = self.bidirectional_mode.strip().lower()
+        if self.bidirectional_mode not in {"coalesce", "separate"}:
+            raise ValueError("bidirectional_mode must be one of: coalesce, separate")
 
         if isinstance(self.layout_strategy, str):
             self.layout_strategy = (
@@ -280,6 +288,26 @@ class LayoutOptions:
                 "layout_strategy must be one of: legacy, bfs, bipartite, btree, circular, hierarchical, layered, "
                 "planar, kamada_kawai, spring, arf, spiral, shell, random, multipartite, vertical"
             )
+
+        if isinstance(self.node_order_mode, str):
+            self.node_order_mode = (
+                self.node_order_mode.strip().lower().replace("-", "_")
+            )
+        if self.node_order_mode not in {
+            "layout_default",
+            "preserve",
+            "alpha",
+            "natural",
+            "numeric",
+        }:
+            raise ValueError(
+                "node_order_mode must be one of: layout_default, preserve, alpha, natural, numeric"
+            )
+
+        if self.node_order_attr is not None:
+            self.node_order_attr = str(self.node_order_attr).strip()
+            if not self.node_order_attr:
+                self.node_order_attr = None
 
         if isinstance(self.edge_color_mode, str):
             self.edge_color_mode = self.edge_color_mode.strip().lower()

@@ -17,13 +17,14 @@ node_dist_to_color = {
     4: "light_green",
     5: "blue",
     6: "magenta",
+    7: "bright_magenta",
 }
 
 # Create a complete graph with an odd number of nodes
 G = nx.complete_graph(nnodes)
 
 # make it directed, for colored spaghetti and testing node-pacement/routing changes
-#G = G.to_directed()
+G = G.to_directed()
 
 # A graph with (2n + 1) nodes requires n colors for the edges
 n = (nnodes - 1) // 2 % len(node_dist_to_color)
@@ -49,12 +50,13 @@ options = LayoutOptions(
     edge_color_mode="attr",
     edge_color_rules={
         "color": {
-            "red": "red",
-            "light_green": "bright_green",
-            "green": "green",
+            "red": "bright_red",
             "orange": "orange",
-            "blue": "blue",
-            "magenta": "magenta",
+            "green": "green",
+            "light_green": "yellow",
+            "blue": "magenta",
+            "magenta": "blue",
+            "bright_magenta": "bright_magenta",
         }
     },
     layout_strategy="circular",
@@ -64,7 +66,7 @@ options = LayoutOptions(
     hpad=4,
     vpad=2,
     edge_anchor_mode="ports",
-    shared_ports_mode="none"
+    shared_ports_mode="none",
 )
 
 R = ASCIIRenderer(G, options=options)

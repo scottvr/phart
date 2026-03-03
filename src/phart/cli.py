@@ -44,6 +44,8 @@ CLI_LAYOUT_FIELD_MAP = {
     "--btree": {"binary_tree_layout"},
     "--layout": {"layout_strategy"},
     "--layout-strategy": {"layout_strategy"},
+    "--node-order": {"node_order_mode"},
+    "--node-order-attr": {"node_order_attr"},
     "--flow-direction": {"flow_direction"},
     "--flow": {"flow_direction"},
     "--bboxes": {"bboxes"},
@@ -54,6 +56,7 @@ CLI_LAYOUT_FIELD_MAP = {
     "--size-to-widest": {"uniform"},
     "--edge-anchors": {"edge_anchor_mode"},
     "--shared-ports": {"shared_ports_mode"},
+    "--bidirectional-mode": {"bidirectional_mode"},
     "--labels": {"use_labels"},
     "--colors": {"ansi_colors", "edge_color_mode"},
     "--no-color-nodes": {"color_nodes"},
@@ -235,6 +238,27 @@ def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
         help="Node positioning strategy (default: auto)",
     )
     parser.add_argument(
+        "--node-order",
+        choices=[
+            "layout-default",
+            "preserve",
+            "alpha",
+            "natural",
+            "numeric",
+        ],
+        default="layout-default",
+        help=(
+            "Node ordering policy: layout-default (default), preserve, alpha, "
+            "natural, or numeric"
+        ),
+    )
+    parser.add_argument(
+        "--node-order-attr",
+        type=str,
+        default=None,
+        help="Optional node attribute name to use as the ordering key",
+    )
+    parser.add_argument(
         "--flow-direction",
         "--flow",
         choices=["down", "up", "left", "right"],
@@ -283,6 +307,16 @@ def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
             "Terminal port sharing policy: any (default), minimize "
             "(prefer unused points on the same face), or none "
             "(avoid sharing until the node has no free terminal slots)"
+        ),
+    )
+    parser.add_argument(
+        "--bidirectional-mode",
+        choices=["coalesce", "separate"],
+        default="coalesce",
+        help=(
+            "How to render reciprocal directed edges: coalesce (default) draws "
+            "one shared route with arrows at both ends; separate draws each "
+            "direction independently"
         ),
     )
     parser.add_argument(
@@ -435,6 +469,8 @@ def create_layout_options(
         use_ascii=use_ascii,
         binary_tree_layout=binary_tree_layout,
         layout_strategy=layout_strategy,
+        node_order_mode=args.node_order,
+        node_order_attr=args.node_order_attr,
         flow_direction=args.flow_direction,
         bboxes=args.bboxes,
         hpad=args.hpad,
@@ -442,6 +478,7 @@ def create_layout_options(
         uniform=args.uniform,
         edge_anchor_mode=args.edge_anchors,
         shared_ports_mode=args.shared_ports,
+        bidirectional_mode=args.bidirectional_mode,
         use_labels=args.labels,
         ansi_colors=(color_mode != "none"),
         allow_ansi_in_ascii=allow_ansi_in_ascii,

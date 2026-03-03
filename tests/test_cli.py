@@ -12,7 +12,7 @@ from io import StringIO
 from unittest.mock import patch
 
 
-from phart.cli import main
+from phart.cli import create_layout_options, main, parse_args
 
 
 class TestCLI(unittest.TestCase):
@@ -571,6 +571,17 @@ def main():
         self.assertEqual(exit_code, 0)
         self.assertNotIn("Error", self.stderr.getvalue())
 
+    def test_bidirectional_mode_flag(self):
+        sys.argv = [
+            "phart",
+            "--bidirectional-mode",
+            "separate",
+            str(self.test_text_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        self.assertNotIn("Error", self.stderr.getvalue())
+
     def test_labels_flag_uses_node_labels(self):
         sys.argv = ["phart", "--labels", str(self.labeled_dot_file)]
         exit_code = main()
@@ -722,3 +733,18 @@ def main():
             exit_code = main()
             self.assertEqual(exit_code, 0)
             self.assertNotIn("Error", self.stderr.getvalue())
+
+    def test_node_order_flags_populate_layout_options(self):
+        sys.argv = [
+            "phart",
+            "--node-order",
+            "numeric",
+            "--node-order-attr",
+            "rank",
+            str(self.test_text_file),
+        ]
+        args, _unknown, explicit_layout_fields, _module_argv = parse_args()
+        options = create_layout_options(args, explicit_layout_fields)
+
+        self.assertEqual(options.node_order_mode, "numeric")
+        self.assertEqual(options.node_order_attr, "rank")

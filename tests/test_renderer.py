@@ -1455,6 +1455,42 @@ class TestASCIIRenderer(unittest.TestCase):
         self.assertFalse(renderer._should_use_ports_for_edge("Alice", "Bob"))  # noqa: SLF001
         self.assertTrue(renderer._should_use_ports_for_edge("Bob", "Charlie"))  # noqa: SLF001
 
+    def test_bidirectional_mode_separate_disables_bidirectional_rendering(self):
+        graph = nx.DiGraph([("A", "B"), ("B", "A")])
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=True,
+                bidirectional_mode="separate",
+                bboxes=True,
+                edge_anchor_mode="ports",
+                layer_spacing=4,
+            ),
+        )
+        renderer.render()
+
+        self.assertFalse(renderer._is_bidirectional_edge("A", "B"))  # noqa: SLF001
+        self.assertFalse(renderer._is_bidirectional_edge("B", "A"))  # noqa: SLF001
+
+    def test_edge_anchor_auto_uses_ports_for_bidirectional_separate_mode(self):
+        graph = nx.DiGraph([("A", "B"), ("B", "A")])
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=True,
+                bidirectional_mode="separate",
+                bboxes=True,
+                edge_anchor_mode="auto",
+                layer_spacing=4,
+            ),
+        )
+        renderer.render()
+
+        self.assertTrue(renderer._should_use_ports_for_edge("A", "B"))  # noqa: SLF001
+        self.assertTrue(renderer._should_use_ports_for_edge("B", "A"))  # noqa: SLF001
+
     def test_bidirectional_edge_dedupes_when_colors_match(self):
         class CountingRenderer(ASCIIRenderer):
             def __init__(self, *args, **kwargs):
@@ -1493,6 +1529,39 @@ class TestASCIIRenderer(unittest.TestCase):
         self.assertEqual(counts[frozenset(("Alice", "Bob"))], 1)
         # Mismatched reciprocal attrs should remain separate draws.
         self.assertEqual(counts[frozenset(("Bob", "Charlie"))], 2)
+
+    def test_bidirectional_edge_separate_mode_does_not_dedupe(self):
+        class CountingRenderer(ASCIIRenderer):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.drawn_edges: list[tuple[str, str]] = []
+
+            def _draw_edge(self, start, end, positions):
+                self.drawn_edges.append((str(start), str(end)))
+                return super()._draw_edge(start, end, positions)
+
+        graph = nx.DiGraph()
+        graph.add_edge("Alice", "Bob", relationship="friend")
+        graph.add_edge("Bob", "Alice", relationship="friend")
+
+        renderer = CountingRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=False,
+                ansi_colors=True,
+                edge_color_mode="attr",
+                edge_color_rules={"relationship": {"friend": "bright_green"}},
+                bidirectional_mode="separate",
+                bboxes=True,
+                edge_anchor_mode="auto",
+                layer_spacing=4,
+            ),
+        )
+        renderer.render()
+        counts = Counter(frozenset(edge) for edge in renderer.drawn_edges)
+
+        self.assertEqual(counts[frozenset(("Alice", "Bob"))], 2)
 
     def test_file_writing(self):
         """Test writing to file with proper encoding."""

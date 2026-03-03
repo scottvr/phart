@@ -5,6 +5,7 @@ for ASCII graph visualization.
 """
 
 import math
+import re
 from collections import deque
 from typing import Any, Dict, List, Optional, Set, Tuple
 
@@ -20,6 +21,9 @@ class LayoutManager:
         self.node_positions: Dict[str, Tuple[int, int]] = {}
         self.max_width = 0
         self.max_height = 0
+        self._node_insertion_order = {
+            node: idx for idx, node in enumerate(self.graph.nodes())
+        }
         self._widest_node_text_width = (
             max(
                 (
@@ -78,6 +82,79 @@ class LayoutManager:
             widest_text_width=self._widest_node_text_width,
         )
         return width
+
+    @staticmethod
+    def _natural_sort_tokens(value: Any) -> Tuple[Tuple[Any, ...], ...]:
+        """Split text into comparable text/number tokens for natural sorting."""
+        text = str(value)
+        chunks = re.findall(r"\d+|\D+", text.casefold())
+        if not chunks:
+            return ((1, ""),)
+
+        tokens: List[Tuple[Any, ...]] = []
+        for chunk in chunks:
+            if chunk.isdigit():
+                tokens.append((0, int(chunk), chunk))
+            else:
+                tokens.append((1, chunk))
+        return tuple(tokens)
+
+    def _resolve_node_order_mode(self, default_mode: str) -> str:
+        mode = self.options.node_order_mode
+        if mode == "layout_default":
+            return default_mode
+        return mode
+
+    def _node_order_value(self, node: Any) -> Any:
+        """Return the active sort value for a node."""
+        attr_name = self.options.node_order_attr
+        if attr_name is not None and node in self.graph:
+            return self.graph.nodes[node].get(attr_name)
+        return node
+
+    def _node_sort_key(
+        self, node: Any, *, default_mode: str = "alpha"
+    ) -> Tuple[Any, ...]:
+        """Return a deterministic sort key for a node under the configured policy."""
+        mode = self._resolve_node_order_mode(default_mode)
+        fallback_text = str(node)
+        fallback_key = self._natural_sort_tokens(fallback_text)
+
+        if mode == "preserve":
+            return (
+                0,
+                self._node_insertion_order.get(node, len(self._node_insertion_order)),
+                fallback_text,
+            )
+
+        value = self._node_order_value(node)
+        if value is None:
+            return (1, fallback_key, fallback_text)
+
+        value_text = str(value)
+        value_natural_key = self._natural_sort_tokens(value)
+
+        if mode == "alpha":
+            return (0, value_text.casefold(), fallback_key, fallback_text)
+
+        if mode == "natural":
+            return (0, value_natural_key, fallback_key, fallback_text)
+
+        if mode == "numeric":
+            try:
+                numeric_value = float(value)
+            except TypeError, ValueError:
+                return (1, fallback_key, fallback_text)
+            return (0, numeric_value, fallback_text)
+
+        return (0, fallback_text.casefold(), fallback_text)
+
+    def _ordered_nodes(self, nodes: Any, *, default_mode: str = "alpha") -> List[Any]:
+        """Return nodes ordered according to the configured node-order policy."""
+        return sorted(
+            list(nodes),
+            key=lambda node: self._node_sort_key(node, default_mode=default_mode),
+        )
 
     def _node_rect(
         self, node: Any, x: int, y: int, node_height: Optional[int] = None
@@ -214,14 +291,14 @@ class LayoutManager:
                 result.append(group["left"])
 
             # Add unspecified children in middle (alphabetically sorted)
-            result.extend(sorted(group["other"]))
+            result.extend(self._ordered_nodes(group["other"], default_mode="alpha"))
 
             # Add right child last
             if group["right"] is not None:
                 result.append(group["right"])
 
         # Add orphan nodes at the end (alphabetically sorted)
-        result.extend(sorted(orphans))
+        result.extend(self._ordered_nodes(orphans, default_mode="alpha"))
 
         return result
 
@@ -463,7 +540,7 @@ class LayoutManager:
                 nodes=set(children),
                 positions={node: (0, 0)},
             )
-        return sorted(children, key=lambda n: str(n))
+        return self._ordered_nodes(children, default_mode="alpha")
 
     def _build_subtree_contours(
         self, positions: Dict[Any, Tuple[int, int]], layer_height: int
@@ -743,13 +820,13 @@ class LayoutManager:
                 unresolved.discard(node)
 
         if not left_nodes or not right_nodes:
-            all_nodes = sorted(graph.nodes(), key=lambda n: str(n))
+            all_nodes = self._ordered_nodes(graph.nodes(), default_mode="alpha")
             midpoint = max(1, len(all_nodes) // 2)
             left_nodes = set(all_nodes[:midpoint])
             right_nodes = set(all_nodes[midpoint:])
 
-        left_ordered = sorted(left_nodes, key=lambda n: str(n))
-        right_ordered = sorted(right_nodes, key=lambda n: str(n))
+        left_ordered = self._ordered_nodes(left_nodes, default_mode="alpha")
+        right_ordered = self._ordered_nodes(right_nodes, default_mode="alpha")
 
         left_col_width = max((self._get_node_width(n) for n in left_ordered), default=1)
         right_col_width = max(
@@ -779,7 +856,7 @@ class LayoutManager:
         self, graph: nx.DiGraph, spacing: int
     ) -> Dict[str, Tuple[int, int]]:
         """Place nodes around a circle and nudge to avoid node overlaps."""
-        nodes = sorted(graph.nodes(), key=lambda n: str(n))
+        nodes = self._ordered_nodes(graph.nodes(), default_mode="natural")
         if not nodes:
             return {}
 
@@ -826,13 +903,20 @@ class LayoutManager:
 
         return self._normalize_positions_to_origin(positions)
 
-    @staticmethod
-    def _to_ordered_undirected_graph(graph: nx.DiGraph) -> nx.Graph:
+    def _to_ordered_undirected_graph(self, graph: nx.DiGraph) -> nx.Graph:
         """Create a deterministic undirected graph preserving stable node order."""
         ordered_graph: nx.Graph = nx.Graph()
-        ordered_graph.add_nodes_from(sorted(graph.nodes(), key=lambda n: str(n)))
+        ordered_graph.add_nodes_from(
+            self._ordered_nodes(graph.nodes(), default_mode="alpha")
+        )
         ordered_graph.add_edges_from(
-            sorted(graph.edges(), key=lambda edge: (str(edge[0]), str(edge[1])))
+            sorted(
+                graph.edges(),
+                key=lambda edge: (
+                    self._node_sort_key(edge[0], default_mode="alpha"),
+                    self._node_sort_key(edge[1], default_mode="alpha"),
+                ),
+            )
         )
         return ordered_graph
 
@@ -934,7 +1018,11 @@ class LayoutManager:
         placed_rects: List[Tuple[int, int, int, int]] = []
         nodes_ordered = sorted(
             coord_map.keys(),
-            key=lambda n: (xy_map[n][1], xy_map[n][0], str(n)),
+            key=lambda n: (
+                xy_map[n][1],
+                xy_map[n][0],
+                self._node_sort_key(n, default_mode="alpha"),
+            ),
         )
 
         for node in nodes_ordered:
@@ -1029,9 +1117,13 @@ class LayoutManager:
         """Concentric shell layout using BFS-derived rings."""
         ordered_graph = self._to_ordered_undirected_graph(graph)
         layers = self._build_layers_bfs(nx.DiGraph(graph))
-        shells = [sorted(layer, key=lambda n: str(n)) for layer in layers if layer]
+        shells = [
+            self._ordered_nodes(layer, default_mode="alpha")
+            for layer in layers
+            if layer
+        ]
         if not shells:
-            shells = [sorted(ordered_graph.nodes(), key=lambda n: str(n))]
+            shells = [self._ordered_nodes(ordered_graph.nodes(), default_mode="alpha")]
         coord_map = nx.shell_layout(ordered_graph, nlist=shells)
         return self._layout_from_coordinate_map(coord_map, spacing)
 
@@ -1114,7 +1206,15 @@ class LayoutManager:
             ]
         )
         components.sort(
-            key=lambda comp: min(str(n) for n in comp.nodes()), reverse=False
+            key=lambda comp: (
+                self._node_sort_key(
+                    self._ordered_nodes(comp.nodes(), default_mode="alpha")[0],
+                    default_mode="alpha",
+                )
+                if comp.nodes()
+                else (2, "")
+            ),
+            reverse=False,
         )
 
         positions: Dict[str, Tuple[int, int]] = {}
@@ -1128,7 +1228,9 @@ class LayoutManager:
                 layers = self._build_layers_auto(nx.DiGraph(component))
             widths = {node: self._get_node_width(node) for node in component.nodes()}
             ordered_layers = [
-                sorted(layer, key=lambda n: str(n)) for layer in layers if layer
+                self._ordered_nodes(layer, default_mode="alpha")
+                for layer in layers
+                if layer
             ]
             if not ordered_layers:
                 continue
