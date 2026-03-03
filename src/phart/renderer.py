@@ -819,7 +819,7 @@ def merge_layout_options(
         "vpad",
         "uniform",
         "edge_anchor_mode",
-        "minimize_shared_ports",
+        "shared_ports_mode",
         "use_labels",
         "ansi_colors",
         "allow_ansi_in_ascii",

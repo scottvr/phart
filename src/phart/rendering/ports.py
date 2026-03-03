@@ -110,6 +110,42 @@ def values_with_min_separation(
     return filtered if filtered else list(candidates)
 
 
+def expand_face_pool_before_reuse(
+    local_candidates: List[int],
+    face_candidates: List[int],
+    used_values: List[int],
+    min_sep: int,
+) -> List[int]:
+    """Prefer unused points from the local pool, then the full face, before reuse."""
+    local_filtered = values_with_min_separation(local_candidates, used_values, min_sep)
+    if local_filtered != list(local_candidates):
+        return local_filtered
+
+    full_face_filtered = values_with_min_separation(
+        face_candidates, used_values, min_sep
+    )
+    if full_face_filtered != list(face_candidates):
+        return full_face_filtered
+
+    return list(local_candidates)
+
+
+def resolve_face_candidate_pool(
+    renderer: ASCIIRenderer,
+    *,
+    local_candidates: List[int],
+    face_candidates: List[int],
+    used_values: List[int],
+    min_sep: int,
+) -> List[int]:
+    """Choose candidate pool according to the configured shared-port policy."""
+    if renderer.options.shared_ports_mode == "any":
+        return values_with_min_separation(local_candidates, used_values, min_sep)
+    return expand_face_pool_before_reuse(
+        local_candidates, face_candidates, used_values, min_sep
+    )
+
+
 def port_pair_jog_cost(start_value: int, end_value: int) -> int:
     """Orthogonal jog distance in the routing axis for a port pair."""
     return abs(start_value - end_value)
@@ -286,24 +322,19 @@ def assign_monotone_port_indices(
     return chosen
 
 
-def rebalance_edge_face_role(
+def rebalance_edge_face_occupancy(
     renderer: ASCIIRenderer,
     edge_specs: List[Dict[str, Any]],
     positions: Dict[Any, Tuple[int, int]],
-    role: str,
 ) -> None:
-    """Move oversubscribed edge endpoints for one role to alternate faces."""
-    node_key = f"{role}_node"
-    side_key = f"{role}_side"
-    default_side_key = f"default_{role}_side"
-    counter_key = f"{role}_counter"
-    candidates_key = f"{role}_candidates"
-    peer_role = "end" if role == "start" else "start"
-    peer_node_key = f"{peer_role}_node"
+    """Move oversubscribed edge endpoints to alternate faces using total occupancy."""
     face_capacity: Dict[Tuple[Any, str], int] = {}
     face_counts: Dict[Tuple[Any, str], int] = {}
     node_bounds_cache: Dict[Any, Dict[str, int]] = {}
     face_order = ("top", "right", "bottom", "left")
+    endpoint_refs: List[Tuple[Dict[str, Any], str]] = [
+        (spec, "start") for spec in edge_specs
+    ] + [(spec, "end") for spec in edge_specs]
 
     def _get_bounds(node: Any) -> Dict[str, int]:
         if node not in node_bounds_cache:
@@ -318,7 +349,9 @@ def rebalance_edge_face_role(
             face_capacity[key] = len(candidates) if candidates else 1
         return face_capacity[key]
 
-    for spec in edge_specs:
+    for spec, role in endpoint_refs:
+        node_key = f"{role}_node"
+        side_key = f"{role}_side"
         face = (spec[node_key], spec[side_key])
         face_counts[face] = face_counts.get(face, 0) + 1
 
@@ -335,13 +368,27 @@ def rebalance_edge_face_role(
             return
 
         best_move: Optional[
-            Tuple[Tuple[int, int, int, str, str], Dict[str, Any], str, int, List[int]]
+            Tuple[
+                Tuple[int, int, int, str, str, str],
+                Dict[str, Any],
+                str,
+                str,
+                int,
+                List[int],
+            ]
         ] = None
 
         for face in oversubscribed_faces:
             node, current_side = face
             node_bounds = _get_bounds(node)
-            for spec in edge_specs:
+            for spec, role in endpoint_refs:
+                node_key = f"{role}_node"
+                side_key = f"{role}_side"
+                default_side_key = f"default_{role}_side"
+                counter_key = f"{role}_counter"
+                candidates_key = f"{role}_candidates"
+                peer_role = "end" if role == "start" else "start"
+                peer_node_key = f"{peer_role}_node"
                 if spec[node_key] != node or spec[side_key] != current_side:
                     continue
 
@@ -360,7 +407,9 @@ def rebalance_edge_face_role(
                         set(renderer._get_side_port_values(node_bounds, alt_side))
                     )
                     if not alt_candidates:
-                        alt_candidates = [renderer._side_center_value(node_bounds, alt_side)]
+                        alt_candidates = [
+                            renderer._side_center_value(node_bounds, alt_side)
+                        ]
 
                     alt_counter = counter_for_side(node_bounds, peer_bounds, alt_side)
                     alt_value = renderer._nearest_candidate_to_center(
@@ -379,6 +428,7 @@ def rebalance_edge_face_role(
                         score,
                         face_counts.get(alt_face, 0),
                         face_order.index(alt_side),
+                        role,
                         str(spec["edge_key"][0]),
                         str(spec["edge_key"][1]),
                     )
@@ -387,6 +437,7 @@ def rebalance_edge_face_role(
                         best_move = (
                             move_key,
                             spec,
+                            role,
                             alt_side,
                             alt_counter,
                             alt_candidates,
@@ -395,7 +446,11 @@ def rebalance_edge_face_role(
         if best_move is None:
             return
 
-        _move_key, spec, alt_side, alt_counter, alt_candidates = best_move
+        _move_key, spec, role, alt_side, alt_counter, alt_candidates = best_move
+        node_key = f"{role}_node"
+        side_key = f"{role}_side"
+        counter_key = f"{role}_counter"
+        candidates_key = f"{role}_candidates"
         old_face = (spec[node_key], spec[side_key])
         new_face = (spec[node_key], alt_side)
         face_counts[old_face] -= 1
@@ -453,15 +508,15 @@ def compute_edge_anchor_map(
             }
         )
 
-    if renderer.options.minimize_shared_ports:
-        rebalance_edge_face_role(renderer, edge_specs, positions, "start")
-        rebalance_edge_face_role(renderer, edge_specs, positions, "end")
+    if renderer.options.shared_ports_mode == "none":
+        rebalance_edge_face_occupancy(renderer, edge_specs, positions)
 
     edge_anchor_map: Dict[Tuple[Any, Any], Dict[str, Any]] = {}
     used_by_side: Dict[Tuple[Any, str], List[int]] = {}
     min_port_separation = 1
     wiggle_radius = 1
     face_candidate_pools: Dict[Tuple[Tuple[Any, Any], str], List[int]] = {}
+    face_all_candidates: Dict[Tuple[Any, str], List[int]] = {}
     face_requirements: Dict[
         Tuple[Any, str], List[Tuple[Tuple[Any, Any], str, int, str]]
     ] = {}
@@ -485,6 +540,7 @@ def compute_edge_anchor_map(
         candidates = sorted(set(renderer._get_side_port_values(node_bounds, side)))
         if not candidates:
             candidates = [renderer._side_center_value(node_bounds, side)]
+        face_all_candidates[(node, side)] = list(candidates)
         max_idx = len(candidates) - 1
 
         sorted_items = sorted(items, key=lambda item: (item[2], item[3]))
@@ -555,11 +611,22 @@ def compute_edge_anchor_map(
         start_pool = face_candidate_pools.get((edge_key, "start"), start_candidates)
         end_pool = face_candidate_pools.get((edge_key, "end"), end_candidates)
 
-        start_pool = renderer._values_with_min_separation(
-            start_pool, used_start_values, min_port_separation
+        start_face_candidates = face_all_candidates.get(start_key, start_candidates)
+        end_face_candidates = face_all_candidates.get(end_key, end_candidates)
+
+        start_pool = resolve_face_candidate_pool(
+            renderer,
+            local_candidates=start_pool,
+            face_candidates=start_face_candidates,
+            used_values=used_start_values,
+            min_sep=min_port_separation,
         )
-        end_pool = renderer._values_with_min_separation(
-            end_pool, used_end_values, min_port_separation
+        end_pool = resolve_face_candidate_pool(
+            renderer,
+            local_candidates=end_pool,
+            face_candidates=end_face_candidates,
+            used_values=used_end_values,
+            min_sep=min_port_separation,
         )
 
         start_value, end_value = renderer._choose_port_pair(

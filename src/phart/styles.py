@@ -123,7 +123,7 @@ class LayoutOptions:
     vpad: int = field(default=0)  # Vertical inner padding for boxed nodes
     uniform: bool = field(default=False)  # Use widest node text width for all boxes
     edge_anchor_mode: str = field(default="auto")  # auto, center, or ports
-    minimize_shared_ports: bool = field(default=False)
+    shared_ports_mode: str = field(default="any")  # any, minimize, or none
     use_labels: bool = field(default=False)  # Prefer node labels for display text
     ansi_colors: bool = field(default=False)  # ANSI colorized render output
     allow_ansi_in_ascii: bool = field(
@@ -246,6 +246,13 @@ class LayoutOptions:
             self.edge_anchor_mode = self.edge_anchor_mode.strip().lower()
         if self.edge_anchor_mode not in {"auto", "center", "ports"}:
             raise ValueError("edge_anchor_mode must be one of: auto, center, ports")
+
+        if isinstance(self.shared_ports_mode, str):
+            self.shared_ports_mode = self.shared_ports_mode.strip().lower()
+        if self.shared_ports_mode not in {"any", "minimize", "none"}:
+            raise ValueError(
+                "shared_ports_mode must be one of: any, minimize, none"
+            )
 
         if isinstance(self.layout_strategy, str):
             self.layout_strategy = (

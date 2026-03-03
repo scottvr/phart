@@ -53,7 +53,7 @@ CLI_LAYOUT_FIELD_MAP = {
     "--uniform": {"uniform"},
     "--size-to-widest": {"uniform"},
     "--edge-anchors": {"edge_anchor_mode"},
-    "--minimize-shared-ports": {"minimize_shared_ports"},
+    "--shared-ports": {"shared_ports_mode"},
     "--labels": {"use_labels"},
     "--colors": {"ansi_colors", "edge_color_mode"},
     "--no-color-nodes": {"color_nodes"},
@@ -276,11 +276,13 @@ def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
         ),
     )
     parser.add_argument(
-        "--minimize-shared-ports",
-        action="store_true",
+        "--shared-ports",
+        choices=["any", "minimize", "none"],
+        default="any",
         help=(
-            "When port faces fill up, try alternate node faces before reusing the "
-            "same terminal port"
+            "Terminal port sharing policy: any (default), minimize "
+            "(prefer unused points on the same face), or none "
+            "(avoid sharing until the node has no free terminal slots)"
         ),
     )
     parser.add_argument(
@@ -439,7 +441,7 @@ def create_layout_options(
         vpad=args.vpad,
         uniform=args.uniform,
         edge_anchor_mode=args.edge_anchors,
-        minimize_shared_ports=args.minimize_shared_ports,
+        shared_ports_mode=args.shared_ports,
         use_labels=args.labels,
         ansi_colors=(color_mode != "none"),
         allow_ansi_in_ascii=allow_ansi_in_ascii,
