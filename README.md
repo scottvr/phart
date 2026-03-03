@@ -16,7 +16,60 @@ _\*except NetworkX, which should be mentioned prominently, as rendering NX digra
 - Over ten layout strategies
 - Orthogonal edge paths (all 90 degree turns, "Manhattan" style)
 
+## Newest additions are:
+
+```
+  --node-order {layout-default,preserve,alpha,natural,numeric}
+                        Node ordering policy: layout-default (default), preserve, alpha, natural, or numeric
+  --node-order-attr NODE_ORDER_ATTR
+                        Optional node attribute name to use as the ordering key
+```
+
+Intended usage is of the sorts:
+
+- `--node-order natural`
+- `--node-order-attr label --node-order alpha`
+- `--node-order-attr rank` `--node-order numeric`
+
+Also added were:
+
+```
+  --shared-ports {any,minimize,none}
+                        Terminal port sharing policy: any (default), minimize (prefer unused points on the same face),
+                        or none (avoid sharing until the node has no free terminal slots)
+  --bidirectional-mode {coalesce,separate}
+                        How to render reciprocal directed edges: coalesce (default) draws one shared route with arrows
+                        at both ends; separate draws each direction independently
+```
+
+Regarding `shared_ports_mode` (added to LayoutOptions in styles.py) and exposed in the cli as `--shared-ports <any|minimize|none>`:
+
+- `any`: legacy compact behavior. Reuse within the local face pool is allowed once that local pool is exhausted. This is the default.
+- `minimize`: avoid reuse on the same face by expanding to the rest of that face before sharing a terminal slot.
+- `none`: do the minimize behavior, and also rebalance endpoints across other node faces so sharing is avoided until the node has no free terminal slots left anywhere.
+
+When debugging testing changes or debugging expected rendered graph output, I make use of
+variations on:
+
+```bash
+$ phart --shared-ports none --bidirectional-mode separate ...
+$ phart --shared-ports minimize --bidirectional-mode separate ...
+$ phart --shared-ports any --bidirectional-mode coalesce ...
+# and so on...
+```
+
+Often, I'll combine those with variations on `--hpad/--vpad`, `--layer/node-sizing` and `--colors` ..., but hopefully unless you're adding a new layout strategy or other such enhancement, you aren't having to do a lot of puzzling about output. If you are, feel free to open an Issue.
+
+Additionally, a `public get_edge_route_length()` function was added to ASCIIRenderer.
+
+- `get_edge_route_length()` is in canvas grid units: one unit per character cell step in the renderer’s virtual grid. Concretely, it returns abs(dx) + abs(dy) between the final chosen edge anchors, so it is “orthogonal steps,” not a geometric or graph-theoretic distance.
+
+You probably won't need it.
+
+---
+
 ## New! mermaid output
+
 [`flowchart TD` is now a supported output. Read about it here.](https://github.com/scottvr/phart/blob/main/docs/mermaid-phart.md)
 
 ## New Layout Strategies
@@ -45,9 +98,9 @@ So, with only 90 degree jogs available to connect any node to another, and with 
 
 If you did the math, you know that there are 78 connections to account for in this graph (or 156, depending on how you count a bidirectional path; we're going to use the same connection to go both ways in our diagram. You will see it is quite crowded already.)
 
-Having rambled on long enough now, let me show you phart's latest masterpiece of ASCII Art (ok, I used Unicode characters in this one, and phart colored it them with ANSI color escape codes, but it's still plain text!). It's rendering is quite fetching in its own way I think.  
+Having rambled on long enough now, let me show you phart's latest masterpiece of ASCII Art (ok, I used Unicode characters in this one, and phart colored it them with ANSI color escape codes, but it's still plain text!). It's rendering is quite fetching in its own way I think.
 
-(note: I had previously uploaded a cool-looking but incorrect due to incorrect node sorting I hadn't noticed at the time. I'll link the original uploaded image  so I don't look like I bait-and-switched anyone who saw my post about it which brought them here.)
+(note: I had previously uploaded a cool-looking but incorrect due to incorrect node sorting I hadn't noticed at the time. I'll link the original uploaded image so I don't look like I bait-and-switched anyone who saw my post about it which brought them here.)
 
 <img width="700" height="700" alt="rainbow-coloring-13-nodes-correct-sorting" src="https://github.com/user-attachments/assets/0673464c-aca2-48fe-a9bf-d600fe05373e" />
 
@@ -55,11 +108,9 @@ Here is the original cool-but-incorrect render I had done before:
 
 [Original broken-sort image](https://github.com/user-attachments/assets/ac28aa5c-b6b2-4a23-a03f-4a6839076c55")
 
-<br />  
+<br />
 
-
-
----  
+---
 
 ## NEW Features Feb 2026
 
@@ -85,14 +136,13 @@ ANSI color support turned out more interesting than I expected. Not completely s
 
 I'm not sure it's all _that_ much easier to discern what goes to where, but it sure is fun to look at.
 
-## NEWER! - Accidental Features 
+## NEWER! - Accidental Features
 
-So, I inadvertently merged some code into main that was not intended to be released yet, because it's - while not _**not**_ working, per se - still a little half-baked, and not documented well. 
+So, I inadvertently merged some code into main that was not intended to be released yet, because it's - while not _**not**_ working, per se - still a little half-baked, and not documented well.
 
-Nevertheless, some might notice the command-line options, when runnning ``phart --help`` for example,  and try to use some of the features, so I figured I may as well explain one of the goofier ones. I've written about it here in [GHM-LAtEX.md](https://github.com/scottvr/phart/blob/main/docs/GHM-LATEX.md).
+Nevertheless, some might notice the command-line options, when runnning `phart --help` for example, and try to use some of the features, so I figured I may as well explain one of the goofier ones. I've written about it here in [GHM-LAtEX.md](https://github.com/scottvr/phart/blob/main/docs/GHM-LATEX.md).
 
 I just finished updating the SVG documentation with a couple of surprising results achieved by what was intended to be a silly and useless feature that I didn't actually plan to release. Check out the two vector diagrams at the top of [svg-renderer.md](https://github.com/scottvr/phart/blob/main/docs/svg-renderer.md).
-
 
 ---
 
@@ -278,19 +328,18 @@ the output. (And, because it is simply console text, you can pipe it elsewhere, 
 As we'll see here, I will `tail` to just the last 15 lines of output so I can just see
 something new and interesting, further down the tree:
 
-``` bash
+```bash
 $ phart --colors attr --edge-color-rule side:left=green,right=red --bbox --btree \
  --charset unicode --no-color-nodes examples/collatz.py -- 5 | tail -15
 ```
 
-
-This gives us the following output, which I'll share via screenshot, because GitHub is picky&ast;&ast; about letting one color a markdown document:
+This gives us the following output, which I'll share via screenshot, because GitHub is picky\*\* about letting one color a markdown document:
 
 <img width="325" height="218" alt="collatz-5-tail-15" src="https://github.com/user-attachments/assets/bcd4cd1b-322a-464a-b1b6-e0e1359332a0" />
 
 There are more examples scripts in the repo, along with a README in the examples/ directory
 
-&ast;&ast; [There's' an app for that!(tm)](https://github.com/scottvr/phart/blob/main/docs/GHM-LATEX.md)
+\*\* [There's' an app for that!(tm)](https://github.com/scottvr/phart/blob/main/docs/GHM-LATEX.md)
 
 ---
 
@@ -299,10 +348,9 @@ There are more examples scripts in the repo, along with a README in the examples
 Now, explicitly exposed and selectable by the user, phart's layout_strategy is now configurable.
 See [LAYOUT-STRATEGIES.md](https://github.com/scottvr/phart/blob/main/LAYOUT-STRATEGIES.md) in the repo for demos.
 
-### NEWER! - Accidental Features 
+### NEWER! - Accidental Features
 
-So, I inadvertently merged some code into main that was not intended to be released yet, because it's - while not _not_ working, per se - still a little half-baked, so it's not documented well. Nevertheless, some might notice the command-line options when runnning ``phart --help``, for example and try to use some of the features, so I figured I may as well explain one of the goofier ones. I've written about it here in [GHM-LAtEX.md](https://github.com/scottvr/phart/blob/main/docs/GHM-LATEX.md)
-
+So, I inadvertently merged some code into main that was not intended to be released yet, because it's - while not _not_ working, per se - still a little half-baked, so it's not documented well. Nevertheless, some might notice the command-line options when runnning `phart --help`, for example and try to use some of the features, so I figured I may as well explain one of the goofier ones. I've written about it here in [GHM-LAtEX.md](https://github.com/scottvr/phart/blob/main/docs/GHM-LATEX.md)
 
 ## Why "PHART"?
 
@@ -354,13 +402,18 @@ To install all `extra` requirements (e.g., `fonttools` for svg rendering support
 ## The CLI
 
 ````bash
-usage: phart [-h] [--output OUTPUT] [--style {minimal,square,round,diamond,custom,bbox}]
-             [--node-spacing NODE_SPACING] [--layer-spacing LAYER_SPACING]
-             [--charset {ascii,ansi,unicode}] [--ascii] [--function FUNCTION] [--binary-tree]
+usage: phart [-h] [--output OUTPUT] [--version] [--output-format {ditaa,ditaa-puml,html,latex-markdown,mmd,svg,text}]
+             [--style {minimal,square,round,diamond,custom,bbox}] [--node-spacing NODE_SPACING]
+             [--layer-spacing LAYER_SPACING] [--charset {ascii,ansi,unicode}] [--ascii] [--function FUNCTION]
+             [--binary-tree]
              [--layout {arf,auto,bfs,bipartite,btree,circular,hierarchical,kamada-kawai,layered,multipartite,planar,random,shell,spiral,spring,vertical}]
-             [--flow-direction {down,up,left,right}] [--bboxes] [--hpad HPAD] [--vpad VPAD]
-             [--uniform] [--edge-anchors {auto,center,ports}] [--labels]
-             [--colors {attr,none,path,source,target}] [--edge-color-rule RULE]
+             [--node-order {layout-default,preserve,alpha,natural,numeric}] [--node-order-attr NODE_ORDER_ATTR]
+             [--flow-direction {down,up,left,right}] [--bboxes] [--hpad HPAD] [--vpad VPAD] [--uniform]
+             [--edge-anchors {auto,center,ports}] [--shared-ports {any,minimize,none}]
+             [--bidirectional-mode {coalesce,separate}] [--labels] [--colors {attr,none,path,source,target}]
+             [--no-color-nodes] [--edge-color-rule RULE] [--svg-cell-size SVG_CELL_SIZE]
+             [--svg-font-family SVG_FONT_FAMILY] [--svg-text-mode {text,path}] [--svg-font-path SVG_FONT_PATH]
+             [--svg-fg SVG_FG] [--svg-bg SVG_BG]
              input
 
 PHART: Python Hierarchical ASCII Rendering Tool
@@ -371,6 +424,9 @@ positional arguments:
 options:
   -h, --help            show this help message and exit
   --output, -o OUTPUT   Output file (if not specified, prints to stdout)
+  --version, -v         show program's version number and exit
+  --output-format {ditaa,ditaa-puml,html,latex-markdown,mmd,svg,text}
+                        Output format: text (default), ditaa, ditaa-puml, svg, html, mmmd, or latex-markdown
   --style {minimal,square,round,diamond,custom,bbox}
                         Node style (default: square, or minimal when --bboxes is enabled)
   --node-spacing NODE_SPACING
@@ -382,27 +438,48 @@ options:
   --ascii               Force ASCII output (deprecated, use --charset ascii instead)
   --function, -f FUNCTION
                         Function to call in Python file (default: main)
-  --binary-tree         Shortcut to enable binary tree layout (respects edge 'side' attributes for left/right)
-  --layout, --layout-strategy {auto,arf,bfs,bipartite,btree,circular,hierarchical,kamada-kawai,layered,multipartite,planar,random,shell,spiral,spring,vertical}
-                        Node positioning strategy (default: auto - legacy hierarchical, vertical for triads)
+  --binary-tree, --btree
+                        Enable binary tree layout (respects edge 'side' attributes)
+  --layout, --layout-strategy {arf,auto,bfs,bipartite,btree,circular,hierarchical,kamada-kawai,layered,multipartite,planar,random,shell,spiral,spring,vertical}
+                        Node positioning strategy (default: auto)
+  --node-order {layout-default,preserve,alpha,natural,numeric}
+                        Node ordering policy: layout-default (default), preserve, alpha, natural, or numeric
+  --node-order-attr NODE_ORDER_ATTR
+                        Optional node attribute name to use as the ordering key
   --flow-direction, --flow {down,up,left,right}
-                        Layout flow direction: down (default, root at top), up (root at
-                        bottom), left (root at right), right (root at left)
+                        Layout flow direction: down (default, root at top), up (root at bottom), left (root at right),
+                        right (root at left)
   --bboxes              Draw line-art boxes around nodes
   --hpad HPAD           Horizontal padding inside node boxes (default: 1)
   --vpad VPAD           Vertical padding inside node boxes (default: 0)
   --uniform, --size-to-widest
                         Use widest node text as the width baseline for all node boxes
   --edge-anchors {auto,center,ports}
-                        Edge anchor strategy: auto (default), center, or ports (distributed
-                        on box edges)
+                        Edge anchor strategy: auto (default), center, or ports (distributed on box edges)
+  --shared-ports {any,minimize,none}
+                        Terminal port sharing policy: any (default), minimize (prefer unused points on the same face),
+                        or none (avoid sharing until the node has no free terminal slots)
+  --bidirectional-mode {coalesce,separate}
+                        How to render reciprocal directed edges: coalesce (default) draws one shared route with arrows
+                        at both ends; separate draws each direction independently
   --labels              Use node labels (if present) for displayed node text
   --colors {attr,none,path,source,target}
                         ANSI edge coloring mode: none (default), source, target, path, or attr
+  --no-color-nodes      Color edges only, not nodes
   --edge-color-rule RULE
                         Attribute-driven edge color rule for --colors attr. Format:
-                        <attribute>:<value>=<color>[,<value>=<color>...] (repeatable)```
-````
+                        <attribute>:<value>=<color>[,<value>=<color>...] (repeatable)
+  --svg-cell-size SVG_CELL_SIZE
+                        Cell size in pixels for SVG output (default: 12)
+  --svg-font-family SVG_FONT_FAMILY
+                        Font family for SVG/HTML output (default: monospace)
+  --svg-text-mode {text,path}
+                        Render SVG characters as <text> (default) or glyph paths
+  --svg-font-path SVG_FONT_PATH
+                        Font file path required when --svg-text-mode path is used
+  --svg-fg SVG_FG       Foreground color for SVG/HTML/LaTeX output
+  --svg-bg SVG_BG       Background color for SVG/HTML output
+  ```
 
 ## Quick Start
 
@@ -600,3 +677,4 @@ do something cool with it, or if it breaks on your graph.
 ## License
 
 MIT License
+````
