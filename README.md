@@ -110,7 +110,9 @@ Having rambled on long enough now, let me show you phart's latest masterpiece of
 
 <img width="700" height="700" alt="rainbow-coloring-13-nodes-correct-sorting" src="https://github-production-user-asset-6210df.s3.amazonaws.com/7464239/557415439-0673464c-aca2-48fe-a9bf-d600fe05373e.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAVCODYLSA53PQK4ZA%2F20260303%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260303T122543Z&X-Amz-Expires=300&X-Amz-Signature=8fda4e9a903a6942f211a2c28bbfd97fdfe0e913150b0cb24afe7e1b67020d2f&X-Amz-SignedHeaders=host" />
 
-Here is the original cool-but-incorrect render I had done before; the "rainbow" is not the same pattern due to some nodes being out if order, so the length-based color is askew for several edges: <img width="700" height="700"  src="https://github.com/user-attachments/assets/41a402f1-4443-491e-9033-fa5795b7cf9d" />
+Here is the original cool-but-incorrect render I had done before; the "rainbow" is not the same pattern due to some nodes being out if order, so the length-based color is askew for several edges. Notice that while it makes an interesting rainbow-ish gradient from left to right, it isn't what was intended and you can see the bottom-most node has two same-length horizontal  lines to each side, and they are of different colors despite being the same apparent distance.  (now notice the labels on the nodes; that's the problem.  0 should be next to 1 and on side and 11 on the other, by shortest (graph)  distance; a "green-length" edge (path) got incorrectly respresented by a short (Cartesian)  length line.) Here:  
+
+<img width="700" height="700"  src="https://github.com/user-attachments/assets/41a402f1-4443-491e-9033-fa5795b7cf9d" />
 
 ---
 
