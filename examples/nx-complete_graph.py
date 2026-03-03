@@ -24,7 +24,7 @@ node_dist_to_color = {
 G = nx.complete_graph(nnodes)
 
 # make it directed, for colored spaghetti and testing node-pacement/routing changes
-G = G.to_undirected()
+G = G.to_directed()
 
 # A graph with (2n + 1) nodes requires n colors for the edges
 n = (nnodes - 1) // 2 % len(node_dist_to_color)
@@ -55,7 +55,8 @@ options = LayoutOptions(
             "green": "bright_green",
             "light_green": "yellow",
             "blue": "blue",
-            "magenta": "bright_magenta",
+            "magenta": "magenta",
+            "bright_magenta": "bright_blue",
         }
     },
     layout_strategy="circular",
