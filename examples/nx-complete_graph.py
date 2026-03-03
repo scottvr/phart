@@ -9,8 +9,6 @@ if len(sys.argv) > 1:
 else:
     nnodes = 13
 
-G = nx.complete_graph(nnodes)
-
 # A rainbow color mapping using matplotlib's tableau colors
 node_dist_to_color = {
     1: "red",
@@ -23,6 +21,9 @@ node_dist_to_color = {
 
 # Create a complete graph with an odd number of nodes
 G = nx.complete_graph(nnodes)
+
+# make it directed, for colored spaghetti and testing node-pacement/routing changes
+G = G.to_directed()
 
 # A graph with (2n + 1) nodes requires n colors for the edges
 n = (nnodes - 1) // 2 % len(node_dist_to_color)
@@ -50,9 +51,10 @@ options = LayoutOptions(
         "color": {
             "red": "red",
             "bright_green": "bright_green",
+            "green": "green",
             "orange": "orange",
             "blue": "blue",
-            "magenta": "amagenta",
+            "magenta": "magenta",
         }
     },
     node_spacing=8,

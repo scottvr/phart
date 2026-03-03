@@ -9,6 +9,7 @@ import networkx as nx  # type: ignore
 
 from phart import ASCIIRenderer
 from phart.layout import LayoutOptions
+from phart.rendering import ports as ports_mod
 from phart.styles import FlowDirection, NodeStyle
 from phart.renderer import merge_layout_options
 from phart.io.output.files import write_to_file
@@ -95,6 +96,15 @@ class TestASCIIRenderer(unittest.TestCase):
         for line in lines:
             print(f"{line}\n")
         self.assertTrue(any("|" in line or "│" in line for line in lines))
+
+    def test_port_pool_expands_to_unused_face_slots_before_reusing_terminal(self):
+        pool = ports_mod.expand_face_pool_before_reuse(
+            [4, 5],
+            [1, 2, 3, 4, 5],
+            [4, 5],
+            1,
+        )
+        self.assertEqual(pool, [1, 2, 3])
 
     def test_tree_structure(self):
         """Test rendering of a tree structure."""
@@ -702,6 +712,235 @@ class TestASCIIRenderer(unittest.TestCase):
 
         self.assertNotEqual(a_to_b_start[1], b_to_a_end[1])
         self.assertNotEqual(a_to_b_end[1], b_to_a_start[1])
+
+    def test_shared_ports_none_reassigns_oversubscribed_target_face(self):
+        graph = nx.DiGraph([("A", "T"), ("B", "T"), ("C", "T")])
+        positions = {"A": (0, 0), "B": (0, 2), "C": (0, 4), "T": (16, 2)}
+
+        baseline = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                bboxes=True,
+                hpad=1,
+                vpad=0,
+                edge_anchor_mode="ports",
+                use_ascii=True,
+                layer_spacing=4,
+            ),
+        )
+        baseline._edge_anchor_map = baseline._compute_edge_anchor_map(positions)  # noqa: SLF001
+        baseline_ends = {
+            baseline._edge_anchor_map[(source, "T")]["end"]  # noqa: SLF001
+            for source in ("A", "B", "C")
+        }
+        self.assertEqual(len(baseline_ends), 1)
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                bboxes=True,
+                hpad=1,
+                vpad=0,
+                edge_anchor_mode="ports",
+                shared_ports_mode="none",
+                use_ascii=True,
+                layer_spacing=4,
+            ),
+        )
+        renderer._edge_anchor_map = renderer._compute_edge_anchor_map(positions)  # noqa: SLF001
+
+        end_anchors = {
+            renderer._edge_anchor_map[(source, "T")]["end"]  # noqa: SLF001
+            for source in ("A", "B", "C")
+        }
+        self.assertGreater(len(end_anchors), 1)
+
+        rerouted_sources = [
+            source
+            for source in ("A", "B", "C")
+            if renderer._edge_anchor_map[(source, "T")]["end_side"] != "left"  # noqa: SLF001
+        ]
+        self.assertTrue(rerouted_sources)
+
+        rerouted = rerouted_sources[0]
+        _start_anchor, end_anchor = renderer._get_edge_anchor_points(
+            rerouted, "T", positions
+        )  # noqa: SLF001
+        self.assertEqual(
+            end_anchor,
+            renderer._edge_anchor_map[(rerouted, "T")]["end"],  # noqa: SLF001
+        )
+
+    def test_shared_ports_none_reassigns_oversubscribed_source_face(self):
+        graph = nx.Graph([("S", "A"), ("S", "B"), ("S", "C")])
+        positions = {"S": (8, 0), "A": (0, 8), "B": (8, 8), "C": (16, 8)}
+
+        baseline = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                bboxes=True,
+                hpad=0,
+                vpad=0,
+                edge_anchor_mode="ports",
+                use_ascii=True,
+                layer_spacing=4,
+            ),
+        )
+        baseline._edge_anchor_map = baseline._compute_edge_anchor_map(positions)  # noqa: SLF001
+        baseline_starts = {
+            baseline._edge_anchor_map[("S", target)]["start"]  # noqa: SLF001
+            for target in ("A", "B", "C")
+        }
+        self.assertEqual(len(baseline_starts), 1)
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                bboxes=True,
+                hpad=0,
+                vpad=0,
+                edge_anchor_mode="ports",
+                shared_ports_mode="none",
+                use_ascii=True,
+                layer_spacing=4,
+            ),
+        )
+        renderer._edge_anchor_map = renderer._compute_edge_anchor_map(positions)  # noqa: SLF001
+
+        start_anchors = {
+            renderer._edge_anchor_map[("S", target)]["start"]  # noqa: SLF001
+            for target in ("A", "B", "C")
+        }
+        self.assertGreater(len(start_anchors), 1)
+        self.assertTrue(
+            any(
+                renderer._edge_anchor_map[("S", target)]["start_side"] != "bottom"  # noqa: SLF001
+                for target in ("A", "B", "C")
+            )
+        )
+
+    def test_shared_ports_none_counts_start_and_end_together_per_face(self):
+        graph = nx.DiGraph(
+            [
+                ("A", "M"),
+                ("B", "M"),
+                ("C", "M"),
+                ("M", "N"),
+                ("M", "O"),
+                ("M", "P"),
+            ]
+        )
+        positions = {
+            "A": (8, 0),
+            "B": (13, 0),
+            "C": (18, 0),
+            "N": (23, 0),
+            "O": (28, 0),
+            "P": (33, 0),
+            "M": (18, 8),
+        }
+
+        baseline = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                bboxes=True,
+                hpad=2,
+                vpad=0,
+                edge_anchor_mode="ports",
+                use_ascii=True,
+            ),
+        )
+        baseline._edge_anchor_map = baseline._compute_edge_anchor_map(positions)  # noqa: SLF001
+        baseline_top_terminals = 0
+        for edge, data in baseline._edge_anchor_map.items():  # noqa: SLF001
+            if edge[0] == "M" and data["start_side"] == "top":
+                baseline_top_terminals += 1
+            if edge[1] == "M" and data["end_side"] == "top":
+                baseline_top_terminals += 1
+        self.assertEqual(baseline_top_terminals, 6)
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                bboxes=True,
+                hpad=2,
+                vpad=0,
+                edge_anchor_mode="ports",
+                shared_ports_mode="none",
+                use_ascii=True,
+            ),
+        )
+        renderer._edge_anchor_map = renderer._compute_edge_anchor_map(positions)  # noqa: SLF001
+        top_terminals = 0
+        non_top_terminals = 0
+        for edge, data in renderer._edge_anchor_map.items():  # noqa: SLF001
+            if edge[0] == "M":
+                top_terminals += int(data["start_side"] == "top")
+                non_top_terminals += int(data["start_side"] != "top")
+            if edge[1] == "M":
+                top_terminals += int(data["end_side"] == "top")
+                non_top_terminals += int(data["end_side"] != "top")
+
+        self.assertEqual(top_terminals, 5)
+        self.assertGreater(non_top_terminals, 0)
+
+    def test_shared_ports_minimize_avoids_reuse_on_same_face_without_rebalancing(self):
+        graph = nx.DiGraph(
+            [
+                ("A", "M"),
+                ("B", "M"),
+                ("C", "M"),
+                ("M", "N"),
+                ("M", "O"),
+                ("M", "P"),
+            ]
+        )
+        positions = {
+            "A": (8, 0),
+            "B": (13, 0),
+            "C": (18, 0),
+            "N": (23, 0),
+            "O": (28, 0),
+            "P": (33, 0),
+            "M": (18, 8),
+        }
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                bboxes=True,
+                hpad=2,
+                vpad=0,
+                edge_anchor_mode="ports",
+                shared_ports_mode="minimize",
+                use_ascii=True,
+            ),
+        )
+        renderer._edge_anchor_map = renderer._compute_edge_anchor_map(positions)  # noqa: SLF001
+
+        top_terminals = 0
+        side_terminals = 0
+        terminal_points = set()
+        for edge, data in renderer._edge_anchor_map.items():  # noqa: SLF001
+            if edge[0] == "M":
+                terminal_points.add(data["start"])
+                top_terminals += int(data["start_side"] == "top")
+                side_terminals += int(data["start_side"] != "top")
+            if edge[1] == "M":
+                terminal_points.add(data["end"])
+                top_terminals += int(data["end_side"] == "top")
+                side_terminals += int(data["end_side"] != "top")
+
+        self.assertEqual(top_terminals, 6)
+        self.assertEqual(side_terminals, 0)
+        self.assertEqual(len(terminal_points), 5)
 
     def test_edge_anchor_center_prefers_horizontal_sides_for_near_aligned_boxes(self):
         graph = nx.DiGraph([("A", "B")])
