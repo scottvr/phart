@@ -81,6 +81,8 @@ Will generate a Mermaid `flowchart TD` from your graph.
 See [LAYOUT-STRATEGIES.md](https://github.com/scottvr/phart/blob/main/LAYOUT-STRATEGIES.md) in the repo for some examples of output.
 I have also documented one of the scripts in the `examples/` directory and shown its output here in [TRIADIC-CENSUS.md](https://github.com/scottvr/phart/blob/main/examples/docs/TRIADIC-CENSUS.md)
 
+## "Rainbow Coloring" demo
+
 Anyone interested in representing potentially very dense and complex graphs with an ascii line-drawing generator
 such that they find themselves here reading this is probably someone with a fair likelyhood to find this next
 trick as amusing as I did.
