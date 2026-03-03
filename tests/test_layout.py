@@ -310,8 +310,8 @@ class TestLayoutManager(unittest.TestCase):
             graph,
             LayoutOptions(
                 node_style=NodeStyle.MINIMAL,
-                node_order_mode="attr",
                 node_order_attr="rank",
+                node_order_mode="numeric",
                 use_ascii=True,
             ),
         )

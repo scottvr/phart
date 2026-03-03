@@ -105,6 +105,13 @@ class LayoutManager:
             return default_mode
         return mode
 
+    def _node_order_value(self, node: Any) -> Any:
+        """Return the active sort value for a node."""
+        attr_name = self.options.node_order_attr
+        if attr_name is not None and node in self.graph:
+            return self.graph.nodes[node].get(attr_name)
+        return node
+
     def _node_sort_key(
         self, node: Any, *, default_mode: str = "alpha"
     ) -> Tuple[Any, ...]:
@@ -120,34 +127,25 @@ class LayoutManager:
                 fallback_text,
             )
 
+        value = self._node_order_value(node)
+        if value is None:
+            return (1, fallback_key, fallback_text)
+
+        value_text = str(value)
+        value_natural_key = self._natural_sort_tokens(value)
+
         if mode == "alpha":
-            return (0, fallback_text.casefold(), fallback_text)
+            return (0, value_text.casefold(), fallback_key, fallback_text)
 
         if mode == "natural":
-            return (0, fallback_key, fallback_text)
+            return (0, value_natural_key, fallback_key, fallback_text)
 
         if mode == "numeric":
             try:
-                numeric_value = float(node)
+                numeric_value = float(value)
             except (TypeError, ValueError):
                 return (1, fallback_key, fallback_text)
             return (0, numeric_value, fallback_text)
-
-        if mode == "attr":
-            attr_name = self.options.node_order_attr
-            attr_value = (
-                self.graph.nodes[node].get(attr_name)
-                if node in self.graph
-                else None
-            )
-            if attr_value is None:
-                return (1, fallback_key, fallback_text)
-            return (
-                0,
-                self._natural_sort_tokens(attr_value),
-                fallback_key,
-                fallback_text,
-            )
 
         return (0, fallback_text.casefold(), fallback_text)
 

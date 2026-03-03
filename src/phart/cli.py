@@ -244,19 +244,18 @@ def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
             "alpha",
             "natural",
             "numeric",
-            "attr",
         ],
         default="layout-default",
         help=(
             "Node ordering policy: layout-default (default), preserve, alpha, "
-            "natural, numeric, or attr"
+            "natural, or numeric"
         ),
     )
     parser.add_argument(
         "--node-order-attr",
         type=str,
         default=None,
-        help="Node attribute name used when --node-order attr is selected",
+        help="Optional node attribute name to use as the ordering key",
     )
     parser.add_argument(
         "--flow-direction",

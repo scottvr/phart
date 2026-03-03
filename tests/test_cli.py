@@ -727,7 +727,7 @@ def main():
         sys.argv = [
             "phart",
             "--node-order",
-            "attr",
+            "numeric",
             "--node-order-attr",
             "rank",
             str(self.test_text_file),
@@ -735,5 +735,5 @@ def main():
         args, _unknown, explicit_layout_fields, _module_argv = parse_args()
         options = create_layout_options(args, explicit_layout_fields)
 
-        self.assertEqual(options.node_order_mode, "attr")
+        self.assertEqual(options.node_order_mode, "numeric")
         self.assertEqual(options.node_order_attr, "rank")

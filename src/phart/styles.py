@@ -119,7 +119,7 @@ class LayoutOptions:
     )  # auto, bfs, bipartite, circular, hierarchical, planar, layered, kamada_kawai, spring, arf, spiral, shell, random, multipartite, vertical
     node_order_mode: str = field(
         default="layout_default"
-    )  # layout_default, preserve, alpha, natural, numeric, attr
+    )  # layout_default, preserve, alpha, natural, numeric
     node_order_attr: Optional[str] = field(default=None)
     flow_direction: FlowDirection = field(default=FlowDirection.DOWN)
     bboxes: bool = field(default=False)  # Draw line-art boxes around nodes
@@ -295,18 +295,15 @@ class LayoutOptions:
             "alpha",
             "natural",
             "numeric",
-            "attr",
         }:
             raise ValueError(
-                "node_order_mode must be one of: layout_default, preserve, alpha, natural, numeric, attr"
+                "node_order_mode must be one of: layout_default, preserve, alpha, natural, numeric"
             )
 
         if self.node_order_attr is not None:
             self.node_order_attr = str(self.node_order_attr).strip()
             if not self.node_order_attr:
                 self.node_order_attr = None
-        if self.node_order_mode == "attr" and self.node_order_attr is None:
-            raise ValueError("node_order_attr is required when node_order_mode='attr'")
 
         if isinstance(self.edge_color_mode, str):
             self.edge_color_mode = self.edge_color_mode.strip().lower()

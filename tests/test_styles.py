@@ -11,7 +11,7 @@ class TestLayoutOptions(unittest.TestCase):
 
         self.assertEqual(options.node_order_mode, "layout_default")
 
-    def test_attr_node_order_requires_attribute_name(self):
+    def test_invalid_attr_node_order_mode_is_rejected(self):
         with self.assertRaises(ValueError):
             LayoutOptions(node_order_mode="attr")
 
@@ -19,6 +19,12 @@ class TestLayoutOptions(unittest.TestCase):
         options = LayoutOptions(node_order_attr="   ")
 
         self.assertIsNone(options.node_order_attr)
+
+    def test_node_order_attr_is_allowed_without_special_mode(self):
+        options = LayoutOptions(node_order_mode="natural", node_order_attr="rank")
+
+        self.assertEqual(options.node_order_mode, "natural")
+        self.assertEqual(options.node_order_attr, "rank")
 
 
 if __name__ == "__main__":
