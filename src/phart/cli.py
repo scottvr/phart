@@ -19,7 +19,6 @@ LAYOUT_STRATEGIES = {
     "auto",
     "bfs",
     "bipartite",
-    "btree",
     "circular",
     "planar",
     "kamada-kawai",
@@ -41,11 +40,11 @@ CLI_LAYOUT_FIELD_MAP = {
     "--charset": {"use_ascii", "allow_ansi_in_ascii"},
     "--ascii": {"use_ascii", "allow_ansi_in_ascii"},
     "--binary-tree": {"binary_tree_layout"},
-    "--btree": {"binary_tree_layout"},
     "--layout": {"layout_strategy"},
     "--layout-strategy": {"layout_strategy"},
     "--node-order": {"node_order_mode"},
     "--node-order-attr": {"node_order_attr"},
+    "--node-order-reverse": {"node_order_reverse"},
     "--flow-direction": {"flow_direction"},
     "--flow": {"flow_direction"},
     "--bboxes": {"bboxes"},
@@ -137,10 +136,6 @@ def _collect_explicit_layout_fields(
         opt_name = token.split("=", 1)[0]
         explicit_fields.update(_fields_for_option_token(opt_name))
 
-    # layout=btree implies binary-tree semantics, even without explicit --binary-tree.
-    if "layout_strategy" in explicit_fields and args.layout_strategy == "btree":
-        explicit_fields.add("binary_tree_layout")
-
     return explicit_fields
 
 
@@ -225,7 +220,6 @@ def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
     )
     parser.add_argument(
         "--binary-tree",
-        "--btree",
         action="store_true",
         help="Enable binary tree layout (respects edge 'side' attributes)",
     )
@@ -257,6 +251,11 @@ def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
         type=str,
         default=None,
         help="Optional node attribute name to use as the ordering key",
+    )
+    parser.add_argument(
+        "--node-order-reverse",
+        action="store_true",
+        help="The result of the sorting method used by the layout strategy will be reversed",
     )
     parser.add_argument(
         "--flow-direction",
@@ -458,9 +457,6 @@ def create_layout_options(
     if color_mode == "attr" and not edge_color_rules:
         raise ValueError("--colors attr requires --edge-color-rule")
     use_ascii = args.charset in {CharSet.ASCII, CharSet.ANSI} or args.use_legacy_ascii
-    if args.layout_strategy == "btree":
-        binary_tree_layout = True
-        layout_strategy = "auto"
     allow_ansi_in_ascii = args.charset == CharSet.ANSI and not args.use_legacy_ascii
     options = LayoutOptions(
         node_style=node_style,
@@ -471,6 +467,7 @@ def create_layout_options(
         layout_strategy=layout_strategy,
         node_order_mode=args.node_order,
         node_order_attr=args.node_order_attr,
+        node_order_reverse=args.node_order_reverse,
         flow_direction=args.flow_direction,
         bboxes=args.bboxes,
         hpad=args.hpad,

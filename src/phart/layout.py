@@ -151,9 +151,11 @@ class LayoutManager:
 
     def _ordered_nodes(self, nodes: Any, *, default_mode: str = "alpha") -> List[Any]:
         """Return nodes ordered according to the configured node-order policy."""
+        print(f"node_sort_reverse: {self.options.node_order_reverse}")
         return sorted(
             list(nodes),
             key=lambda node: self._node_sort_key(node, default_mode=default_mode),
+            reverse=self.options.node_order_reverse,
         )
 
     def _node_rect(
@@ -342,6 +344,8 @@ class LayoutManager:
         - Graph is dense (many edges relative to possible edges)
         - Has significant bidirectional relationships
         """
+        # TODO: determine if still want this. vertical layout was added specifically for triad
+        # graphlets but... maybe it it is useful for other "auto" cases
         if len(graph) != 3:
             return False
 

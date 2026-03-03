@@ -121,6 +121,7 @@ class LayoutOptions:
         default="layout_default"
     )  # layout_default, preserve, alpha, natural, numeric
     node_order_attr: Optional[str] = field(default=None)
+    node_order_reverse: bool = field(default=False)
     flow_direction: FlowDirection = field(default=FlowDirection.DOWN)
     bboxes: bool = field(default=False)  # Draw line-art boxes around nodes
     hpad: int = field(default=1)  # Horizontal inner padding for boxed nodes
@@ -158,6 +159,9 @@ class LayoutOptions:
     edge_cross = EdgeChar("+", "┼")
     edge_vertical = EdgeChar("|", "│")
     edge_horizontal = EdgeChar("-", "─")
+    # TODO:
+    # Need to finish the custom edge_arrows, and custom edge-decoraators in general
+    # rather than this that I have done. Mayhaps *somebody* likes the unicode arrows.
     #    edge_arrow_r = EdgeChar(">", "→")
     #    edge_arrow_l = EdgeChar("<", "←")
     edge_arrow_r = EdgeChar(">", ">")
@@ -270,7 +274,6 @@ class LayoutOptions:
             "auto",
             "bfs",
             "bipartite",
-            "btree",
             "circular",
             "planar",
             "kamada_kawai",
@@ -285,7 +288,7 @@ class LayoutOptions:
             "layered",
         }:
             raise ValueError(
-                "layout_strategy must be one of: legacy, bfs, bipartite, btree, circular, hierarchical, layered, "
+                "layout_strategy must be one of: legacy, bfs, bipartite, circular, hierarchical, layered, "
                 "planar, kamada_kawai, spring, arf, spiral, shell, random, multipartite, vertical"
             )
 

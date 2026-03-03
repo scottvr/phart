@@ -833,6 +833,7 @@ def merge_layout_options(
         "layout_strategy",
         "node_order_mode",
         "node_order_attr",
+        "node_order_reverse",
         "left_padding",
         "right_padding",
         "margin",

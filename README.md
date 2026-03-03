@@ -23,13 +23,16 @@ _\*except NetworkX, which should be mentioned prominently, as rendering NX digra
                         Node ordering policy: layout-default (default), preserve, alpha, natural, or numeric
   --node-order-attr NODE_ORDER_ATTR
                         Optional node attribute name to use as the ordering key
+  --node-order-reverse
+                        The result of the sorting method used by the layout strategy will be reversed
 ```
 
-Intended usage is of the sorts:
+Intended usage examples:
 
 - `--node-order natural`
 - `--node-order-attr label --node-order alpha`
 - `--node-order-attr rank` `--node-order numeric`
+- `--noder-order alpha --node-order-reverse`
 
 Also added were:
 
@@ -73,8 +76,9 @@ You probably won't need it.
 [`flowchart TD` is now a supported output. Read about it here.](https://github.com/scottvr/phart/blob/main/docs/mermaid-phart.md)
 
 TL;DR:
+
 - `--output-format mmd` along with, optionally `--output yourfile.mmd` (or you can just redirect stdout with `> yourfile.md`
-Will generate a Mermaid `flowchart TD` from your graph.
+  Will generate a Mermaid `flowchart TD` from your graph.
 
 ## New Layout Strategies
 
@@ -110,7 +114,7 @@ Having rambled on long enough now, let me show you phart's latest masterpiece of
 
 <img width="700" height="700" alt="rainbow-coloring-13-nodes-correct-sorting" src="https://github-production-user-asset-6210df.s3.amazonaws.com/7464239/557415439-0673464c-aca2-48fe-a9bf-d600fe05373e.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAVCODYLSA53PQK4ZA%2F20260303%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260303T122543Z&X-Amz-Expires=300&X-Amz-Signature=8fda4e9a903a6942f211a2c28bbfd97fdfe0e913150b0cb24afe7e1b67020d2f&X-Amz-SignedHeaders=host" />
 
-Here is the original cool-but-incorrect render I had done before; the "rainbow" is not the same pattern due to some nodes being out if order, so the length-based color is askew for several edges. Notice that while it makes an interesting rainbow-ish gradient from left to right, it isn't what was intended and you can see the bottom-most node has two same-length horizontal  lines to each side, and they are of different colors despite being the same apparent distance.  (now notice the labels on the nodes; that's the problem.  0 should be next to 1 and on side and 11 on the other, by shortest (graph)  distance; a "green-length" edge (path) got incorrectly respresented by a short (Cartesian)  length line.) Here:  
+Here is the original cool-but-incorrect render I had done before; the "rainbow" is not the same pattern due to some nodes being out if order, so the length-based color is askew for several edges. Notice that while it makes an interesting rainbow-ish gradient from left to right, it isn't what was intended and you can see the bottom-most node has two same-length horizontal lines to each side, and they are of different colors despite being the same apparent distance. (now notice the labels on the nodes; that's the problem. 0 should be next to 1 and on side and 11 on the other, by shortest (graph) distance; a "green-length" edge (path) got incorrectly respresented by a short (Cartesian) length line.) Here:
 
 <img width="700" height="700"  src="https://github.com/user-attachments/assets/41a402f1-4443-491e-9033-fa5795b7cf9d" />
 
@@ -333,7 +337,7 @@ As we'll see here, I will `tail` to just the last 15 lines of output so I can ju
 something new and interesting, further down the tree:
 
 ```bash
-$ phart --colors attr --edge-color-rule side:left=green,right=red --bbox --btree \
+$ phart --colors attr --edge-color-rule side:left=green,right=red --bbox -- \
  --charset unicode --no-color-nodes examples/collatz.py -- 5 | tail -15
 ```
 
@@ -409,9 +413,9 @@ To install all `extra` requirements (e.g., `fonttools` for svg rendering support
 usage: phart [-h] [--output OUTPUT] [--version] [--output-format {ditaa,ditaa-puml,html,latex-markdown,mmd,svg,text}]
              [--style {minimal,square,round,diamond,custom,bbox}] [--node-spacing NODE_SPACING]
              [--layer-spacing LAYER_SPACING] [--charset {ascii,ansi,unicode}] [--ascii] [--function FUNCTION]
+             [--layout {arf,auto,bfs,bipartite,circular,hierarchical,kamada-kawai,layered,multipartite,planar,random,shell,spiral,spring,vertical}]
              [--binary-tree]
-             [--layout {arf,auto,bfs,bipartite,btree,circular,hierarchical,kamada-kawai,layered,multipartite,planar,random,shell,spiral,spring,vertical}]
-             [--node-order {layout-default,preserve,alpha,natural,numeric}] [--node-order-attr NODE_ORDER_ATTR]
+             [--node-order {layout-default,preserve,alpha,natural,numeric}] [--node-order-attr NODE_ORDER_ATTR] [--node-order-reverse]
              [--flow-direction {down,up,left,right}] [--bboxes] [--hpad HPAD] [--vpad VPAD] [--uniform]
              [--edge-anchors {auto,center,ports}] [--shared-ports {any,minimize,none}]
              [--bidirectional-mode {coalesce,separate}] [--labels] [--colors {attr,none,path,source,target}]
@@ -442,14 +446,19 @@ options:
   --ascii               Force ASCII output (deprecated, use --charset ascii instead)
   --function, -f FUNCTION
                         Function to call in Python file (default: main)
-  --binary-tree, --btree
+  --binary-tree
                         Enable binary tree layout (respects edge 'side' attributes)
-  --layout, --layout-strategy {arf,auto,bfs,bipartite,btree,circular,hierarchical,kamada-kawai,layered,multipartite,planar,random,shell,spiral,spring,vertical}
+                        Equivalent to setting node-order to 'natural', but having the sort
+                        key be an edge attribute ('side'), or if none exists, the sort will
+                        be applied to the nodes directly using the node ordering policy specified.
+  --layout, --layout-strategy {arf,auto,bfs,bipartite,circular,hierarchical,kamada-kawai,layered,multipartite,planar,random,shell,spiral,spring,vertical}
                         Node positioning strategy (default: auto)
   --node-order {layout-default,preserve,alpha,natural,numeric}
                         Node ordering policy: layout-default (default), preserve, alpha, natural, or numeric
   --node-order-attr NODE_ORDER_ATTR
                         Optional node attribute name to use as the ordering key
+  --node-order-reverse
+                        The result of the sorting method used by the layout strategy will be reversed
   --flow-direction, --flow {down,up,left,right}
                         Layout flow direction: down (default, root at top), up (root at bottom), left (root at right),
                         right (root at left)
