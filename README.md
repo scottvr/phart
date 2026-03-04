@@ -30,7 +30,7 @@ Intended usage examples:
 
 - `--node-order natural`
 - `--node-order-attr label --node-order alpha`
-- `--node-order-attr rank` `--node-order numeric`
+- `--node-order-attr rank --node-order numeric`
 - `--noder-order alpha --node-order-reverse`
 
 Also added were:
@@ -62,7 +62,7 @@ $ phart --shared-ports any --bidirectional-mode coalesce ...
 
 Often, I'll combine those with variations on `--hpad/--vpad`, `--layer/node-sizing` and `--colors` ..., but hopefully unless you're adding a new layout strategy or other such enhancement, you aren't having to do a lot of puzzling about output. If you are, feel free to open an Issue.
 
-Additionally, a `public get_edge_route_length()` function was added to ASCIIRenderer.
+Additionally, a `public get_edge_route_length()` function was added to ASCIIRenderer class.
 
 - `get_edge_route_length()` is in canvas grid units: one unit per character cell step in the renderer’s virtual grid. Concretely, it returns abs(dx) + abs(dy) between the final chosen edge anchors, so it is “orthogonal steps,” not a geometric or graph-theoretic distance.
 
