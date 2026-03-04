@@ -31,7 +31,7 @@ Intended usage examples:
 - `--node-order natural`
 - `--node-order-attr label --node-order alpha`
 - `--node-order-attr rank --node-order numeric`
-- `--noder-order alpha --node-order-reverse`
+- `--node-order alpha --node-order-reverse`
 
 Also added were:
 
