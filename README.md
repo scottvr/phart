@@ -108,9 +108,7 @@ So, with only 90 degree jogs available to connect any node to another, and with 
 
 ### You can get there from here, just probably not as a crow flies
 
-If you did the math, you know that there are 78 connections to account for in this graph (or 156, depending on how you count a bidirectional path; we're going to use the same connection to go both ways in our diagram. You will see it is quite crowded already.)
-
-Having rambled on long enough now, let me show you phart's latest masterpiece of ASCII Art (ok, I used Unicode characters in this one, and phart colored it them with ANSI color escape codes, but it's still plain text!). It's rendering is quite fetching in its own way I think.
+If you did the math, you know that there are 78 connections to account for in this graph (or 156, depending on how you count a bidirectional path; we're going to use the same connection to go both ways in our diagram. You will see it is quite crowded already.
 
 Here's the original cool-but-incorrect render I had prominently at the top before I realized that  the "rainbow" is not the same pattern due to some nodes being out if order, so the length-based color is askew for several edges. Notice that while it makes an interesting rainbow-ish gradient from left to right, it isn't what was intended and you can see the bottom-most node has two same-length horizontal lines to each side, and they are of different colors despite being the same apparent distance. (now notice the labels on the nodes; that's the problem. 0 should be next to 1 and on side and 11 on the other, by shortest (graph) distance; a "green-length" edge (path) got incorrectly respresented by a short (Cartesian) length line.) Here:
 
