@@ -14,6 +14,7 @@
 - Edge attribute support (and attribute-based coloring of edges)
 - Over ten layout strategies
 - Orthogonal edge paths (all 90 degree turns, "Manhattan" style)
+- Node labels using multi-column character sets (such as CJK)
 
 ## Newest additions are:
 
