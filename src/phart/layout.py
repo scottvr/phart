@@ -27,7 +27,9 @@ class LayoutManager:
         self._widest_node_text_width = (
             max(
                 (
-                    len(self.options.get_node_text(self._get_node_display_text(node)))
+                    self.options.get_text_display_width(
+                        self.options.get_node_text(self._get_node_display_text(node))
+                    )
                     for node in self.graph.nodes()
                 ),
                 default=0,

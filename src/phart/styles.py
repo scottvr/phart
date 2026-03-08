@@ -1,6 +1,7 @@
 # src path: src\phart\styles.py
 from dataclasses import dataclass, field, fields
 from enum import Enum
+import unicodedata
 from typing import Any, Dict, Optional, Tuple, Union
 
 
@@ -469,7 +470,7 @@ class LayoutOptions:
         self, node_str: str, widest_text_width: Optional[int] = None
     ) -> Tuple[int, int]:
         """Get rendered node width/height for a given node text."""
-        text_width = len(self.get_node_text(node_str))
+        text_width = self.get_text_display_width(self.get_node_text(node_str))
         if self.bboxes and self.uniform and widest_text_width is not None:
             text_width = max(text_width, widest_text_width)
 
@@ -478,3 +479,26 @@ class LayoutOptions:
 
         width = text_width + (2 * self.hpad) + 2  # left/right border columns
         return width, self.get_node_height()
+
+    @staticmethod
+    def get_char_display_width(char: str) -> int:
+        """Return terminal display width for a single Unicode codepoint."""
+        if not char:
+            return 0
+
+        if unicodedata.combining(char):
+            return 0
+
+        if unicodedata.east_asian_width(char) in {"F", "W"}:
+            return 2
+
+        category = unicodedata.category(char)
+        if category in {"Cc", "Cf"}:
+            return 0
+
+        return 1
+
+    @classmethod
+    def get_text_display_width(cls, text: str) -> int:
+        """Return terminal display width for text in monospace columns."""
+        return sum(cls.get_char_display_width(ch) for ch in text)

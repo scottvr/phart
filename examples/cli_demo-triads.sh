@@ -12,7 +12,7 @@ for charset in unicode;
         read -n 1 -s -r -p "Press 'y' to proceed or any other to skip to next step" yn
         case "$yn" in
             [Yy])
-                for x in arf auto bfs bipartite btree circular hierarchical kamada-kawai layered multipartite planar random shell spiral spring vertical ;
+                for x in arf auto bfs bipartite circular hierarchical kamada-kawai layered multipartite planar random shell spiral spring vertical ;
                     do
                     echo "**${x}** layout strategy";
                     echo ""

@@ -185,6 +185,25 @@ class TestASCIIRenderer(unittest.TestCase):
         result = renderer.render()
         self.assertIn("Alpha Beta", result)
 
+    def test_cjk_label_box_width_respects_display_columns(self):
+        graph = nx.DiGraph()
+        graph.add_node("n1", label="中文")
+        graph.add_node("n2", label="A")
+        graph.add_edge("n1", "n2")
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                bboxes=True,
+                use_labels=True,
+                use_ascii=True,
+            ),
+        )
+        result = renderer.render()
+
+        # "中文" is 4 display columns; with default hpad/borders this yields a 6-dash top.
+        self.assertIn("+------+", result)
+
     def test_cycle_handling(self):
         """Test proper handling of cycles in graphs."""
         renderer = ASCIIRenderer(self.cycle)

@@ -42,16 +42,13 @@ So, with only 90 degree jogs available to connect any node to another, and with 
 
 If you did the math, you know that there are 78 connections to account for in this graph (or 156, depending on how you count a bidirectional path; we're going to use the same connection to go both ways in our diagram. You will see it is quite crowded already.)
 
-Having rambled on long enough now, let me show you phart's latest masterpiece of ASCII Art (ok, I used Unicode characters in this one, and phart colored it them with ANSI color escape codes, but it's still plain text!). It's rendering is quite fetching in its own way I think.  
+Having rambled on long enough now, let me show you phart's latest masterpiece of ASCII Art (ok, I used Unicode characters in this one, and phart colored it them with ANSI color escape codes, but it's still plain text!). It's rendering is quite fetching in its own way I think.
 
+<img width="800" height="800" alt="NX-complete-graph" src="https://github.com/user-attachments/assets/ac28aa5c-b6b2-4a23-a03f-4a6839076c55" />
 
-<img width="800" height="800" alt="NX-complete-graph" src="https://github.com/user-attachments/assets/ac28aa5c-b6b2-4a23-a03f-4a6839076c55" />  
+<br />
 
-<br />  
-
-
-
----  
+---
 
 ## NEW Features Feb 2026
 
@@ -77,14 +74,13 @@ ANSI color support turned out more interesting than I expected. Not completely s
 
 I'm not sure it's all _that_ much easier to discern what goes to where, but it sure is fun to look at.
 
-## NEWER! - Accidental Features 
+## NEWER! - Accidental Features
 
-So, I inadvertently merged some code into main that was not intended to be released yet, because it's - while not _**not**_ working, per se - still a little half-baked, and not documented well. 
+So, I inadvertently merged some code into main that was not intended to be released yet, because it's - while not _**not**_ working, per se - still a little half-baked, and not documented well.
 
-Nevertheless, some might notice the command-line options, when runnning ``phart --help`` for example,  and try to use some of the features, so I figured I may as well explain one of the goofier ones. I've written about it here in [GHM-LAtEX.md](https://github.com/scottvr/phart/blob/main/docs/GHM-LATEX.md).
+Nevertheless, some might notice the command-line options, when runnning `phart --help` for example, and try to use some of the features, so I figured I may as well explain one of the goofier ones. I've written about it here in [GHM-LAtEX.md](https://github.com/scottvr/phart/blob/main/docs/GHM-LATEX.md).
 
 I just finished updating the SVG documentation with a couple of surprising results achieved by what was intended to be a silly and useless feature that I didn't actually plan to release. Check out the two vector diagrams at the top of [svg-renderer.md](https://github.com/scottvr/phart/blob/main/docs/svg-renderer.md).
-
 
 ---
 
@@ -270,19 +266,18 @@ the output. (And, because it is simply console text, you can pipe it elsewhere, 
 As we'll see here, I will `tail` to just the last 15 lines of output so I can just see
 something new and interesting, further down the tree:
 
-``` bash
-$ phart --colors attr --edge-color-rule side:left=green,right=red --bbox --btree \
+```bash
+$ phart --colors attr --edge-color-rule side:left=green,right=red --bbox --binary-tree \
  --charset unicode --no-color-nodes examples/collatz.py -- 5 | tail -15
 ```
 
-
-This gives us the following output, which I'll share via screenshot, because GitHub is picky&ast;&ast; about letting one color a markdown document:
+This gives us the following output, which I'll share via screenshot, because GitHub is picky\*\* about letting one color a markdown document:
 
 <img width="325" height="218" alt="collatz-5-tail-15" src="https://github.com/user-attachments/assets/bcd4cd1b-322a-464a-b1b6-e0e1359332a0" />
 
 There are more examples scripts in the repo, along with a README in the examples/ directory
 
-&ast;&ast; [There's' an app for that!(tm)](https://github.com/scottvr/phart/blob/main/docs/GHM-LATEX.md)
+\*\* [There's' an app for that!(tm)](https://github.com/scottvr/phart/blob/main/docs/GHM-LATEX.md)
 
 ---
 
@@ -291,10 +286,9 @@ There are more examples scripts in the repo, along with a README in the examples
 Now, explicitly exposed and selectable by the user, phart's layout_strategy is now configurable.
 See [LAYOUT-STRATEGIES.md](https://github.com/scottvr/phart/blob/main/LAYOUT-STRATEGIES.md) in the repo for demos.
 
-### NEWER! - Accidental Features 
+### NEWER! - Accidental Features
 
-So, I inadvertently merged some code into main that was not intended to be released yet, because it's - while not _not_ working, per se - still a little half-baked, so it's not documented well. Nevertheless, some might notice the command-line options when runnning ``phart --help``, for example and try to use some of the features, so I figured I may as well explain one of the goofier ones. I've written about it here in [GHM-LAtEX.md](https://github.com/scottvr/phart/blob/main/docs/GHM-LATEX.md)
-
+So, I inadvertently merged some code into main that was not intended to be released yet, because it's - while not _not_ working, per se - still a little half-baked, so it's not documented well. Nevertheless, some might notice the command-line options when runnning `phart --help`, for example and try to use some of the features, so I figured I may as well explain one of the goofier ones. I've written about it here in [GHM-LAtEX.md](https://github.com/scottvr/phart/blob/main/docs/GHM-LATEX.md)
 
 ## Why "PHART"?
 
@@ -349,7 +343,7 @@ To install all `extra` requirements (e.g., `fonttools` for svg rendering support
 usage: phart [-h] [--output OUTPUT] [--style {minimal,square,round,diamond,custom,bbox}]
              [--node-spacing NODE_SPACING] [--layer-spacing LAYER_SPACING]
              [--charset {ascii,ansi,unicode}] [--ascii] [--function FUNCTION] [--binary-tree]
-             [--layout {arf,auto,bfs,bipartite,btree,circular,hierarchical,kamada-kawai,layered,multipartite,planar,random,shell,spiral,spring,vertical}]
+             [--layout {arf,auto,bfs,bipartite,circular,hierarchical,kamada-kawai,layered,multipartite,planar,random,shell,spiral,spring,vertical}]
              [--flow-direction {down,up,left,right}] [--bboxes] [--hpad HPAD] [--vpad VPAD]
              [--uniform] [--edge-anchors {auto,center,ports}] [--labels]
              [--colors {attr,none,path,source,target}] [--edge-color-rule RULE]
@@ -375,7 +369,7 @@ options:
   --function, -f FUNCTION
                         Function to call in Python file (default: main)
   --binary-tree         Shortcut to enable binary tree layout (respects edge 'side' attributes for left/right)
-  --layout, --layout-strategy {auto,arf,bfs,bipartite,btree,circular,hierarchical,kamada-kawai,layered,multipartite,planar,random,shell,spiral,spring,vertical}
+  --layout, --layout-strategy {auto,arf,bfs,bipartite,binary-tree,circular,hierarchical,kamada-kawai,layered,multipartite,planar,random,shell,spiral,spring,vertical}
                         Node positioning strategy (default: auto - legacy hierarchical, vertical for triads)
   --flow-direction, --flow {down,up,left,right}
                         Layout flow direction: down (default, root at top), up (root at

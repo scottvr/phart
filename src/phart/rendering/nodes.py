@@ -35,7 +35,9 @@ def get_widest_node_text_width(renderer: ASCIIRenderer) -> Optional[int]:
         return None
     return max(
         (
-            len(renderer.options.get_node_text(renderer._get_display_node_text(node)))
+            renderer.options.get_text_display_width(
+                renderer.options.get_node_text(renderer._get_display_node_text(node))
+            )
             for node in renderer.graph.nodes()
         ),
         default=0,
@@ -77,15 +79,16 @@ def draw_node(renderer: ASCIIRenderer, node: Any, x: int, y: int) -> None:
 
     # if  renderer._use_ansi_colors and not renderer.options.bboxes:
     if not renderer.options.bboxes:
-        for i, char in enumerate(label):
-            renderer._paint_cell(x + i, y, char, node_color)
+        _paint_label(renderer, label, x, y, node_color)
         return
 
     right_x = x + node_width - 1
     bottom_y = y + node_height - 1
     inner_width = max(0, node_width - 2 - (2 * renderer.options.hpad))
     label_offset = (
-        max(0, (inner_width - len(label)) // 2) if renderer.options.uniform else 0
+        max(0, (inner_width - renderer.options.get_text_display_width(label)) // 2)
+        if renderer.options.uniform
+        else 0
     )
     inner_start_x = x + 1 + renderer.options.hpad + label_offset
     label_y = y + 1 + renderer.options.vpad
@@ -108,5 +111,24 @@ def draw_node(renderer: ASCIIRenderer, node: Any, x: int, y: int) -> None:
         renderer._paint_cell(x, row, renderer.options.edge_vertical, node_color)
         renderer._paint_cell(right_x, row, renderer.options.edge_vertical, node_color)
 
-    for i, char in enumerate(label):
-        renderer._paint_cell(inner_start_x + i, label_y, char, node_color)
+    _paint_label(renderer, label, inner_start_x, label_y, node_color)
+
+
+def _paint_label(
+    renderer: ASCIIRenderer,
+    label: str,
+    start_x: int,
+    y: int,
+    color: Optional[str],
+) -> None:
+    cursor_x = start_x
+    for char in label:
+        renderer._paint_cell(cursor_x, y, char, color)
+        char_width = renderer.options.get_char_display_width(char)
+        if char_width <= 0:
+            continue
+
+        # Mark continuation cells so wide glyphs occupy their full terminal width.
+        for continuation in range(1, char_width):
+            renderer._paint_cell(cursor_x + continuation, y, "", color)
+        cursor_x += char_width

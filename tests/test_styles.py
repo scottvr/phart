@@ -35,6 +35,17 @@ class TestLayoutOptions(unittest.TestCase):
         with self.assertRaises(ValueError):
             LayoutOptions(bidirectional_mode="split")
 
+    def test_text_display_width_counts_cjk_as_double_width(self):
+        options = LayoutOptions()
+        self.assertEqual(options.get_text_display_width("ASCII"), 5)
+        self.assertEqual(options.get_text_display_width("中文"), 4)
+
+    def test_node_dimensions_use_display_width(self):
+        options = LayoutOptions(node_style="minimal", bboxes=True, use_ascii=True)
+        width, _height = options.get_node_dimensions("中文")
+        # 4 columns for text + 2 inner hpad + 2 borders
+        self.assertEqual(width, 8)
+
 
 if __name__ == "__main__":
     unittest.main()
