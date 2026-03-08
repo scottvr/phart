@@ -95,6 +95,9 @@ def draw_node(renderer: ASCIIRenderer, node: Any, x: int, y: int) -> None:
 
     renderer._paint_cell(x, y, renderer.options.box_top_left, node_color)
     renderer._paint_cell(right_x, y, renderer.options.box_top_right, node_color)
+    # TODO(width): Border routing assumes box glyphs are single-cell display width.
+    # If box edge/corner glyphs are configured as wide glyphs, draw logic must
+    # reserve continuation cells and adjust border stepping.
     for col in range(x + 1, right_x):
         renderer._paint_cell(col, y, renderer.options.edge_horizontal, node_color)
 

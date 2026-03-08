@@ -44,6 +44,8 @@ def draw_vertical_segment(
     marker: Optional[str],
     color: Optional[str] = None,
 ) -> None:
+    # TODO(width): Edge routing currently treats line glyphs as single-cell.
+    # Supporting wide/custom edge glyphs will require width-aware stepping.
     for y in range(start_y + 1, end_y):
         renderer._paint_edge_cell(x, y, renderer.options.edge_vertical, color)
     if marker is not None:
@@ -59,6 +61,8 @@ def draw_horizontal_segment(
     marker: Optional[str],
     color: Optional[str] = None,
 ) -> None:
+    # TODO(width): Edge routing currently treats line glyphs as single-cell.
+    # Supporting wide/custom edge glyphs will require width-aware stepping.
     for x in range(start_x + 1, end_x):
         renderer._paint_edge_cell(x, y, renderer.options.edge_horizontal, color)
     if marker is not None:
