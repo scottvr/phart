@@ -153,7 +153,6 @@ class LayoutManager:
 
     def _ordered_nodes(self, nodes: Any, *, default_mode: str = "alpha") -> List[Any]:
         """Return nodes ordered according to the configured node-order policy."""
-        print(f"node_sort_reverse: {self.options.node_order_reverse}")
         return sorted(
             list(nodes),
             key=lambda node: self._node_sort_key(node, default_mode=default_mode),
