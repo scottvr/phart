@@ -454,6 +454,29 @@ def main():
         self.assertIn("C", content)
         self.assertNotIn("Error", self.stderr.getvalue())
 
+    def test_markdown_output_auto_uses_nbsp_padding(self):
+        output_file = Path(self.temp_dir) / "diagram.md"
+        sys.argv = ["phart", str(self.py_main_file), "--output", str(output_file)]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        content = output_file.read_text(encoding="utf-8")
+        self.assertIn("\u00a0", content)
+
+    def test_markdown_output_whitespace_override_ascii_space(self):
+        output_file = Path(self.temp_dir) / "diagram.md"
+        sys.argv = [
+            "phart",
+            "--whitespace",
+            "ascii-space",
+            str(self.py_main_file),
+            "--output",
+            str(output_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        content = output_file.read_text(encoding="utf-8")
+        self.assertNotIn("\u00a0", content)
+
     def test_python_with_main_block(self):
         """Test executing Python file with __main__ block."""
         sys.argv = ["phart", str(self.py_block_file)]
@@ -748,3 +771,14 @@ def main():
 
         self.assertEqual(options.node_order_mode, "numeric")
         self.assertEqual(options.node_order_attr, "rank")
+
+    def test_whitespace_flag_populates_layout_options(self):
+        sys.argv = [
+            "phart",
+            "--whitespace",
+            "ascii-space",
+            str(self.test_text_file),
+        ]
+        args, _unknown, explicit_layout_fields, _module_argv = parse_args()
+        options = create_layout_options(args, explicit_layout_fields)
+        self.assertEqual(options.whitespace_mode, "ascii_space")

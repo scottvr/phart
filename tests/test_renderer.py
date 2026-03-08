@@ -266,6 +266,44 @@ class TestASCIIRenderer(unittest.TestCase):
         result = renderer.render()
         self.assertEqual(result.strip(), "[A]")
 
+    def test_render_markdown_safe_uses_nbsp_in_auto_mode(self):
+        graph = nx.DiGraph()
+        graph.add_node("A B")
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(node_style=NodeStyle.MINIMAL, use_ascii=True),
+        )
+        result = renderer.render(markdown_safe=True)
+        self.assertIn("\u00a0", result)
+        self.assertNotIn("A B", result)
+
+    def test_render_markdown_safe_respects_explicit_whitespace_mode(self):
+        graph = nx.DiGraph()
+        graph.add_node("A B")
+        ascii_renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=True,
+                whitespace_mode="ascii_space",
+            ),
+        )
+        nbsp_renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=True,
+                whitespace_mode="nbsp",
+            ),
+        )
+
+        ascii_result = ascii_renderer.render(markdown_safe=True)
+        nbsp_result = nbsp_renderer.render(markdown_safe=False)
+
+        self.assertIn("A B", ascii_result)
+        self.assertNotIn("\u00a0", ascii_result)
+        self.assertIn("\u00a0", nbsp_result)
+
     def test_from_dot(self):
         """Test creation from DOT format."""
         dot_string = """

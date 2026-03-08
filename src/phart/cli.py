@@ -60,7 +60,10 @@ CLI_LAYOUT_FIELD_MAP = {
     "--colors": {"ansi_colors", "edge_color_mode"},
     "--no-color-nodes": {"color_nodes"},
     "--edge-color-rule": {"edge_color_rules"},
+    "--whitespace": {"whitespace_mode"},
 }
+
+MARKDOWN_EXTENSIONS = {".md", ".markdown", ".mdown", ".mkd", ".mdx"}
 
 
 def _normalize_color_args(argv: list[str]) -> list[str]:
@@ -379,6 +382,15 @@ def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
         default="#ffffff",
         help="Background color for SVG/HTML output",
     )
+    parser.add_argument(
+        "--whitespace",
+        choices=["auto", "ascii-space", "nbsp"],
+        default="auto",
+        help=(
+            "Text output whitespace mode: auto (default), ascii-space, or nbsp. "
+            "In auto mode, .md/.markdown outputs use nbsp for padding."
+        ),
+    )
     args, unknown = parser.parse_known_args(argv)
     explicit_layout_fields = _collect_explicit_layout_fields(argv, args)
     return args, unknown, explicit_layout_fields, module_argv
@@ -482,6 +494,7 @@ def create_layout_options(
         edge_color_mode="source" if color_mode == "none" else color_mode,
         edge_color_rules=edge_color_rules,
         color_nodes=color_nodes,
+        whitespace_mode=args.whitespace,
     )
     setattr(options, "_explicit_cli_fields", set(explicit_layout_fields or set()))
     return options
@@ -490,6 +503,12 @@ def create_layout_options(
 def main() -> Optional[int]:
     """CLI entry point for PHART."""
     args, unknown, explicit_layout_fields, module_argv = parse_args()
+    markdown_target = (
+        args.output is not None and args.output.suffix.lower() in MARKDOWN_EXTENSIONS
+    )
+    markdown_safe_text = args.whitespace == "nbsp" or (
+        args.whitespace == "auto" and markdown_target
+    )
 
     try:
         output_render_config = OutputRenderConfig(
@@ -500,6 +519,7 @@ def main() -> Optional[int]:
             svg_font_path=args.svg_font_path,
             svg_fg=args.svg_fg,
             svg_bg=args.svg_bg,
+            markdown_safe_text=markdown_safe_text,
         )
         renderer_output_config = RendererOutputConfig(
             output_format=args.output_format,
@@ -509,6 +529,7 @@ def main() -> Optional[int]:
             svg_font_path=args.svg_font_path,
             svg_fg=args.svg_fg,
             svg_bg=args.svg_bg,
+            markdown_safe_text=markdown_safe_text,
         )
 
         if args.input.suffix == ".py":

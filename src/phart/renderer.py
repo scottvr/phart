@@ -477,7 +477,9 @@ class ASCIIRenderer:
             start_anchor[1] - end_anchor[1]
         )
 
-    def render(self, print_config: Optional[bool] = False) -> str:
+    def render(
+        self, print_config: Optional[bool] = False, *, markdown_safe: bool = False
+    ) -> str:
         """Render the graph as ASCII art."""
         positions, width, height = self.layout_manager.calculate_layout()
         if not positions:
@@ -524,10 +526,16 @@ class ASCIIRenderer:
                     f"Node drawing failed: {pos_info}, {canvas_info}"
                 ) from e
 
-        return "\n".join(
+        text = "\n".join(
             self._render_row(row, colors)
             for row, colors in zip(self.canvas, self._color_canvas, strict=True)
         )
+        padding_char = self.options.resolve_padding_char(markdown_safe=markdown_safe)
+        if padding_char != " ":
+            from .rendering.output import apply_padding_char
+
+            text = apply_padding_char(text, padding_char=padding_char)
+        return text
 
     def draw(self, file: Optional[TextIO] = None) -> None:
         """

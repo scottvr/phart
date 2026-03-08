@@ -14,6 +14,13 @@ if TYPE_CHECKING:
 _TILDE_SPACE_RATIO = 32.0 / 15.0
 
 
+def apply_padding_char(text: str, *, padding_char: str) -> str:
+    """Replace ASCII spaces in rendered output with a configured padding glyph."""
+    if padding_char == " ":
+        return text
+    return text.replace(" ", padding_char)
+
+
 def normalized_canvas_rows(renderer: ASCIIRenderer) -> List[str]:
     width = max((len(row) for row in renderer.canvas), default=0)
     return ["".join(row).ljust(width) for row in renderer.canvas]

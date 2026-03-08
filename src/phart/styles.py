@@ -152,6 +152,9 @@ class LayoutOptions:
         default_factory=dict
     )  # attr mode rules: {"attr_name": {"attr_value": "color_spec"}}
     color_nodes: bool = field(default=True)
+    whitespace_mode: str = field(
+        default="auto"
+    )  # auto, ascii_space, or nbsp for text output spacing
 
     # Instance-specific ID (unchanged)
     instance_id: int = field(init=False)
@@ -319,6 +322,13 @@ class LayoutOptions:
             raise ValueError(
                 "edge_color_mode must be one of: target, source, path, attr"
             )
+
+        if isinstance(self.whitespace_mode, str):
+            self.whitespace_mode = (
+                self.whitespace_mode.strip().lower().replace("-", "_")
+            )
+        if self.whitespace_mode not in {"auto", "ascii_space", "nbsp"}:
+            raise ValueError("whitespace_mode must be one of: auto, ascii_space, nbsp")
 
         if not isinstance(self.edge_color_rules, dict):
             raise ValueError("edge_color_rules must be a dict of dicts")
@@ -502,3 +512,11 @@ class LayoutOptions:
     def get_text_display_width(cls, text: str) -> int:
         """Return terminal display width for text in monospace columns."""
         return sum(cls.get_char_display_width(ch) for ch in text)
+
+    def resolve_padding_char(self, *, markdown_safe: bool = False) -> str:
+        """Resolve output padding character for text rendering."""
+        if self.whitespace_mode == "ascii_space":
+            return " "
+        if self.whitespace_mode == "nbsp":
+            return "\u00a0"
+        return "\u00a0" if markdown_safe else " "
