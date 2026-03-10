@@ -354,10 +354,6 @@ There are more examples scripts in the repo, along with a README in the examples
 Now, explicitly exposed and selectable by the user, phart's layout_strategy is now configurable.
 See [LAYOUT-STRATEGIES.md](https://github.com/scottvr/phart/blob/main/LAYOUT-STRATEGIES.md) in the repo for demos.
 
-### NEWER! - Accidental Features
-
-So, I inadvertently merged some code into main that was not intended to be released yet, because it's - while not _not_ working, per se - still a little half-baked, so it's not documented well. Nevertheless, some might notice the command-line options when runnning `phart --help`, for example and try to use some of the features, so I figured I may as well explain one of the goofier ones. I've written about it here in [GHM-LAtEX.md](https://github.com/scottvr/phart/blob/main/docs/GHM-LATEX.md)
-
 ## Why "PHART"?
 
 The acronym was a fortuitous accident from the non-abbreviated words that the letters represent: **Python Hierarchical ASCII Rendering Tool**.
