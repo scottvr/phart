@@ -291,7 +291,7 @@ $ phart balanced_tree.py --bbox --hpad 0 --style round --layer-spacing 4 --edge-
 └───┘    └───┘    └───┘    └───┘
 ```
 
-Let's look a slightly more interesting graph, courtesy of phart user @deostroll, in the [Discussions](https://github.com/scottvr/phart/discussions/15).
+Let's look a slightly more interesting graph, courtesy of a user in the [Discussions](https://github.com/scottvr/phart/discussions/15).
 
 His script generates a Collatz Tree, and takes an argument for the depth for which you wish to calculate terms. As you will see, we can pass arguments for the **phart cli** to use as
 arguments for the script you've given it as an input file. We will just separate the
