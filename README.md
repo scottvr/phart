@@ -677,9 +677,7 @@ phart graph.py --charset ascii --style round
 This means you can set specific options in your code while still using command-line
 options to adjust general rendering settings.
 
-#### I hope you enjoy it, and include many surprising plain-text diagrams in your next paper/book/website/video. Let me know if you
-
-do something cool with it, or if it breaks on your graph.
+#### I hope you enjoy it, and include many surprising plain-text diagrams in your next paper/book/website/video. Let me know if you do something cool with it, or if it breaks on your graph.
 
 ## License
 
