@@ -1,7 +1,6 @@
 # phart
 
-**PHART:** The Python Hierarchical ASCII Representation Tool - A Pure Python graph visualization in ASCII, no external dependencies\*
-_\*except NetworkX, which should be mentioned prominently, as rendering NX digraphs as ASCII was the entire reason for phart's creation. but **phart** will **not** require you to stand up a webserver to run PHP and install Perl and some libraries just to render a Graph in 7-bit text (or UTF-8 or Unicode) from Python._
+**PHART:** The Python Hierarchical ASCII Representation Tool - A Pure Python tool for graph visualization via charts and diagrams rendered in ASCII.
 
 ## Features
 
@@ -13,8 +12,28 @@ _\*except NetworkX, which should be mentioned prominently, as rendering NX digra
 - Handles cycles and complex layouts
 - Bidirectional edge support
 - Edge attribute support (and attribute-based coloring of edges)
+- Edge label rendering from edge `label` attributes
 - Over ten layout strategies
 - Orthogonal edge paths (all 90 degree turns, "Manhattan" style)
+- Node labels using multi-column character sets (such as CJK)
+- Optional width/height pagination for text output
+- Optional multiline node labels in bounding boxes
+
+---
+
+Design/spec references:
+
+- [Style Rules Specification (Draft)](./architecture/style-rules-spec.md)
+- [mermaid `flowchart TD` is now a supported output](./architecture/mermaid-flowchart-syntax.md")
+
+## NEW mermaid output support
+
+Read about it here.](https://github.com/scottvr/phart/blob/main/docs/mermaid-phart.md)
+
+TL;DR:
+
+- `--output-format mmd` along with, optionally `--output yourfile.mmd` (or you can just redirect stdout with `> yourfile.md`
+  Will generate a Mermaid `flowchart TD` from your graph.
 
 ## New Layout Strategies
 
