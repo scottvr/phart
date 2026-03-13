@@ -3,6 +3,7 @@
 import sys
 import argparse
 import json
+import re
 import shutil
 from pathlib import Path
 from typing import Optional, Any
@@ -57,6 +58,7 @@ CLI_LAYOUT_FIELD_MAP = {
     "--cross-partition-edge-style": {"cross_partition_edge_style"},
     "--partition-order": {"partition_order"},
     "--panel-headers": {"panel_header_mode"},
+    "--connector-ref": {"connector_ref_mode"},
     "--bboxes": {"bboxes"},
     "--bbox": {"bboxes"},
     "--hpad": {"hpad"},
@@ -436,6 +438,12 @@ def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
         choices=["none", "basic", "lineage"],
         default="basic",
         help="Constrained panel header mode: none, basic (default), or lineage",
+    )
+    parser.add_argument(
+        "--connector-ref",
+        choices=["auto", "id", "label", "both"],
+        default="auto",
+        help="Connector endpoint reference mode: auto (default), id, label, or both",
     )
     parser.add_argument(
         "--bboxes",
@@ -917,20 +925,6 @@ def create_layout_options(
     )
     if args.partition_overlap < 0:
         raise ValueError("--partition-overlap must be non-negative")
-    if (
-        target_canvas_width is not None
-        and args.partition_overlap >= target_canvas_width
-    ):
-        raise ValueError(
-            "--partition-overlap must be smaller than --target-canvas-width"
-        )
-    if (
-        target_canvas_height is not None
-        and args.partition_overlap >= target_canvas_height
-    ):
-        raise ValueError(
-            "--partition-overlap must be smaller than --target-canvas-height"
-        )
     if args.constrained and target_canvas_width is None:
         raise ValueError("--constrained requires --target-canvas-width")
     if args.labels:
@@ -957,6 +951,7 @@ def create_layout_options(
         cross_partition_edge_style=args.cross_partition_edge_style,
         partition_order=args.partition_order,
         panel_header_mode=args.panel_headers,
+        connector_ref_mode=args.connector_ref,
         bboxes=args.bboxes,
         hpad=args.hpad,
         vpad=args.vpad,
@@ -1125,12 +1120,28 @@ def main() -> Optional[int]:
 
             cli_options = create_layout_options(args, explicit_layout_fields)
             renderer = load_renderer_from_file(args.input, options=cli_options)
-            rendered_output = render_renderer_output(
-                renderer, config=renderer_output_config
-            )
+            panel_blocks: Optional[list[str]] = None
+            if paginate_enabled and renderer_output_config.output_format == "text":
+                if cli_options.constrained:
+                    panel_blocks = renderer.render_panel_blocks(
+                        markdown_safe=renderer_output_config.markdown_safe_text
+                    )
+                    rendered_output = "\n\n".join(panel_blocks)
+                else:
+                    rendered_output = render_renderer_output(
+                        renderer, config=renderer_output_config
+                    )
+            else:
+                rendered_output = render_renderer_output(
+                    renderer, config=renderer_output_config
+                )
             if paginate_enabled:
                 rendered_output = _apply_text_pagination(
-                    args, rendered_output, paginate_width, paginate_height
+                    args,
+                    rendered_output,
+                    paginate_width,
+                    paginate_height,
+                    panel_blocks=panel_blocks,
                 )
             if args.output:
                 args.output.write_text(rendered_output, encoding="utf-8")
@@ -1148,11 +1159,81 @@ def _apply_text_pagination(
     rendered_output: str,
     paginate_width: Optional[int],
     paginate_height: Optional[int],
+    *,
+    panel_blocks: Optional[list[str]] = None,
 ) -> str:
+    overlap_x = args.paginate_overlap if paginate_width is not None else 0
+
+    if panel_blocks is None and args.constrained:
+        panel_blocks = _split_constrained_panel_blocks(rendered_output)
+
+    if panel_blocks and len(panel_blocks) > 1:
+        selected_blocks: list[str] = []
+        panel_descriptions: list[str] = []
+
+        if args.write_pages is not None:
+            args.write_pages.mkdir(parents=True, exist_ok=True)
+
+        for panel_idx, panel_text in enumerate(panel_blocks):
+            panel_rows = panel_text.splitlines()
+            panel_canvas_width = max((len(row) for row in panel_rows), default=1)
+            panel_page_width = (
+                paginate_width
+                if paginate_width is not None
+                else max(1, panel_canvas_width)
+            )
+
+            pages, canvas_width, canvas_height = paginate_text(
+                panel_text,
+                page_width=panel_page_width,
+                overlap=overlap_x,
+                page_height=paginate_height,
+                overlap_y=0,
+            )
+            if args.list_pages:
+                description = describe_pages(
+                    pages,
+                    canvas_width=canvas_width,
+                    canvas_height=canvas_height,
+                    page_width=panel_page_width,
+                    overlap=overlap_x,
+                )
+                panel_descriptions.append(
+                    f"Panel P{panel_idx + 1}/{len(panel_blocks)}\n{description}"
+                )
+
+            if args.write_pages is not None:
+                for page in pages:
+                    page_file = args.write_pages / (
+                        f"panel_p{panel_idx + 1:02d}_x{page.x_index:02d}_y{page.y_index:02d}.txt"
+                    )
+                    page_file.write_text(page.text, encoding="utf-8")
+
+            max_x = max((page.x_index for page in pages), default=0)
+            max_y = max((page.y_index for page in pages), default=0)
+            selected_x = min(args.page_x, max_x)
+            selected_y = min(args.page_y, max_y)
+            selected_page = next(
+                (
+                    page
+                    for page in pages
+                    if page.x_index == selected_x and page.y_index == selected_y
+                ),
+                None,
+            )
+            if selected_page is None:
+                raise ValueError(
+                    f"Unable to select paginated view for panel P{panel_idx + 1}"
+                )
+            selected_blocks.append(selected_page.text)
+
+        if args.list_pages and panel_descriptions:
+            print("\n\n".join(panel_descriptions), file=sys.stderr)
+        return "\n\n".join(selected_blocks)
+
     rows = rendered_output.splitlines()
     canvas_width = max((len(row) for row in rows), default=1)
     page_width = paginate_width if paginate_width is not None else max(1, canvas_width)
-    overlap_x = args.paginate_overlap if paginate_width is not None else 0
 
     pages, canvas_width, canvas_height = paginate_text(
         rendered_output,
@@ -1198,6 +1279,30 @@ def _apply_text_pagination(
             f"(max x={max_x}, y={max_y})"
         )
     return selected_page.text
+
+
+def _split_constrained_panel_blocks(rendered_output: str) -> Optional[list[str]]:
+    lines = rendered_output.splitlines()
+    if not lines:
+        return None
+
+    ansi_re = re.compile(r"\x1b\[[0-9;]*m")
+    starts: list[int] = []
+    for idx, line in enumerate(lines):
+        plain = ansi_re.sub("", line)
+        if re.search(r"\bPanel\s+P\d+/\d+\b", plain):
+            starts.append(idx)
+
+    if len(starts) < 2:
+        return None
+
+    blocks: list[str] = []
+    for pos, start in enumerate(starts):
+        end = starts[pos + 1] if pos + 1 < len(starts) else len(lines)
+        block = "\n".join(lines[start:end]).rstrip()
+        if block:
+            blocks.append(block)
+    return blocks if blocks else None
 
 
 if __name__ == "__main__":

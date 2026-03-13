@@ -2050,12 +2050,13 @@ class TestASCIIRenderer(unittest.TestCase):
         )
         output = renderer.render()
 
-        self.assertIn("=== Panel P1/3", output)
-        self.assertIn("=== Panel P2/3", output)
-        self.assertIn("=== Panel P3/3", output)
+        self.assertIn("=== Panel P1/2", output)
+        self.assertIn("=== Panel P2/2", output)
         self.assertIn("Connectors:", output)
-        self.assertIn("-> [P2] R->A1", output)
-        self.assertIn("from [P1] -> A1 (R->A1)", output)
+        self.assertIn("-> [P2] R->A3", output)
+        self.assertIn("from [P1] -> B1 (A1->B1)", output)
+        self.assertIn("Boundary Out:", output)
+        self.assertIn("Boundary In:", output)
 
     def test_constrained_render_respects_connector_style_none(self):
         graph = nx.DiGraph()
@@ -2140,8 +2141,8 @@ class TestASCIIRenderer(unittest.TestCase):
         )
         output = renderer.render()
 
-        self.assertIn("[HDR]=== Panel P1/3", output)
-        self.assertIn("[IN]  from [P1] -> A1 (R->A1)", output)
+        self.assertIn("[HDR]=== Panel P1/2", output)
+        self.assertIn("[IN]  from [P1] -> B1 (A1->B1)", output)
 
     def test_constrained_render_supports_connector_style_rule_color(self):
         graph = nx.DiGraph()
@@ -2173,6 +2174,72 @@ class TestASCIIRenderer(unittest.TestCase):
 
         self.assertIn("\x1b[31m", output)
         self.assertIn("\x1b[0m", output)
+
+    def test_constrained_render_overlap_includes_context_layers(self):
+        graph = nx.DiGraph()
+        graph.add_edge("R", "A1")
+        graph.add_edge("R", "A2")
+        graph.add_edge("R", "A3")
+        graph.add_edge("R", "A4")
+        graph.add_edge("A1", "B1")
+        graph.add_edge("A2", "B2")
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="layered",
+                constrained=True,
+                target_canvas_width=12,
+                partition_overlap=1,
+                use_ascii=True,
+            ),
+        )
+        output = renderer.render()
+
+        self.assertIn("=== Panel P1/2", output)
+        self.assertIn("=== Panel P2/2", output)
+        self.assertNotIn("Boundary In:", output)
+        self.assertNotIn("Boundary Out:", output)
+        self.assertIn("B1", output)
+        self.assertIn("B2", output)
+        self.assertIn("R", output)
+
+    def test_constrained_render_connector_ref_mode_both_uses_labels_and_ids(self):
+        graph = nx.DiGraph()
+        graph.add_edge("R", "A1")
+        graph.add_edge("R", "A2")
+        graph.add_edge("R", "A3")
+        graph.add_edge("R", "A4")
+        graph.add_edge("A1", "B1")
+        graph.add_edge("A2", "B2")
+        labels = {
+            "R": "Root",
+            "A1": "Alice",
+            "A2": "Aaron",
+            "A3": "Asha",
+            "A4": "Aria",
+            "B1": "Ben",
+            "B2": "Bianca",
+        }
+        for node, label in labels.items():
+            graph.nodes[node]["label"] = label
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="layered",
+                constrained=True,
+                target_canvas_width=12,
+                connector_ref_mode="both",
+                use_ascii=True,
+            ),
+        )
+        output = renderer.render()
+
+        self.assertIn("Alice [A1]->Ben [B1]", output)
+        self.assertIn("Root [R]->Asha [A3]", output)
 
     def test_file_writing(self):
         """Test writing to file with proper encoding."""
@@ -2319,6 +2386,14 @@ class TestLayoutOptions(unittest.TestCase):
     def test_invalid_panel_header_mode_raises(self):
         with self.assertRaises(ValueError):
             LayoutOptions(panel_header_mode="invalid")
+
+    def test_connector_ref_mode_defaults_to_auto(self):
+        options = LayoutOptions()
+        self.assertEqual(options.connector_ref_mode, "auto")
+
+    def test_invalid_connector_ref_mode_raises(self):
+        with self.assertRaises(ValueError):
+            LayoutOptions(connector_ref_mode="invalid")
 
     def test_invalid_edge_color_mode(self):
         with self.assertRaises(ValueError):

@@ -33,6 +33,13 @@ class PartitionPlan:
     cross_partition_edges: List[CrossPartitionEdge]
 
 
+@dataclass(frozen=True)
+class _LayerSegment:
+    layer_index: int
+    nodes: List[Any]
+    width: int
+
+
 class LayoutManager:
     def __init__(self, graph: nx.DiGraph, options: LayoutOptions):
         self.graph = graph
@@ -1343,27 +1350,75 @@ class LayoutManager:
         total = sum(self._get_node_width(node) for node in layer)
         return total + (spacing * max(0, len(layer) - 1))
 
+    def _split_layer_into_segments(
+        self, layer: List[Any], spacing: int, max_width: Optional[int]
+    ) -> List[List[Any]]:
+        if not layer:
+            return []
+
+        if max_width is None or max_width <= 0:
+            return [list(layer)]
+
+        segments: List[List[Any]] = []
+        current_segment: List[Any] = []
+        current_width = 0
+        for node in layer:
+            node_width = self._get_node_width(node)
+            candidate_width = node_width
+            if current_segment:
+                candidate_width = current_width + spacing + node_width
+            if current_segment and candidate_width > max_width:
+                segments.append(current_segment)
+                current_segment = [node]
+                current_width = node_width
+            else:
+                current_segment.append(node)
+                current_width = candidate_width
+        if current_segment:
+            segments.append(current_segment)
+        return segments
+
     @staticmethod
-    def _partition_layer_ranges(
-        layer_widths: List[int], target_width: int
+    def _partition_segment_ranges(
+        *,
+        segment_layer_indices: List[int],
+        segment_widths: List[int],
+        layer_height: int,
+        node_height: int,
+        max_width: Optional[int],
+        max_height: Optional[int],
     ) -> List[Tuple[int, int]]:
-        if not layer_widths:
+        if not segment_widths:
             return []
 
         ranges: List[Tuple[int, int]] = []
         start = 0
-        running_width = layer_widths[0]
+        running_width = segment_widths[0]
+        running_segments = 1
 
-        for idx in range(1, len(layer_widths)):
-            candidate_width = max(running_width, layer_widths[idx])
-            if idx > start and candidate_width > target_width:
+        for idx in range(1, len(segment_widths)):
+            split_same_layer = (
+                segment_layer_indices[idx] == segment_layer_indices[idx - 1]
+            )
+            candidate_width = max(running_width, segment_widths[idx])
+            candidate_segments = running_segments + 1
+            candidate_height = ((candidate_segments - 1) * layer_height) + node_height
+
+            exceeds_width = (
+                max_width is not None and idx > start and candidate_width > max_width
+            )
+            exceeds_height = (
+                max_height is not None and idx > start and candidate_height > max_height
+            )
+            if split_same_layer or exceeds_width or exceeds_height:
                 ranges.append((start, idx))
                 start = idx
-                running_width = layer_widths[idx]
+                running_width = segment_widths[idx]
+                running_segments = 1
             else:
                 running_width = candidate_width
-
-        ranges.append((start, len(layer_widths)))
+                running_segments = candidate_segments
+        ranges.append((start, len(segment_widths)))
         return ranges
 
     def _layout_constrained(
@@ -1379,12 +1434,28 @@ class LayoutManager:
         if target_width is None:
             raise ValueError("constrained layout requires target_canvas_width")
 
-        if self.options.flow_direction not in {FlowDirection.DOWN, FlowDirection.UP}:
+        flow_direction = self.options.flow_direction
+        if flow_direction not in {
+            FlowDirection.DOWN,
+            FlowDirection.UP,
+            FlowDirection.LEFT,
+            FlowDirection.RIGHT,
+        }:
             raise ValueError(
-                "constrained mode currently supports flow-direction down and up"
+                "constrained mode currently supports flow-direction down, up, left, and right"
             )
 
+        panel_max_width: Optional[int]
+        panel_max_height: Optional[int]
+        if flow_direction in {FlowDirection.DOWN, FlowDirection.UP}:
+            panel_max_width = target_width
+            panel_max_height = self.options.target_canvas_height
+        else:
+            panel_max_width = self.options.target_canvas_height
+            panel_max_height = target_width
+
         layer_height = self._get_layer_step()
+        node_height = self._get_node_height()
         if layer_mode == "bfs":
             raw_layers = self._build_layers_bfs(nx.DiGraph(graph))
         else:
@@ -1403,18 +1474,45 @@ class LayoutManager:
             )
             return {}
 
-        layer_widths = [
-            self._layer_row_width(layer, spacing) for layer in ordered_layers
-        ]
-        base_ranges = self._partition_layer_ranges(layer_widths, target_width)
+        layer_segments: List[_LayerSegment] = []
+        for layer_index, layer in enumerate(ordered_layers):
+            for segment_nodes in self._split_layer_into_segments(
+                layer, spacing, panel_max_width
+            ):
+                layer_segments.append(
+                    _LayerSegment(
+                        layer_index=layer_index,
+                        nodes=segment_nodes,
+                        width=self._layer_row_width(segment_nodes, spacing),
+                    )
+                )
+        if not layer_segments:
+            self.partition_plan = PartitionPlan(
+                partitions=[],
+                partition_layer_ranges=[],
+                node_to_partition={},
+                cross_partition_edges=[],
+            )
+            return {}
+
+        base_ranges = self._partition_segment_ranges(
+            segment_layer_indices=[segment.layer_index for segment in layer_segments],
+            segment_widths=[segment.width for segment in layer_segments],
+            layer_height=layer_height,
+            node_height=node_height,
+            max_width=panel_max_width,
+            max_height=panel_max_height,
+        )
 
         ordered_indices = list(range(len(base_ranges)))
         if self.options.partition_order == "size":
             ordered_indices.sort(
                 key=lambda idx: (
                     -sum(
-                        len(ordered_layers[layer_idx])
-                        for layer_idx in range(*base_ranges[idx])
+                        len(segment.nodes)
+                        for segment in layer_segments[
+                            base_ranges[idx][0] : base_ranges[idx][1]
+                        ]
                     ),
                     idx,
                 )
@@ -1422,20 +1520,35 @@ class LayoutManager:
 
         rendered_ranges = [base_ranges[idx] for idx in ordered_indices]
         width_by_range = [
-            max(layer_widths[start:end], default=0) for start, end in rendered_ranges
+            max(
+                (segment.width for segment in layer_segments[start:end]),
+                default=0,
+            )
+            for start, end in rendered_ranges
         ]
 
         positions: Dict[Any, Tuple[int, int]] = {}
         node_to_partition: Dict[Any, int] = {}
+        partition_layer_ranges: List[Tuple[int, int]] = []
         partition_gap = layer_height
         y_offset = 0
 
         for partition_idx, (start, end) in enumerate(rendered_ranges):
-            partition_layers = ordered_layers[start:end]
+            partition_segments = layer_segments[start:end]
             partition_width = width_by_range[partition_idx]
+            primary_layer_index_set = {
+                segment.layer_index for segment in partition_segments
+            }
+            if primary_layer_index_set:
+                partition_layer_ranges.append(
+                    (min(primary_layer_index_set), max(primary_layer_index_set) + 1)
+                )
+            else:
+                partition_layer_ranges.append((0, 0))
 
-            for local_layer_idx, layer in enumerate(partition_layers):
-                layer_width = self._layer_row_width(layer, spacing)
+            for local_layer_idx, segment in enumerate(partition_segments):
+                layer = segment.nodes
+                layer_width = segment.width
                 current_x = (partition_width - layer_width) // 2
                 y = y_offset + (local_layer_idx * layer_height)
                 for node in layer:
@@ -1443,19 +1556,42 @@ class LayoutManager:
                     node_to_partition[node] = partition_idx
                     current_x += self._get_node_width(node) + spacing
 
-            y_offset += (len(partition_layers) * layer_height) + partition_gap
+            y_offset += (len(partition_segments) * layer_height) + partition_gap
 
         overlap = max(0, self.options.partition_overlap)
         plan_partitions: List[List[Any]] = []
         for start, end in rendered_ranges:
-            expanded_start = max(0, start - overlap)
-            expanded_end = min(len(ordered_layers), end + overlap)
-            panel_nodes = [
-                node
-                for layer in ordered_layers[expanded_start:expanded_end]
-                for node in layer
-            ]
-            plan_partitions.append(panel_nodes)
+            primary_segments = layer_segments[start:end]
+            if not primary_segments:
+                plan_partitions.append([])
+                continue
+            primary_layer_index_list = sorted(
+                {segment.layer_index for segment in primary_segments}
+            )
+            start_layer = primary_layer_index_list[0]
+            end_layer = primary_layer_index_list[-1] + 1
+            expanded_start = max(0, start_layer - overlap)
+            expanded_end = min(len(ordered_layers), end_layer + overlap)
+
+            panel_nodes: List[Any] = []
+            if overlap > 0:
+                for layer_idx in range(expanded_start, start_layer):
+                    panel_nodes.extend(ordered_layers[layer_idx])
+            for segment in primary_segments:
+                panel_nodes.extend(segment.nodes)
+            if overlap > 0:
+                for layer_idx in range(end_layer, expanded_end):
+                    panel_nodes.extend(ordered_layers[layer_idx])
+
+            deduped_nodes: List[Any] = []
+            seen_nodes: Set[Any] = set()
+            for node in panel_nodes:
+                if node in seen_nodes:
+                    continue
+                seen_nodes.add(node)
+                deduped_nodes.append(node)
+
+            plan_partitions.append(deduped_nodes)
 
         cross_partition_edges: List[CrossPartitionEdge] = []
         for u, v in graph.edges():
@@ -1479,7 +1615,7 @@ class LayoutManager:
 
         self.partition_plan = PartitionPlan(
             partitions=plan_partitions,
-            partition_layer_ranges=rendered_ranges,
+            partition_layer_ranges=partition_layer_ranges,
             node_to_partition=node_to_partition,
             cross_partition_edges=cross_partition_edges,
         )

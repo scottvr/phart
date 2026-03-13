@@ -160,6 +160,18 @@ def main():
     print("\\x1b[31mABCDEFGHIJ\\x1b[0m")
 """
         self.py_ansi_output_file.write_text(ansi_output_content, encoding="utf-8")
+        self.py_panelized_output_file = Path(self.temp_dir) / "test_panelized_output.py"
+        panelized_output_content = """
+def main():
+    print("=== Panel P1/2 (nodes=1) ===")
+    print("ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890ABCDE")
+    print("")
+    print("=== Panel P2/2 (nodes=1) ===")
+    print("XYZ")
+"""
+        self.py_panelized_output_file.write_text(
+            panelized_output_content, encoding="utf-8"
+        )
 
         # Create Python file with script-level bbox disabled, for CLI override tests
         self.py_bbox_override_file = Path(self.temp_dir) / "test_bbox_override.py"
@@ -1146,6 +1158,8 @@ def main():
             "size",
             "--panel-headers",
             "lineage",
+            "--connector-ref",
+            "both",
             str(self.test_text_file),
         ]
         args, _unknown, explicit_layout_fields, _module_argv = parse_args()
@@ -1159,6 +1173,7 @@ def main():
         self.assertEqual(options.cross_partition_edge_style, "stub")
         self.assertEqual(options.partition_order, "size")
         self.assertEqual(options.panel_header_mode, "lineage")
+        self.assertEqual(options.connector_ref_mode, "both")
 
     def test_constrained_requires_target_canvas_width(self):
         sys.argv = [
@@ -1187,7 +1202,7 @@ def main():
         self.assertEqual(exit_code, 1)
         self.assertIn("requires terminal stdout", self.stderr.getvalue())
 
-    def test_partition_overlap_must_be_smaller_than_target_canvas_width(self):
+    def test_partition_overlap_is_not_limited_by_canvas_width(self):
         sys.argv = [
             "phart",
             "--constrained",
@@ -1199,12 +1214,29 @@ def main():
             "10",
             str(self.test_text_file),
         ]
+        args, _unknown, explicit_layout_fields, _module_argv = parse_args()
+        options = create_layout_options(args, explicit_layout_fields)
+        self.assertEqual(options.partition_overlap, 10)
+
+    def test_paginate_output_width_is_panel_aware_for_constrained_text(self):
+        sys.argv = [
+            "phart",
+            "--constrained",
+            "--target-canvas-width",
+            "20",
+            "--paginate-output-width",
+            "30",
+            "--paginate-overlap",
+            "0",
+            "--page-x",
+            "1",
+            str(self.py_panelized_output_file),
+        ]
         exit_code = main()
-        self.assertEqual(exit_code, 1)
-        self.assertIn(
-            "--partition-overlap must be smaller than --target-canvas-width",
-            self.stderr.getvalue(),
-        )
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertIn("XYZ", output)
+        self.assertIn("LMNOPQRSTUVWXYZ1234567890ABCDE", output)
 
     def test_constrained_rejects_unsupported_layout_strategy(self):
         sys.argv = [

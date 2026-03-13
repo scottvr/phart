@@ -196,9 +196,9 @@ Phase A:
 
 Phase B:
 
-- [ ] Height constraint behavior (`target_canvas_height`) in partitioning
-- [ ] Left/right flow support parity in constrained mode
-- [ ] Overlap context rendering in panel output
+- [x] Height constraint behavior (`target_canvas_height`) in partitioning
+- [x] Left/right flow support parity in constrained mode
+- [x] Overlap context rendering in panel output
 
 Phase C:
 
@@ -211,7 +211,7 @@ Suggested PR checklist:
 - [x] PR1: constrained mode core + partition metadata
 - [x] PR2: panelized output mode + connector stubs
 - [x] PR3: style-rule targeting for connectors + panel headers
-- [ ] PR4: height/left-right support + overlap rendering
+- [x] PR4: height/left-right support + overlap rendering
 - [ ] PR5: affinity tuning + connector compaction + metadata export finalization
 
 ### 15.1 Additional Implementation Notes

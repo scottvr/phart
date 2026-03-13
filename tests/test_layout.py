@@ -543,13 +543,13 @@ class TestLayoutManager(unittest.TestCase):
         self.assertEqual(set(positions.keys()), set(graph.nodes()))
         self.assertIsNotNone(manager.partition_plan)
         assert manager.partition_plan is not None
-        self.assertEqual(len(manager.partition_plan.partitions), 3)
+        self.assertEqual(len(manager.partition_plan.partitions), 2)
         self.assertEqual(manager.partition_plan.node_to_partition["R"], 0)
-        self.assertEqual(manager.partition_plan.node_to_partition["A1"], 1)
-        self.assertEqual(manager.partition_plan.node_to_partition["B1"], 2)
+        self.assertEqual(manager.partition_plan.node_to_partition["A1"], 0)
+        self.assertEqual(manager.partition_plan.node_to_partition["B1"], 1)
         self.assertTrue(
             any(
-                edge.u == "R" and edge.v == "A1"
+                edge.u == "R" and edge.v == "A3"
                 for edge in manager.partition_plan.cross_partition_edges
             )
         )
@@ -577,33 +577,34 @@ class TestLayoutManager(unittest.TestCase):
         )
         positions, _, _ = manager.calculate_layout()
 
-        self.assertEqual(positions["A1"][1], 0)
-        self.assertEqual(positions["A2"][1], 0)
         self.assertEqual(positions["A3"][1], 0)
         self.assertEqual(positions["A4"][1], 0)
-        self.assertGreater(positions["R"][1], positions["A1"][1])
+        self.assertEqual(positions["B1"][1], 2)
+        self.assertEqual(positions["B2"][1], 2)
+        self.assertLess(positions["R"][1], positions["A1"][1])
         self.assertIsNotNone(manager.partition_plan)
         assert manager.partition_plan is not None
-        self.assertEqual(manager.partition_plan.node_to_partition["A1"], 0)
-        self.assertEqual(manager.partition_plan.node_to_partition["B1"], 1)
-        self.assertEqual(manager.partition_plan.node_to_partition["R"], 2)
+        self.assertEqual(manager.partition_plan.node_to_partition["A1"], 1)
+        self.assertEqual(manager.partition_plan.node_to_partition["B1"], 0)
+        self.assertEqual(manager.partition_plan.node_to_partition["R"], 1)
 
-    def test_constrained_mode_rejects_left_right_flow(self):
+    def test_constrained_mode_supports_left_right_flow(self):
         graph = nx.DiGraph([("A", "B")])
-        manager = LayoutManager(
-            graph,
-            LayoutOptions(
-                node_style=NodeStyle.MINIMAL,
-                layout_strategy="layered",
-                constrained=True,
-                target_canvas_width=10,
-                flow_direction="left",
-                use_ascii=True,
-            ),
-        )
-
-        with self.assertRaises(ValueError):
-            manager.calculate_layout()
+        for flow in ("left", "right"):
+            manager = LayoutManager(
+                graph,
+                LayoutOptions(
+                    node_style=NodeStyle.MINIMAL,
+                    layout_strategy="layered",
+                    constrained=True,
+                    target_canvas_width=10,
+                    flow_direction=flow,
+                    use_ascii=True,
+                ),
+            )
+            positions, _width, _height = manager.calculate_layout()
+            self.assertEqual(set(positions.keys()), {"A", "B"})
+            self.assertIsNotNone(manager.partition_plan)
 
     def test_constrained_mode_rejects_unsupported_layout_strategy(self):
         graph = nx.DiGraph([("A", "B"), ("B", "C"), ("C", "A")])

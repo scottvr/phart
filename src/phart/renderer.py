@@ -617,6 +617,223 @@ class ASCIIRenderer:
             return styled
         return f"{resolved_color}{styled}{ANSI_RESET}"
 
+    @staticmethod
+    def _coerce_connector_label(value: Any) -> Optional[str]:
+        if value is None:
+            return None
+        if isinstance(value, dict):
+            return None
+        if isinstance(value, (list, tuple)):
+            for item in value:
+                candidate = ASCIIRenderer._coerce_connector_label(item)
+                if candidate:
+                    return candidate
+            return None
+        text = nodes_mod.normalize_label_value(value)
+        return text if text else None
+
+    def _connector_label_for_node(self, node: Any) -> Optional[str]:
+        if node not in self.graph:
+            return None
+
+        attrs = self.graph.nodes[node]
+        candidate_keys: List[str] = []
+        if self.options.node_label_attr and self.options.node_label_attr != "label":
+            candidate_keys.append(self.options.node_label_attr)
+        candidate_keys.extend(["label", "name", "title"])
+
+        seen: Set[str] = set()
+        for key in candidate_keys:
+            key_text = str(key).strip()
+            if not key_text or key_text in seen:
+                continue
+            seen.add(key_text)
+            if key_text not in attrs:
+                continue
+            label = self._coerce_connector_label(attrs.get(key_text))
+            if label:
+                return label
+        return None
+
+    def _format_connector_node_ref(self, node: Any) -> str:
+        node_id = str(node)
+        label = self._connector_label_for_node(node)
+        mode = self.options.connector_ref_mode
+
+        if mode == "id":
+            return node_id
+        if mode == "label":
+            return label or node_id
+        if mode == "both":
+            if label and label != node_id:
+                return f"{label} [{node_id}]"
+            return node_id
+        if label and label.casefold() != node_id.casefold():
+            return label
+        return node_id
+
+    def _format_connector_edge_ref(self, u: Any, v: Any) -> str:
+        return f"{self._format_connector_node_ref(u)}->{self._format_connector_node_ref(v)}"
+
+    def _panel_boundary_connector_lines(
+        self, partition_idx: int
+    ) -> Tuple[List[str], List[str]]:
+        plan = self.layout_manager.partition_plan
+        if plan is None:
+            return [], []
+        if self.options.cross_partition_edge_style == "none":
+            return [], []
+        if self.options.partition_overlap > 0:
+            return [], []
+
+        incoming = sorted(
+            (
+                edge
+                for edge in plan.cross_partition_edges
+                if edge.dest_partition == partition_idx
+            ),
+            key=lambda item: (item.source_partition, str(item.u), str(item.v)),
+        )
+        outgoing = sorted(
+            (
+                edge
+                for edge in plan.cross_partition_edges
+                if edge.source_partition == partition_idx
+            ),
+            key=lambda item: (item.dest_partition, str(item.u), str(item.v)),
+        )
+        top_lines: List[str] = []
+        bottom_lines: List[str] = []
+        if incoming:
+            top_lines.append(
+                self._format_text_with_style_rule(
+                    target="connector",
+                    text="Boundary In:",
+                    context={
+                        "self": {
+                            "kind": "boundary_section",
+                            "position": "top",
+                            "partition_index": partition_idx,
+                            "partition_number": partition_idx + 1,
+                        },
+                        "connector": {
+                            "kind": "boundary_section",
+                            "position": "top",
+                            "partition_index": partition_idx,
+                            "partition_number": partition_idx + 1,
+                        },
+                    },
+                )
+            )
+            for edge in incoming:
+                edge_ref = self._format_connector_edge_ref(edge.u, edge.v)
+                text = f"  from [P{edge.source_partition + 1}] {edge_ref}"
+                top_lines.append(
+                    self._format_text_with_style_rule(
+                        target="connector",
+                        text=text,
+                        context={
+                            "self": {
+                                "kind": "boundary_incoming",
+                                "position": "top",
+                                "partition_index": partition_idx,
+                                "partition_number": partition_idx + 1,
+                                "source_partition": edge.source_partition,
+                                "source_partition_number": edge.source_partition + 1,
+                                "dest_partition": edge.dest_partition,
+                                "dest_partition_number": edge.dest_partition + 1,
+                                "edge_id": edge.edge_id,
+                                "u": edge.u,
+                                "v": edge.v,
+                                "u_ref": self._format_connector_node_ref(edge.u),
+                                "v_ref": self._format_connector_node_ref(edge.v),
+                                "edge_ref": edge_ref,
+                            },
+                            "connector": {
+                                "kind": "boundary_incoming",
+                                "position": "top",
+                                "partition_index": partition_idx,
+                                "partition_number": partition_idx + 1,
+                                "source_partition": edge.source_partition,
+                                "source_partition_number": edge.source_partition + 1,
+                                "dest_partition": edge.dest_partition,
+                                "dest_partition_number": edge.dest_partition + 1,
+                                "edge_id": edge.edge_id,
+                                "u": edge.u,
+                                "v": edge.v,
+                                "u_ref": self._format_connector_node_ref(edge.u),
+                                "v_ref": self._format_connector_node_ref(edge.v),
+                                "edge_ref": edge_ref,
+                            },
+                        },
+                    )
+                )
+        if outgoing:
+            bottom_lines.append(
+                self._format_text_with_style_rule(
+                    target="connector",
+                    text="Boundary Out:",
+                    context={
+                        "self": {
+                            "kind": "boundary_section",
+                            "position": "bottom",
+                            "partition_index": partition_idx,
+                            "partition_number": partition_idx + 1,
+                        },
+                        "connector": {
+                            "kind": "boundary_section",
+                            "position": "bottom",
+                            "partition_index": partition_idx,
+                            "partition_number": partition_idx + 1,
+                        },
+                    },
+                )
+            )
+            for edge in outgoing:
+                edge_ref = self._format_connector_edge_ref(edge.u, edge.v)
+                text = f"  -> [P{edge.dest_partition + 1}] {edge_ref}"
+                bottom_lines.append(
+                    self._format_text_with_style_rule(
+                        target="connector",
+                        text=text,
+                        context={
+                            "self": {
+                                "kind": "boundary_outgoing",
+                                "position": "bottom",
+                                "partition_index": partition_idx,
+                                "partition_number": partition_idx + 1,
+                                "source_partition": edge.source_partition,
+                                "source_partition_number": edge.source_partition + 1,
+                                "dest_partition": edge.dest_partition,
+                                "dest_partition_number": edge.dest_partition + 1,
+                                "edge_id": edge.edge_id,
+                                "u": edge.u,
+                                "v": edge.v,
+                                "u_ref": self._format_connector_node_ref(edge.u),
+                                "v_ref": self._format_connector_node_ref(edge.v),
+                                "edge_ref": edge_ref,
+                            },
+                            "connector": {
+                                "kind": "boundary_outgoing",
+                                "position": "bottom",
+                                "partition_index": partition_idx,
+                                "partition_number": partition_idx + 1,
+                                "source_partition": edge.source_partition,
+                                "source_partition_number": edge.source_partition + 1,
+                                "dest_partition": edge.dest_partition,
+                                "dest_partition_number": edge.dest_partition + 1,
+                                "edge_id": edge.edge_id,
+                                "u": edge.u,
+                                "v": edge.v,
+                                "u_ref": self._format_connector_node_ref(edge.u),
+                                "v_ref": self._format_connector_node_ref(edge.v),
+                                "edge_ref": edge_ref,
+                            },
+                        },
+                    )
+                )
+        return top_lines, bottom_lines
+
     def _panel_header_line(
         self,
         *,
@@ -764,7 +981,11 @@ class ASCIIRenderer:
             incoming,
             key=lambda item: (item.source_partition, str(item.u), str(item.v)),
         ):
-            text = f"  from [P{edge.source_partition + 1}] -> {edge.v} ({edge.edge_id})"
+            edge_ref = self._format_connector_edge_ref(edge.u, edge.v)
+            text = (
+                f"  from [P{edge.source_partition + 1}] -> "
+                f"{self._format_connector_node_ref(edge.v)} ({edge_ref})"
+            )
             lines.append(
                 self._format_text_with_style_rule(
                     target="connector",
@@ -781,6 +1002,9 @@ class ASCIIRenderer:
                             "edge_id": edge.edge_id,
                             "u": edge.u,
                             "v": edge.v,
+                            "u_ref": self._format_connector_node_ref(edge.u),
+                            "v_ref": self._format_connector_node_ref(edge.v),
+                            "edge_ref": edge_ref,
                         },
                         "connector": {
                             "kind": "incoming",
@@ -793,6 +1017,9 @@ class ASCIIRenderer:
                             "edge_id": edge.edge_id,
                             "u": edge.u,
                             "v": edge.v,
+                            "u_ref": self._format_connector_node_ref(edge.u),
+                            "v_ref": self._format_connector_node_ref(edge.v),
+                            "edge_ref": edge_ref,
                         },
                     },
                 )
@@ -801,7 +1028,8 @@ class ASCIIRenderer:
             outgoing,
             key=lambda item: (item.dest_partition, str(item.u), str(item.v)),
         ):
-            text = f"  -> [P{edge.dest_partition + 1}] {edge.edge_id}"
+            edge_ref = self._format_connector_edge_ref(edge.u, edge.v)
+            text = f"  -> [P{edge.dest_partition + 1}] {edge_ref}"
             lines.append(
                 self._format_text_with_style_rule(
                     target="connector",
@@ -818,6 +1046,9 @@ class ASCIIRenderer:
                             "edge_id": edge.edge_id,
                             "u": edge.u,
                             "v": edge.v,
+                            "u_ref": self._format_connector_node_ref(edge.u),
+                            "v_ref": self._format_connector_node_ref(edge.v),
+                            "edge_ref": edge_ref,
                         },
                         "connector": {
                             "kind": "outgoing",
@@ -830,16 +1061,21 @@ class ASCIIRenderer:
                             "edge_id": edge.edge_id,
                             "u": edge.u,
                             "v": edge.v,
+                            "u_ref": self._format_connector_node_ref(edge.u),
+                            "v_ref": self._format_connector_node_ref(edge.v),
+                            "edge_ref": edge_ref,
                         },
                     },
                 )
             )
         return lines
 
-    def _render_constrained_panels(self, *, markdown_safe: bool = False) -> str:
+    def _build_constrained_panel_blocks(
+        self, *, markdown_safe: bool = False
+    ) -> List[str]:
         plan = self.layout_manager.partition_plan
         if plan is None:
-            return self._render_single_canvas(markdown_safe=markdown_safe)
+            return []
 
         panel_count = len(plan.partitions)
         panel_blocks: List[str] = []
@@ -860,10 +1096,11 @@ class ASCIIRenderer:
             for u, v, data in self.graph.edges(data=True):
                 if u not in panel_node_set or v not in panel_node_set:
                     continue
-                if plan.node_to_partition.get(u) != partition_idx:
-                    continue
-                if plan.node_to_partition.get(v) != partition_idx:
-                    continue
+                if self.options.partition_overlap <= 0:
+                    if plan.node_to_partition.get(u) != partition_idx:
+                        continue
+                    if plan.node_to_partition.get(v) != partition_idx:
+                        continue
                 panel_graph.add_edge(u, v, **dict(data))
 
             panel_renderer = ASCIIRenderer(
@@ -871,6 +1108,9 @@ class ASCIIRenderer:
             )
             panel_text = panel_renderer._render_single_canvas(
                 markdown_safe=markdown_safe
+            )
+            top_boundary_lines, bottom_boundary_lines = (
+                self._panel_boundary_connector_lines(partition_idx)
             )
 
             block_lines: List[str] = []
@@ -882,12 +1122,35 @@ class ASCIIRenderer:
             )
             if header:
                 block_lines.append(header)
+            block_lines.extend(top_boundary_lines)
             if panel_text:
                 block_lines.append(panel_text)
+            block_lines.extend(bottom_boundary_lines)
             block_lines.extend(self._panel_connector_lines(partition_idx))
             panel_blocks.append("\n".join(block_lines).rstrip())
 
-        return "\n\n".join(block for block in panel_blocks if block)
+        return [block for block in panel_blocks if block]
+
+    def _render_constrained_panels(self, *, markdown_safe: bool = False) -> str:
+        blocks = self._build_constrained_panel_blocks(markdown_safe=markdown_safe)
+        if not blocks:
+            return self._render_single_canvas(markdown_safe=markdown_safe)
+        return "\n\n".join(blocks)
+
+    def render_panel_blocks(self, *, markdown_safe: bool = False) -> List[str]:
+        layout = self.layout_manager.calculate_layout()
+        positions, _width, _height = layout
+        if not positions:
+            return []
+
+        plan = self.layout_manager.partition_plan
+        if self.options.constrained and plan is not None and len(plan.partitions) > 1:
+            return self._build_constrained_panel_blocks(markdown_safe=markdown_safe)
+
+        text = self._render_single_canvas(
+            markdown_safe=markdown_safe, precomputed_layout=layout
+        )
+        return [text] if text else []
 
     def _render_single_canvas(
         self,
