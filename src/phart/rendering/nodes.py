@@ -89,7 +89,9 @@ def _allow_multiline_labels_for_options(options: LayoutOptions) -> bool:
     return bool(options.bboxes and options.bbox_multiline_labels)
 
 
-def _synthesize_label_from_line_specs(options: LayoutOptions, attrs: Dict[Any, Any]) -> str:
+def _synthesize_label_from_line_specs(
+    options: LayoutOptions, attrs: Dict[Any, Any]
+) -> str:
     lines: list[str] = []
     explicit_roots: set[str] = set()
     wildcard_seen = False
@@ -97,7 +99,9 @@ def _synthesize_label_from_line_specs(options: LayoutOptions, attrs: Dict[Any, A
     for spec in options.node_label_lines:
         if _is_wildcard_label_spec(spec):
             wildcard_seen = True
-            for rest_line in _all_remaining_attr_lines(attrs, excluded_roots=explicit_roots):
+            for rest_line in _all_remaining_attr_lines(
+                attrs, excluded_roots=explicit_roots
+            ):
                 if rest_line:
                     lines.append(rest_line)
                     if (
@@ -204,8 +208,8 @@ def _all_remaining_attr_lines(
 
 
 def _flatten_attr_values(prefix: str, value: Any) -> List[str]:
+    lines: List[str] = []
     if isinstance(value, dict):
-        lines: List[str] = []
         for key, nested in sorted(value.items(), key=lambda item: str(item[0]).lower()):
             nested_prefix = f"{prefix}.{key}"
             lines.extend(_flatten_attr_values(nested_prefix, nested))
@@ -215,7 +219,6 @@ def _flatten_attr_values(prefix: str, value: Any) -> List[str]:
         scalar_parts = [part for part in parts if part]
         if scalar_parts:
             return [f"{prefix}={','.join(scalar_parts)}"]
-        lines: List[str] = []
         for idx, item in enumerate(value):
             lines.extend(_flatten_attr_values(f"{prefix}[{idx}]", item))
         return lines
@@ -347,12 +350,17 @@ def draw_node(renderer: ASCIIRenderer, node: Any, x: int, y: int) -> None:
     )
     for line_index, line_text in enumerate(lines_to_draw):
         label_offset = (
-            max(0, (inner_width - renderer.options.get_text_display_width(line_text)) // 2)
+            max(
+                0,
+                (inner_width - renderer.options.get_text_display_width(line_text)) // 2,
+            )
             if renderer.options.uniform
             else 0
         )
         inner_start_x = x + 1 + renderer.options.hpad + label_offset
-        _paint_label(renderer, line_text, inner_start_x, content_top + line_index, node_color)
+        _paint_label(
+            renderer, line_text, inner_start_x, content_top + line_index, node_color
+        )
 
 
 def _resolved_node_label_lines(renderer: ASCIIRenderer, node: Any) -> list[str]:

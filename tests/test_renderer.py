@@ -220,6 +220,87 @@ class TestASCIIRenderer(unittest.TestCase):
         self.assertIn("Y-Y", result)
         self.assertIn("+-------+", result)
 
+    def test_node_label_lines_name_only_is_distinct_from_name_lifespan(self):
+        graph = nx.DiGraph()
+        graph.add_node("n1", name="Alpha", birt={"date": "Y"}, deat={"date": "Y"})
+
+        name_only = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                bboxes=True,
+                use_labels=True,
+                bbox_multiline_labels=True,
+                node_label_lines=("name",),
+                use_ascii=True,
+            ),
+        ).render()
+        name_lifespan = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                bboxes=True,
+                use_labels=True,
+                bbox_multiline_labels=True,
+                node_label_lines=("name", "lifespan"),
+                use_ascii=True,
+            ),
+        ).render()
+
+        self.assertIn("Alpha", name_only)
+        self.assertNotIn("Y-Y", name_only)
+        self.assertIn("Y-Y", name_lifespan)
+
+    def test_node_label_lines_wildcard_includes_remaining_attributes(self):
+        graph = nx.DiGraph()
+        graph.add_node(
+            "n1",
+            name="Alpha",
+            birt={"date": "Y"},
+            deat={"date": "Y"},
+            sex="F",
+            note="N",
+        )
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                bboxes=True,
+                use_labels=True,
+                bbox_multiline_labels=True,
+                node_label_lines=("name", "*"),
+                use_ascii=True,
+            ),
+        )
+        result = renderer.render()
+        self.assertIn("Alpha", result)
+        self.assertIn("sex=F", result)
+        self.assertIn("birt.date=Y", result)
+
+    def test_multiline_bbox_layout_respects_node_spacing_without_overlap(self):
+        graph = nx.DiGraph()
+        graph.add_node("root", name="Root")
+        graph.add_node("left", name="L", note="x")
+        graph.add_node("right", name="Right Node", note="very long line")
+        graph.add_edge("root", "left")
+        graph.add_edge("root", "right")
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                bboxes=True,
+                use_labels=True,
+                bbox_multiline_labels=True,
+                node_label_lines=("name", "*"),
+                node_spacing=1,
+                layer_spacing=3,
+                use_ascii=True,
+            ),
+        )
+        positions, _width, _height = renderer.layout_manager.calculate_layout()
+        left_bounds = renderer._get_node_bounds("left", positions)
+        right_bounds = renderer._get_node_bounds("right", positions)
+        if left_bounds["top"] == right_bounds["top"]:
+            self.assertLess(left_bounds["right"], right_bounds["left"])
+
     def test_multiline_label_uses_single_line_when_bbox_multiline_disabled(self):
         graph = nx.DiGraph()
         graph.add_node("n1", label="Alpha\nBeta")

@@ -562,6 +562,25 @@ def main():
         self.assertIn("DEPTH:7", output)
         self.assertNotIn("Error", self.stderr.getvalue())
 
+    def test_gedcom_example_handles_level2_family_subattrs_without_dict_key_errors(
+        self,
+    ):
+        gedcom_example = Path(__file__).resolve().parents[1] / "examples" / "gedcom.py"
+        sys.argv = [
+            "phart",
+            "--labels",
+            "--bboxes",
+            "--bbox-multiline-labels",
+            "--node-label-lines",
+            "name,*",
+            str(gedcom_example),
+            "--",
+            "fam_marr.ged",
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        self.assertNotIn("Error", self.stderr.getvalue())
+
     def test_paginate_output_width_selects_page_x(self):
         sys.argv = [
             "phart",

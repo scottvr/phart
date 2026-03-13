@@ -16,7 +16,7 @@ for charset in unicode;
                     do
                     echo "**${x}** layout strategy";
                     echo ""
-                    phart issue_7.py  --layout ${x} --hpad 1 --vpad 1 --layer-spacing 4 --node-spacing 3 --labels  --colors attr  --edge-anchors ports --edge-color-rule relationship:friend=green,enemy=red --bbox --uniform --charset ${charset} ;
+                    phart issue_7.py  --layout ${x} --hpad 1 --vpad 1 --layer-spacing 4 --node-spacing 3 --labels  --colors attr  --edge-anchors ports --edge-color-rule relationship:friend=green,enemy=red --bboxes --uniform --charset ${charset} ;
                     done
         ;;
         *) echo;;
@@ -41,7 +41,7 @@ for charset in ascii ansi unicode;
         for x in auto circular planar shell spring vertical ;
             do
                 echo "**${x}** layout strategy";
-                phart issue_8.py  --layout ${x} --hpad 2 --vpad 1 --layer-spacing 4 --node-spacing 3 --labels  --colors attr  --edge-anchors ports --edge-color-rule relationship:friend=green,enemy=red --bbox --uniform --charset ${charset} ;
+                phart issue_8.py  --layout ${x} --hpad 2 --vpad 1 --layer-spacing 4 --node-spacing 3 --labels  --colors attr  --edge-anchors ports --edge-color-rule relationship:friend=green,enemy=red --bboxes --uniform --charset ${charset} ;
             done
         ;;
             *);;

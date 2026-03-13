@@ -164,7 +164,7 @@ We can test other options, without having to edit that python script we just wro
 Let's see how the balanced tree looks with the nodes in bounding boxes:
 
 ```bash
-$ phart balanced_tree.py --bbox --hpad 2 --style minimal --layer-spacing 3  --ascii
+$ phart balanced_tree.py --bboxes --hpad 2 --style minimal --layer-spacing 3  --ascii
                 +-----+
                 |  0  |
                 +-----+
@@ -183,7 +183,7 @@ $ phart balanced_tree.py --bbox --hpad 2 --style minimal --layer-spacing 3  --as
 We can increasae the space between "layers" of nodes, we can move the edges to connect to/from "ports" on the most efficient side of the nodes, and we can render in unicode, using the same script, by passing the options via the command-line until we find what we like:
 
 ```
-$ phart balanced_tree.py --bbox --hpad 2 --style minimal --layer-spacing 4 --edge-anchors ports
+$ phart balanced_tree.py --bboxes --hpad 2 --style minimal --layer-spacing 4 --edge-anchors ports
                 ┌─────┐
                 │  0  │
                 └─────┘
@@ -205,7 +205,7 @@ We can put a NodeStyle around our label, and put a bounding box around that, and
 edges come out of the center of the boxes.
 
 ```
-$ phart balanced_tree.py --bbox --hpad 0 --style round --layer-spacing 4 --edge-anchors center
+$ phart balanced_tree.py --bboxes --hpad 0 --style round --layer-spacing 4 --edge-anchors center
              ┌───┐
              │(0)│
              └───┘
@@ -267,7 +267,7 @@ As we'll see here, I will `tail` to just the last 15 lines of output so I can ju
 something new and interesting, further down the tree:
 
 ```bash
-$ phart --colors attr --edge-color-rule side:left=green,right=red --bbox --binary-tree \
+$ phart --colors attr --edge-color-rule side:left=green,right=red --bboxes --binary-tree \
  --charset unicode --no-color-nodes examples/collatz.py -- 5 | tail -15
 ```
 

@@ -276,6 +276,7 @@ def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
     )
     parser.add_argument(
         "--bboxes",
+        "--bbox",
         action="store_true",
         help="Draw line-art boxes around nodes",
     )

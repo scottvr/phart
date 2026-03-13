@@ -11,6 +11,30 @@ def _as_list(value):
     return [value]
 
 
+def _iter_xrefs(value):
+    if isinstance(value, str):
+        token = value.strip()
+        if token.startswith("@") and token.endswith("@"):
+            yield token
+        return
+    if isinstance(value, dict):
+        inner = value.get("value")
+        if inner is not None:
+            yield from _iter_xrefs(inner)
+        return
+    if isinstance(value, (list, tuple)):
+        for item in value:
+            yield from _iter_xrefs(item)
+
+
+def _person_refs(value):
+    return [xref for xref in _iter_xrefs(value) if xref.startswith("@P")]
+
+
+def _family_refs(value):
+    return [xref for xref in _iter_xrefs(value) if xref.startswith("@F")]
+
+
 def _append_or_set(container, key, value):
     existing = container.get(key)
     if existing is None:
@@ -185,7 +209,7 @@ def build_person_graph(
         family = graph.nodes[family_id]
         family_members = []
         for tag in ("husb", "wife", "chil"):
-            family_members.extend(_as_list(family.get(tag)))
+            family_members.extend(_person_refs(family.get(tag)))
 
         for person_id in family_members:
             if person_id not in graph.nodes:
@@ -195,11 +219,10 @@ def build_person_graph(
                 continue
 
             person = graph.nodes[person_id]
-            for next_family in _as_list(person.get("fams")) + _as_list(
+            for next_family in _family_refs(person.get("fams")) + _family_refs(
                 person.get("famc")
             ):
-                if isinstance(next_family, str) and next_family.startswith("@F"):
-                    families_to_visit.append((next_family, depth + 1))
+                families_to_visit.append((next_family, depth + 1))
 
     person_graph = nx.DiGraph()
     for person_id in sorted(included_people):
@@ -215,16 +238,18 @@ def build_person_graph(
         if family_id not in graph.nodes:
             continue
         family = graph.nodes[family_id]
-        husbands = [p for p in _as_list(family.get("husb")) if p in included_people]
-        wives = [p for p in _as_list(family.get("wife")) if p in included_people]
-        children = [p for p in _as_list(family.get("chil")) if p in included_people]
+        husbands = [p for p in _person_refs(family.get("husb")) if p in included_people]
+        wives = [p for p in _person_refs(family.get("wife")) if p in included_people]
+        children = [p for p in _person_refs(family.get("chil")) if p in included_people]
 
         for husband in husbands:
             for wife in wives:
                 person_graph.add_edge(husband, wife, role="spouse")
         for husband in husbands:
             for child in children:
-                person_graph.add_edge(husband, child, role="parent", parenttype="father")
+                person_graph.add_edge(
+                    husband, child, role="parent", parenttype="father"
+                )
         for wife in wives:
             for child in children:
                 person_graph.add_edge(wife, child, role="parent", parenttype="mother")
@@ -233,7 +258,8 @@ def build_person_graph(
 
 
 def main():
-    file_path = Path(__file__).with_name(sys.argv[1] or "happy.ged")
+    file_name = sys.argv[1] if len(sys.argv) > 1 else "happy.ged"
+    file_path = Path(__file__).with_name(file_name)
     ged_contents = file_path.read_text(encoding="utf-8")
     full_graph = gedcom_to_digraph(ged_contents)
     family_graph = build_person_graph(full_graph, root_family="@F1@", family_depth=4)
