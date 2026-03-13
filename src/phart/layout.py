@@ -522,8 +522,6 @@ class LayoutManager:
             positions = self._layout_layered_fallback(
                 self.graph, effective_spacing, layer_height=self._get_layer_step()
             )
-        elif strategy == "constrained_layered":
-            positions = self._layout_constrained_layered(self.graph, effective_spacing)
 
         else:
             # Auto mode preserves the legacy heuristics.
@@ -534,6 +532,21 @@ class LayoutManager:
                 positions = self._layout_vertical(self.graph, effective_spacing)
             else:
                 positions = self._layout_hierarchical(self.graph, effective_spacing)
+
+        if self.options.constrained:
+            supported = {"auto", "bfs", "hierarchical", "layered"}
+            if strategy not in supported:
+                supported_text = ", ".join(sorted(supported))
+                raise ValueError(
+                    "constrained mode is currently supported with layout strategies: "
+                    f"{supported_text}"
+                )
+            layer_mode = "bfs" if strategy == "bfs" else "auto"
+            positions = self._layout_constrained(
+                self.graph,
+                effective_spacing,
+                layer_mode=layer_mode,
+            )
 
         # Apply flow direction transformation
         positions = self._transform_positions(positions)
@@ -1354,24 +1367,29 @@ class LayoutManager:
         ranges.append((start, len(layer_widths)))
         return ranges
 
-    def _layout_constrained_layered(
-        self, graph: nx.DiGraph, spacing: int
+    def _layout_constrained(
+        self,
+        graph: nx.DiGraph,
+        spacing: int,
+        *,
+        layer_mode: str = "auto",
     ) -> Dict[str, Tuple[int, int]]:
         from .styles import FlowDirection
 
         target_width = self.options.target_canvas_width
         if target_width is None:
-            raise ValueError(
-                "constrained_layered layout requires target_canvas_width"
-            )
+            raise ValueError("constrained layout requires target_canvas_width")
 
         if self.options.flow_direction not in {FlowDirection.DOWN, FlowDirection.UP}:
             raise ValueError(
-                "constrained_layered currently supports flow-direction down and up"
+                "constrained mode currently supports flow-direction down and up"
             )
 
         layer_height = self._get_layer_step()
-        raw_layers = self._build_layers_auto(nx.DiGraph(graph))
+        if layer_mode == "bfs":
+            raw_layers = self._build_layers_bfs(nx.DiGraph(graph))
+        else:
+            raw_layers = self._build_layers_auto(nx.DiGraph(graph))
         ordered_layers = [
             self._ordered_nodes(layer, default_mode="alpha")
             for layer in raw_layers

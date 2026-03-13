@@ -23,7 +23,6 @@ LAYOUT_STRATEGIES = {
     "bfs",
     "bipartite",
     "circular",
-    "constrained-layered",
     "planar",
     "kamada-kawai",
     "spring",
@@ -46,6 +45,7 @@ CLI_LAYOUT_FIELD_MAP = {
     "--binary-tree": {"binary_tree_layout"},
     "--layout": {"layout_strategy"},
     "--layout-strategy": {"layout_strategy"},
+    "--constrained": {"constrained"},
     "--node-order": {"node_order_mode"},
     "--node-order-attr": {"node_order_attr"},
     "--node-order-reverse": {"node_order_reverse"},
@@ -352,6 +352,11 @@ def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
         help="Node positioning strategy (default: auto)",
     )
     parser.add_argument(
+        "--constrained",
+        action="store_true",
+        help="Enable constrained partitioning mode for compatible layout strategies",
+    )
+    parser.add_argument(
         "--node-order",
         choices=[
             "layout-default",
@@ -392,7 +397,7 @@ def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
         default=None,
         metavar="WIDTH|auto",
         help=(
-            "Target width for constrained-layered layout. Accepts WIDTH columns or "
+            "Target width for constrained mode. Accepts WIDTH columns or "
             "'auto' (terminal width on terminal stdout)."
         ),
     )
@@ -916,10 +921,8 @@ def create_layout_options(
         raise ValueError(
             "--partition-overlap must be smaller than --target-canvas-height"
         )
-    if layout_strategy == "constrained_layered" and target_canvas_width is None:
-        raise ValueError(
-            "--layout constrained-layered requires --target-canvas-width"
-        )
+    if args.constrained and target_canvas_width is None:
+        raise ValueError("--constrained requires --target-canvas-width")
     if args.labels:
         if node_label_attr is None:
             node_label_attr = "label"
@@ -933,6 +936,7 @@ def create_layout_options(
         use_ascii=use_ascii,
         binary_tree_layout=binary_tree_layout,
         layout_strategy=layout_strategy,
+        constrained=args.constrained,
         node_order_mode=args.node_order,
         node_order_attr=args.node_order_attr,
         node_order_reverse=args.node_order_reverse,

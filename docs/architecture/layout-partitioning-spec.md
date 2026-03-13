@@ -31,13 +31,13 @@ We need an optional layout mode that constrains width (and optionally height) du
 
 ## 5. User-Facing Surface
 
-New layout strategy:
+New layout modifier:
 
-- `--layout constrained-layered`
+- `--constrained` (applies partitioning to compatible layout strategies)
 
 New options:
 
-- `--target-canvas-width N|auto` (required for constrained-layered)
+- `--target-canvas-width N|auto` (required when `--constrained` is enabled)
 - `--target-canvas-height N|auto` (optional; disabled when omitted)
 - `--partition-overlap N` (default `0`; duplicate context columns/rows)
 - `--cross-partition-edge-style {stub,none}` (default `stub`)
@@ -50,7 +50,7 @@ Notes:
 
 ## 6. Conceptual Model
 
-Constrained-layered performs:
+Constrained mode performs:
 
 1. Initial rank assignment from the selected flow direction.
 2. Estimate node bbox footprint (including labels, padding, and style).
@@ -99,6 +99,7 @@ Connector metadata:
 
 `LayoutOptions` additions (proposed):
 
+- `constrained: bool = False`
 - `target_canvas_width: Optional[int] = None`
 - `target_canvas_height: Optional[int] = None`
 - `partition_overlap: int = 0`
@@ -121,8 +122,8 @@ Renderer/runtime additions:
 
 Interaction with existing output pagination:
 
-- If constrained-layered is enabled, output pagination can still apply within each panel.
-- Recommended behavior is to disable viewport pagination by default when constrained-layered is active, unless explicitly requested.
+- If constrained mode is enabled, output pagination can still apply within each panel.
+- Recommended behavior is to disable viewport pagination by default when constrained mode is active, unless explicitly requested.
 
 ## 11. Failure Modes and Safeguards
 

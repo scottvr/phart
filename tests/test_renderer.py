@@ -2142,17 +2142,19 @@ class TestLayoutOptions(unittest.TestCase):
         options = LayoutOptions(layout_strategy="spring")
         self.assertEqual(options.layout_strategy, "spring")
 
-    def test_layout_strategy_accepts_constrained_layered_with_target_width(self):
+    def test_constrained_layout_accepts_target_width(self):
         options = LayoutOptions(
-            layout_strategy="constrained-layered",
+            layout_strategy="layered",
+            constrained=True,
             target_canvas_width=80,
         )
-        self.assertEqual(options.layout_strategy, "constrained_layered")
+        self.assertEqual(options.layout_strategy, "layered")
+        self.assertTrue(options.constrained)
         self.assertEqual(options.target_canvas_width, 80)
 
-    def test_constrained_layered_requires_target_canvas_width(self):
+    def test_constrained_layout_requires_target_canvas_width(self):
         with self.assertRaises(ValueError):
-            LayoutOptions(layout_strategy="constrained_layered")
+            LayoutOptions(layout_strategy="layered", constrained=True)
 
     def test_layout_strategy_accepts_arf_spiral_shell(self):
         for strategy in ("arf", "spiral", "shell"):
