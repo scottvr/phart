@@ -1,6 +1,6 @@
-# Style Rules Specification (v1.5)
+# Style Rules Specification (v1.5, Implemented)
 
-Status: ~~Draft (design-only, not fully implemented)~~ Spec v1.3 implemented in phart v1.5.0. Bumping spec version to true them up.
+Status: Implemented in PHART v1.5.x (current branch behavior documented below).
 Audience: CLI users, library users, and maintainers
 
 ## 1. Problem Statement
@@ -24,7 +24,7 @@ The design goal is a unified rule model that can style both nodes and edges with
 ## 3. Non-Goals
 
 - General-purpose scripting language.
-- Arbitrary graph traversal in predicates (no multi-hop lookups in spec-v1.1).
+- Arbitrary graph traversal in predicates (no multi-hop lookups in v1.5).
 
 ## 4. Terminology
 
@@ -47,7 +47,7 @@ priority: 100 # optional integer; higher runs first
 target: edge # edge | node
 when: role == "spouse" and v.sex == "M"
 set:
-  color: blue # spec-v1 required for color behavior
+  color: blue # required field for color behavior
 ```
 
 Notes:
@@ -56,7 +56,7 @@ Notes:
 - Ties are resolved by declaration order (stable).
 - First matching rule wins for each style field in `set`.
 
-## 6. Expression Language (spec-v1)
+## 6. Expression Language (v1.5)
 
 ### 6.1 Operators
 
@@ -82,11 +82,11 @@ Resolution rules:
 
 - Missing path resolves to `null`.
 - Dot-path lookup supports nested dict traversal (`a.b.c`).
-- Non-scalar values can only be used with `in`/`not in` in spec-v1.
+- Non-scalar values can only be used with `in`/`not in` in v1.5.
 
 ### 6.4 String comparison semantics
 
-Default string comparisons are case-insensitive in spec-v1 for compatibility with existing edge color rule normalization.
+Default string comparisons are case-insensitive in v1.5 for compatibility with existing edge color rule normalization.
 
 ## 7. Rule Sources
 
@@ -102,7 +102,7 @@ This is compiled into equivalent advanced rules at parse time.
 
 ### 7.2 CLI (advanced)
 
-Add repeated option:
+CLI supports repeated option:
 
 ```bash
 --style-rule 'edge: role=="spouse" and v.sex=="M" -> color=blue'
@@ -119,7 +119,7 @@ File format: YAML or JSON containing a `rules` array using canonical model.
 
 ### 7.3 Programmatic
 
-`LayoutOptions` accepts normalized rules (new field proposed):
+`LayoutOptions` accepts raw canonical rule dicts via `style_rules`:
 
 ```python
 style_rules=[
@@ -131,6 +131,12 @@ style_rules=[
 ]
 ```
 
+Implementation note:
+
+- `style_rules` is the public/raw input field.
+- Rules are compiled during `LayoutOptions` initialization into `_compiled_style_rules` for runtime evaluation.
+- `_compiled_style_rules` is internal and not part of the public stability contract.
+
 ## 8. Evaluation Semantics
 
 1. Build evaluation context for each element.
@@ -141,7 +147,7 @@ style_rules=[
 4. On match, apply keys in `set` not yet assigned.
 5. Continue until all rules checked (or short-circuit if all requested fields set).
 
-spec-v1 color behavior:
+v1.5 color behavior:
 
 - For edge rendering, `set.color` affects edge color map.
 - For node rendering, `set.color` affects node color map.
@@ -190,24 +196,25 @@ normalizes to:
 - Target complexity: O(R _ E) for edges and O(R _ N) for nodes, with small constants.
 - Optional future optimization: pre-index rules by referenced attributes.
 
-## 13. Implementation Plan (Phased)
+## 13. Implementation Status (Phased)
 
-Phase 1:
+Phase 1 completed:
 
-- Introduce parser + canonical rule model.
-- Add `--style-rule` and `--style-rules-file`.
-- Compile legacy `--edge-color-rule` to canonical rules.
-- Apply canonical rules to edge colors only.
+- Parser + canonical rule model implemented.
+- `--style-rule` and `--style-rules-file` implemented.
+- Legacy `--edge-color-rule` is compiled to canonical edge color rules.
+- Canonical rules apply to edge colors.
 
-Phase 2:
+Phase 2 completed:
 
-- Extend canonical rule application to node colors.
-- Add explicit conflict tests and precedence coverage.
+- Canonical rules apply to node colors.
+- Conflict/precedence behavior covered in tests.
 
-Phase 3:
+Phase 3 completed for current scope:
 
-- Extend `set` beyond color with explicit support for legacy decoration intent.
-- Resolve legacy `NodeStyle.CUSTOM`, per-node decorators, and edge arrow/decorator customization through one unified rule path.
+- `set` supports node decorators (`prefix`, `suffix`, `node_style`) and edge glyph fields (`arrow_*`, `line_*`, `corner_*`, `tee_*`, `cross`).
+- Global edge presets and arrow style options implemented.
+- Legacy globals remain operational; style-rules override overlapping keys.
 
 ### 13.1 Phase 3 Expansion: Legacy Feature Convergence
 
@@ -220,7 +227,7 @@ PHART has two historical styling tracks:
 
 The style-rule system should become the canonical per-element styling mechanism, while preserving backward compatibility for existing global options.
 
-#### Proposed rule-settable fields (spec v1.3 target)
+#### Implemented rule-settable fields (v1.5)
 
 Node-target fields:
 
@@ -228,7 +235,6 @@ Node-target fields:
 - `prefix`
 - `suffix`
 - `node_style` (`minimal|square|round|diamond|custom`)
-- `hpad`, `vpad` (optional overrides where safe)
 
 Edge-target fields:
 
@@ -237,27 +243,25 @@ Edge-target fields:
 - `line_horizontal`, `line_vertical`
 - `corner_ul`, `corner_ur`, `corner_ll`, `corner_lr`
 - `tee_up`, `tee_down`, `tee_left`, `tee_right`
+- `cross`
 
-#### Precedence model for legacy + rules
+#### Precedence model (implemented)
 
 1. Engine defaults
 2. `LayoutOptions` explicit global values
-3. Legacy compatibility mappings (if any)
-4. Style rules (priority + declaration order)
+3. Style rules (priority + declaration order)
 
 Style rules are last-write authority for the fields they set.
 
-#### Compatibility strategy
+#### Compatibility strategy (implemented)
 
 - Keep `NodeStyle` and existing decorator fields valid.
 - Keep `custom_decorators` valid for programmatic users.
-- Add migration path:
-  - legacy custom decorators can be normalized into implicit node rules at initialization.
-  - no immediate removal/deprecation until rule parity exists and is documented.
+- Do not auto-map legacy globals into implicit style rules in v1.5.
 
 #### Constraints
 
-- Multi-character glyphs are out of scope in the first Phase 3 increment; single-cell glyphs only.
+- Multi-character glyphs are not supported in v1.5; single-cell glyphs only.
 - Rule-driven style changes must not violate routing assumptions (cell widths, arrow locking).
 - If a rule sets an unsupported field for a target, fail fast with precise diagnostics.
 

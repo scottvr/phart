@@ -587,6 +587,8 @@ You can set global edge line-art and arrowhead style without per-glyph mapping:
 phart --edge-glyph-preset thick --edge-arrow-style unicode your_graph.py
 ```
 
+Full style-rule semantics and field reference: [docs/architecture/style-rules-spec.md](./docs/architecture/style-rules-spec.md)
+
 Node decorators can also be driven by style rules:
 
 ```bash
