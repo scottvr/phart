@@ -20,14 +20,73 @@ def normalize_label_value(label: Any) -> str:
 def get_display_node_text(renderer: ASCIIRenderer, node: Any) -> str:
     """Resolve display text for a node key."""
     if renderer.options.use_labels:
-        label = (
-            renderer.graph.nodes[node].get("label") if node in renderer.graph else None
-        )
+        attrs = renderer.graph.nodes[node] if node in renderer.graph else {}
+        label = attrs.get("label")
         if label is not None:
             normalized = renderer._normalize_label_value(label)
             if normalized:
                 return normalized
+        synthesized = _synthesize_label_from_node_attrs(attrs)
+        if synthesized:
+            normalized = renderer._normalize_label_value(synthesized)
+            if normalized:
+                return normalized
     return str(node)
+
+
+def _synthesize_label_from_node_attrs(attrs: Dict[Any, Any]) -> str:
+    """Build a concise display label from node attributes."""
+    if not attrs:
+        return ""
+
+    name = _extract_scalar_text(attrs.get("name"))
+    birth = _extract_gedcom_event_date(attrs.get("birt"))
+    death = _extract_gedcom_event_date(attrs.get("deat"))
+    if name:
+        lifespan = f"{birth or '-'}-{death or '-'}" if (birth or death) else None
+        return f"{name} {lifespan}".strip() if lifespan else name
+
+    title = _extract_scalar_text(attrs.get("title"))
+    if title:
+        return title
+
+    parts = []
+    sorted_items = sorted(attrs.items(), key=lambda item: str(item[0]))[:6]
+    for key, value in sorted_items:
+        key_text = str(key)
+        if key_text == "label":
+            continue
+        scalar = _extract_scalar_text(value)
+        if not scalar:
+            continue
+        parts.append(f"{key_text}={scalar}")
+        if len(parts) >= 3:
+            break
+    return ", ".join(parts)
+
+
+def _extract_gedcom_event_date(value: Any) -> Optional[str]:
+    if isinstance(value, dict):
+        return _extract_scalar_text(value.get("date"))
+    return None
+
+
+def _extract_scalar_text(value: Any) -> Optional[str]:
+    if value is None:
+        return None
+    if isinstance(value, (list, tuple)):
+        for item in value:
+            text = _extract_scalar_text(item)
+            if text:
+                return text
+        return None
+    if isinstance(value, dict):
+        return None
+
+    text = str(value).strip()
+    if not text:
+        return None
+    return text
 
 
 def get_widest_node_text_width(renderer: ASCIIRenderer) -> Optional[int]:

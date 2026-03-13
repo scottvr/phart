@@ -713,6 +713,19 @@ class ASCIIRenderer:
         # Ensure minimum dimensions that can hold all nodes and edge routing.
         min_width = max_right + 1
         min_height = max_bottom + 2
+        max_edge_label_width = 0
+        for _start, _end, edge_data in self.graph.edges(data=True):
+            label = edge_data.get("label") if isinstance(edge_data, dict) else None
+            if label is None:
+                continue
+            normalized = self._normalize_label_value(label)
+            if not normalized:
+                continue
+            max_edge_label_width = max(
+                max_edge_label_width, self.options.get_text_display_width(normalized)
+            )
+        if max_edge_label_width > 0:
+            min_width += max_edge_label_width + 2
 
         final_width = max(width, min_width)
         final_height = max(height, min_height)

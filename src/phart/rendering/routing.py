@@ -224,6 +224,80 @@ def get_jog_row(
     return latest_jog
 
 
+def _edge_label_text(renderer: ASCIIRenderer, start: Any, end: Any) -> Optional[str]:
+    edge_data = renderer.graph.get_edge_data(start, end) or {}
+    label = edge_data.get("label")
+    if label is None:
+        return None
+    text = renderer._normalize_label_value(label)
+    return text if text else None
+
+
+def _paint_label_text(
+    renderer: ASCIIRenderer,
+    x: int,
+    y: int,
+    text: str,
+    color: Optional[str],
+) -> None:
+    if y < 0 or y >= len(renderer.canvas):
+        return
+    if x >= len(renderer.canvas[y]):
+        return
+    if x < 0:
+        text = text[-x:]
+        x = 0
+    if not text:
+        return
+    text = text[: max(0, len(renderer.canvas[y]) - x)]
+    for offset, char in enumerate(text):
+        renderer._paint_edge_cell(x + offset, y, char, color)
+
+
+def _draw_edge_label(
+    renderer: ASCIIRenderer,
+    *,
+    text: str,
+    start_x: int,
+    start_y: int,
+    end_x: int,
+    end_y: int,
+    jog_y: Optional[int],
+    color: Optional[str],
+) -> None:
+    if not text:
+        return
+
+    def _fallback_label() -> None:
+        mid_y = (min(start_y, end_y) + max(start_y, end_y)) // 2
+        label_x = max(start_x, end_x) + 2
+        _paint_label_text(renderer, label_x, mid_y, text, color)
+
+    if start_y == end_y:
+        min_x = min(start_x, end_x) + 1
+        max_x = max(start_x, end_x) - 1
+        available = max_x - min_x + 1
+        if available < len(text):
+            _fallback_label()
+            return
+        center_x = (min_x + max_x) // 2
+        label_start = max(min_x, center_x - (len(text) // 2))
+        _paint_label_text(renderer, label_start, start_y, text, color)
+        return
+
+    if jog_y is not None and start_x != end_x:
+        min_x = min(start_x, end_x) + 1
+        max_x = max(start_x, end_x) - 1
+        available = max_x - min_x + 1
+        if available >= len(text):
+            center_x = (min_x + max_x) // 2
+            label_start = max(min_x, center_x - (len(text) // 2))
+            _paint_label_text(renderer, label_start, jog_y, text, color)
+            return
+
+    _fallback_label()
+
+
 def draw_edge(
     renderer: ASCIIRenderer,
     start: Any,
@@ -240,6 +314,8 @@ def draw_edge(
     start_x, start_y = start_anchor
     end_x, end_y = end_anchor
     edge_color = renderer._edge_color_map.get((start, end))
+    edge_label = _edge_label_text(renderer, start, end)
+    jog_y: Optional[int] = None
 
     is_bidirectional = renderer._is_bidirectional_edge(start, end)
 
@@ -358,6 +434,18 @@ def draw_edge(
                         renderer.options.get_arrow_for_direction("up"),
                         edge_color,
                     )
+
+        if edge_label:
+            _draw_edge_label(
+                renderer,
+                text=edge_label,
+                start_x=start_x,
+                start_y=start_y,
+                end_x=end_x,
+                end_y=end_y,
+                jog_y=jog_y,
+                color=edge_color,
+            )
 
     except IndexError as exc:
         raise IndexError(f"Edge drawing exceeded canvas boundaries: {exc}") from exc

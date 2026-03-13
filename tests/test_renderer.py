@@ -185,6 +185,52 @@ class TestASCIIRenderer(unittest.TestCase):
         result = renderer.render()
         self.assertIn("Alpha Beta", result)
 
+    def test_use_labels_synthesizes_node_text_from_attributes(self):
+        graph = nx.DiGraph()
+        graph.add_node("n1", name="Alpha", birt={"date": "Y"}, deat={"date": "Y"})
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_labels=True,
+                use_ascii=True,
+            ),
+        )
+        result = renderer.render()
+        self.assertIn("Alpha Y-Y", result)
+        self.assertNotIn("n1", result)
+
+    def test_edge_label_renders_on_horizontal_edges(self):
+        graph = nx.DiGraph()
+        graph.add_edge("A", "B", label="E_H")
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=True,
+                flow_direction=FlowDirection.RIGHT,
+            ),
+        )
+        result = renderer.render()
+        self.assertIn("E_H", result)
+
+    def test_edge_label_renders_on_vertical_edges(self):
+        graph = nx.DiGraph()
+        graph.add_edge("A", "B", label="E_V")
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=True,
+                flow_direction=FlowDirection.DOWN,
+            ),
+        )
+        result = renderer.render()
+        self.assertIn("E_V", result)
+
     def test_cjk_label_box_width_respects_display_columns(self):
         graph = nx.DiGraph()
         graph.add_node("n1", label="中文")

@@ -324,7 +324,10 @@ def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
     parser.add_argument(
         "--labels",
         action="store_true",
-        help="Use node labels (if present) for displayed node text",
+        help=(
+            "Use node labels for displayed node text. "
+            "If 'label' is missing, synthesize text from node attributes."
+        ),
     )
     parser.add_argument(
         "--colors",
