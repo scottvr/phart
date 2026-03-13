@@ -214,10 +214,18 @@ Suggested PR checklist:
 - [ ] PR4: height/left-right support + overlap rendering
 - [ ] PR5: affinity tuning + connector compaction + metadata export finalization
 
-PR Notes:
+### 15.1 Additional Implementation Notes
 
-- PR4 Implementation suggestion:
-  - Enforce hard panel fit: split oversized single layers into subgroups (not just between layers).
-  - Make pagination panel-aware in constrained mode (paginate each panel separately, not whole concatenated text).
-  - Add boundary connector cues at panel edges.
-  - Add connector reference mode (auto|id|label|both) for readable connector text.
+**PR3/4 revised proposal notes:**
+
+- partition-overlap means layers (not rows).
+- Constrained panels must be node-atomic (no half-node clipping).
+- If overlap = 0, render boundary connector cues at top/bottom of each panel.
+- If overlap > 0, include full overlap layers (entire nodes, not partial rows).
+
+**PR4 Implementation suggestion:**
+
+- Enforce hard panel fit: split oversized single layers into subgroups (not just between layers).
+- Make pagination panel-aware in constrained mode (paginate each panel separately, not whole concatenated text).
+- Add boundary connector cues at panel edges.
+- Add connector reference mode (auto|id|label|both) for readable connector text.
