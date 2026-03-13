@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 if TYPE_CHECKING:
     from phart.renderer import ASCIIRenderer
+    from phart.styles import LayoutOptions
 
 
 def normalize_label_value(label: Any, *, keep_newlines: bool = False) -> str:
@@ -23,16 +24,22 @@ def normalize_label_value(label: Any, *, keep_newlines: bool = False) -> str:
 
 def get_display_node_text(renderer: ASCIIRenderer, node: Any) -> str:
     """Resolve display text for a node key."""
-    multiline = _allow_multiline_labels(renderer)
-    if renderer.options.use_labels:
-        attrs = renderer.graph.nodes[node] if node in renderer.graph else {}
+    attrs = renderer.graph.nodes[node] if node in renderer.graph else {}
+    return resolve_display_node_text(renderer.options, attrs, node)
+
+
+def resolve_display_node_text(
+    options: LayoutOptions, attrs: Dict[Any, Any], fallback_node: Any
+) -> str:
+    multiline = _allow_multiline_labels_for_options(options)
+    if options.use_labels:
         label = attrs.get("label")
         if label is not None:
             normalized = normalize_label_value(label, keep_newlines=multiline)
             if normalized:
                 return normalized
-        if renderer.options.node_label_lines:
-            synthesized = _synthesize_label_from_line_specs(renderer, attrs)
+        if options.node_label_lines:
+            synthesized = _synthesize_label_from_line_specs(options, attrs)
             if synthesized:
                 return synthesized
         synthesized = _synthesize_label_from_node_attrs(attrs)
@@ -40,7 +47,7 @@ def get_display_node_text(renderer: ASCIIRenderer, node: Any) -> str:
             normalized = normalize_label_value(synthesized, keep_newlines=multiline)
             if normalized:
                 return normalized
-    return str(node)
+    return str(fallback_node)
 
 
 def _synthesize_label_from_node_attrs(attrs: Dict[Any, Any]) -> str:
@@ -75,28 +82,77 @@ def _synthesize_label_from_node_attrs(attrs: Dict[Any, Any]) -> str:
 
 
 def _allow_multiline_labels(renderer: ASCIIRenderer) -> bool:
-    return bool(renderer.options.bboxes and renderer.options.bbox_multiline_labels)
+    return _allow_multiline_labels_for_options(renderer.options)
 
 
-def _synthesize_label_from_line_specs(renderer: ASCIIRenderer, attrs: Dict[Any, Any]) -> str:
+def _allow_multiline_labels_for_options(options: LayoutOptions) -> bool:
+    return bool(options.bboxes and options.bbox_multiline_labels)
+
+
+def _synthesize_label_from_line_specs(options: LayoutOptions, attrs: Dict[Any, Any]) -> str:
     lines: list[str] = []
-    for spec in renderer.options.node_label_lines:
+    explicit_roots: set[str] = set()
+    wildcard_seen = False
+
+    for spec in options.node_label_lines:
+        if _is_wildcard_label_spec(spec):
+            wildcard_seen = True
+            for rest_line in _all_remaining_attr_lines(attrs, excluded_roots=explicit_roots):
+                if rest_line:
+                    lines.append(rest_line)
+                    if (
+                        options.node_label_max_lines is not None
+                        and len(lines) >= options.node_label_max_lines
+                    ):
+                        break
+            if (
+                options.node_label_max_lines is not None
+                and len(lines) >= options.node_label_max_lines
+            ):
+                break
+            continue
+
+        explicit_root = _explicit_spec_root(spec)
+        if explicit_root:
+            explicit_roots.add(explicit_root)
         text = _resolve_label_line_spec(attrs, spec)
         if text is None:
             text = ""
         lines.append(text)
         if (
-            renderer.options.node_label_max_lines is not None
-            and len(lines) >= renderer.options.node_label_max_lines
+            options.node_label_max_lines is not None
+            and len(lines) >= options.node_label_max_lines
         ):
             break
 
-    if not any(line.strip() for line in lines):
+    if wildcard_seen and not any(line.strip() for line in lines):
+        fallback = _synthesize_label_from_node_attrs(attrs)
+        if fallback:
+            lines = [fallback]
+
+    if not any(str(line).strip() for line in lines):
         return ""
 
-    if _allow_multiline_labels(renderer):
+    if _allow_multiline_labels_for_options(options):
         return "\n".join(lines)
-    return renderer.options.node_label_sep.join(line for line in lines if line.strip())
+    return options.node_label_sep.join(line for line in lines if line.strip())
+
+
+def _is_wildcard_label_spec(spec: str) -> bool:
+    token = str(spec).strip().lower()
+    return token in {"*", "[all the rest]", "[all_the_rest]", "rest", "all"}
+
+
+def _explicit_spec_root(spec: str) -> Optional[str]:
+    token = str(spec).strip()
+    if not token:
+        return None
+    if _is_wildcard_label_spec(token):
+        return None
+    lowered = token.lower()
+    if lowered == "lifespan":
+        return "lifespan"
+    return token.split(".", 1)[0].strip().lower() or None
 
 
 def _resolve_label_line_spec(attrs: Dict[Any, Any], spec: str) -> Optional[str]:
@@ -120,6 +176,52 @@ def _resolve_label_line_spec(attrs: Dict[Any, Any], spec: str) -> Optional[str]:
         else:
             return None
     return _extract_scalar_text(value)
+
+
+def _all_remaining_attr_lines(
+    attrs: Dict[Any, Any], *, excluded_roots: set[str]
+) -> List[str]:
+    lines: List[str] = []
+    for key, value in sorted(attrs.items(), key=lambda item: str(item[0]).lower()):
+        key_text = str(key).strip()
+        key_lower = key_text.lower()
+        if key_lower == "label":
+            continue
+        if key_lower in excluded_roots:
+            continue
+        if key_lower in {"birt", "deat"} and "lifespan" in excluded_roots:
+            continue
+
+        flattened = _flatten_attr_values(key_text, value)
+        if flattened:
+            lines.extend(flattened)
+            continue
+
+        scalar = _extract_scalar_text(value)
+        if scalar:
+            lines.append(f"{key_text}={scalar}")
+    return lines
+
+
+def _flatten_attr_values(prefix: str, value: Any) -> List[str]:
+    if isinstance(value, dict):
+        lines: List[str] = []
+        for key, nested in sorted(value.items(), key=lambda item: str(item[0]).lower()):
+            nested_prefix = f"{prefix}.{key}"
+            lines.extend(_flatten_attr_values(nested_prefix, nested))
+        return lines
+    if isinstance(value, (list, tuple)):
+        parts = [_extract_scalar_text(item) for item in value]
+        scalar_parts = [part for part in parts if part]
+        if scalar_parts:
+            return [f"{prefix}={','.join(scalar_parts)}"]
+        lines: List[str] = []
+        for idx, item in enumerate(value):
+            lines.extend(_flatten_attr_values(f"{prefix}[{idx}]", item))
+        return lines
+
+    scalar = _extract_scalar_text(value)
+    return [f"{prefix}={scalar}"] if scalar else []
 
 
 def _extract_gedcom_event_date(value: Any) -> Optional[str]:

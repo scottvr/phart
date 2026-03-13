@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 import networkx as nx
 
+from .rendering import nodes as nodes_mod
 from .styles import LayoutOptions
 
 
@@ -24,11 +25,22 @@ class LayoutManager:
         self._node_insertion_order = {
             node: idx for idx, node in enumerate(self.graph.nodes())
         }
+        self._node_display_cache: Dict[Any, str] = {
+            node: self._get_node_display_text(node) for node in self.graph.nodes()
+        }
         self._widest_node_text_width = (
             max(
                 (
-                    self.options.get_text_display_width(
-                        self.options.get_node_text(self._get_node_display_text(node))
+                    max(
+                        (
+                            self.options.get_text_display_width(
+                                self.options.get_node_text(line)
+                            )
+                            for line in self._label_lines_for_text(
+                                self._node_display_cache[node]
+                            )
+                        ),
+                        default=0,
                     )
                     for node in self.graph.nodes()
                 ),
@@ -37,29 +49,41 @@ class LayoutManager:
             if self.options.uniform
             else None
         )
+        self._max_node_height = max(
+            (
+                self.options.get_node_dimensions(
+                    self._node_display_cache[node],
+                    widest_text_width=self._widest_node_text_width,
+                )[1]
+                for node in self.graph.nodes()
+            ),
+            default=1,
+        )
 
     @staticmethod
     def _normalize_label_value(label: Any) -> str:
         """Normalize node labels for single-line display."""
-        text = str(label).strip()
-        if len(text) >= 2 and text[0] == text[-1] and text[0] in {"'", '"'}:
-            text = text[1:-1]
-        text = text.replace("\r\n", " ").replace("\n", " ")
-        return text.strip()
+        return nodes_mod.normalize_label_value(label)
 
     def _get_node_display_text(self, node: Any) -> str:
         """Resolve display text for a node key."""
-        if self.options.use_labels:
-            label = self.graph.nodes[node].get("label") if node in self.graph else None
-            if label is not None:
-                normalized = self._normalize_label_value(label)
-                if normalized:
-                    return normalized
-        return str(node)
+        attrs = self.graph.nodes[node] if node in self.graph else {}
+        return nodes_mod.resolve_display_node_text(self.options, attrs, node)
 
-    def _get_node_height(self) -> int:
+    def _label_lines_for_text(self, node_text: str) -> List[str]:
+        if self.options.bboxes and self.options.bbox_multiline_labels:
+            return node_text.split("\n")
+        return [node_text]
+
+    def _get_node_height(self, node: Optional[Any] = None) -> int:
         """Get rendered node height for current options."""
-        return self.options.get_node_height()
+        if node is None:
+            return self._max_node_height
+        display_text = self._node_display_cache.get(node, self._get_node_display_text(node))
+        return self.options.get_node_dimensions(
+            display_text,
+            widest_text_width=self._widest_node_text_width,
+        )[1]
 
     def _get_layer_step(self) -> int:
         """Get vertical step between layer top rows."""
@@ -80,7 +104,7 @@ class LayoutManager:
             Total width of node when rendered
         """
         width, _ = self.options.get_node_dimensions(
-            self._get_node_display_text(node),
+            self._node_display_cache.get(node, self._get_node_display_text(node)),
             widest_text_width=self._widest_node_text_width,
         )
         return width
@@ -481,7 +505,11 @@ class LayoutManager:
         )
         node_height = self._get_node_height()
         base_height = max(
-            (y + node_height - 1 for _, y in positions.values()), default=0
+            (
+                y + self._get_node_height(node) - 1
+                for node, (_x, y) in positions.items()
+            ),
+            default=0,
         )
 
         return positions, base_width, base_height

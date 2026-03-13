@@ -1,5 +1,6 @@
 import networkx as nx
 from pathlib import Path
+import sys
 
 
 def _as_list(value):
@@ -205,7 +206,9 @@ def build_person_graph(
         attrs = dict(graph.nodes[person_id])
         name = _extract_name(attrs, person_id)
         lifespan = _extract_lifespan(attrs)
-        attrs["label"] = f"{name} {lifespan}".strip() if lifespan else str(name)
+        attrs["name"] = name
+        if lifespan:
+            attrs.setdefault("lifespan", lifespan)
         person_graph.add_node(person_id, **attrs)
 
     for family_id in visited_families:
@@ -221,16 +224,16 @@ def build_person_graph(
                 person_graph.add_edge(husband, wife, role="spouse")
         for husband in husbands:
             for child in children:
-                person_graph.add_edge(husband, child, role="parent")
+                person_graph.add_edge(husband, child, role="parent", parenttype="father")
         for wife in wives:
             for child in children:
-                person_graph.add_edge(wife, child, role="parent")
+                person_graph.add_edge(wife, child, role="parent", parenttype="mother")
 
     return person_graph
 
 
 def main():
-    file_path = Path(__file__).with_name("happy.ged")
+    file_path = Path(__file__).with_name(sys.argv[1] or "happy.ged")
     ged_contents = file_path.read_text(encoding="utf-8")
     full_graph = gedcom_to_digraph(ged_contents)
     family_graph = build_person_graph(full_graph, root_family="@F1@", family_depth=4)
