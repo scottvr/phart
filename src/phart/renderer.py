@@ -25,7 +25,7 @@ from .rendering.ansi import resolve_color_spec as _resolve_color_spec_impl
 from .rendering.ansi import xterm_index_to_hex as _xterm_index_to_hex_impl
 
 from .styles import LayoutOptions, NodeStyle
-from .style_rules import evaluate_style_rule_color
+from .style_rules import evaluate_style_rule_color, evaluate_style_rule_set
 
 
 class ASCIIRenderer:
@@ -150,6 +150,54 @@ class ASCIIRenderer:
         self._edge_color_map: Dict[Tuple[Any, Any], str] = {}
         self._edge_conflict_cells: Set[Tuple[int, int]] = set()
         self._locked_arrow_cells: Set[Tuple[int, int]] = set()
+        self._active_edge_style_set: Dict[str, str] = {}
+        self._line_dirs_override_map = self._build_line_dirs_override_map()
+        self._all_edge_arrow_glyphs = self._build_all_edge_arrow_glyphs()
+
+    def _build_line_dirs_override_map(self) -> Dict[str, Set[str]]:
+        key_to_dirs = {
+            "arrow_up": {"up", "down"},
+            "arrow_down": {"up", "down"},
+            "line_vertical": {"up", "down"},
+            "arrow_left": {"left", "right"},
+            "arrow_right": {"left", "right"},
+            "line_horizontal": {"left", "right"},
+            "corner_ul": {"right", "down"},
+            "corner_ur": {"left", "down"},
+            "corner_ll": {"right", "up"},
+            "corner_lr": {"left", "up"},
+            "tee_up": {"left", "right", "up"},
+            "tee_down": {"left", "right", "down"},
+            "tee_left": {"up", "down", "left"},
+            "tee_right": {"up", "down", "right"},
+            "cross": {"up", "down", "left", "right"},
+        }
+        line_map: Dict[str, Set[str]] = {}
+        for rule in getattr(self.options, "_compiled_style_rules", []):
+            if rule.target != "edge":
+                continue
+            for key, glyph in rule.set_values.items():
+                dirs = key_to_dirs.get(key)
+                if dirs is None:
+                    continue
+                line_map.setdefault(glyph, set()).update(dirs)
+        return line_map
+
+    def _build_all_edge_arrow_glyphs(self) -> Set[str]:
+        arrows = {
+            self.options.edge_arrow_up,
+            self.options.edge_arrow_down,
+            self.options.edge_arrow_l,
+            self.options.edge_arrow_r,
+        }
+        for rule in getattr(self.options, "_compiled_style_rules", []):
+            if rule.target != "edge":
+                continue
+            for key in ("arrow_up", "arrow_down", "arrow_left", "arrow_right"):
+                glyph = rule.set_values.get(key)
+                if glyph:
+                    arrows.add(glyph)
+        return arrows
 
     @classmethod
     def _resolve_options(cls, options: Optional[LayoutOptions]) -> LayoutOptions:
@@ -232,6 +280,10 @@ class ASCIIRenderer:
         }
 
     def _resolve_edge_style_color_spec(self, start: Any, end: Any) -> Optional[str]:
+        edge_style = self._resolve_effective_edge_style_set(start, end)
+        return edge_style.get("color")
+
+    def _resolve_effective_edge_style_set(self, start: Any, end: Any) -> Dict[str, str]:
         edge_data = self.graph.get_edge_data(start, end) or {}
         context = {
             "self": edge_data,
@@ -239,11 +291,28 @@ class ASCIIRenderer:
             "u": self.graph.nodes.get(start, {}),
             "v": self.graph.nodes.get(end, {}),
         }
-        return evaluate_style_rule_color(
+        return evaluate_style_rule_set(
             getattr(self.options, "_compiled_style_rules", []),
             "edge",
             context,
         )
+
+    def _edge_style_glyph(self, key: str, fallback: str) -> str:
+        value = self._active_edge_style_set.get(key)
+        if value:
+            return value
+        return fallback
+
+    def _edge_arrow_for_direction(self, direction: str) -> str:
+        key_map = {
+            "up": "arrow_up",
+            "down": "arrow_down",
+            "left": "arrow_left",
+            "right": "arrow_right",
+        }
+        key = key_map[direction]
+        fallback = self.options.get_arrow_for_direction(direction)
+        return self._edge_style_glyph(key, fallback)
 
     def _attr_rules_match_for_reverse_edge(self, start: Any, end: Any) -> bool:
         """Return True when attr-color rule attributes agree in both directions."""
@@ -325,12 +394,7 @@ class ASCIIRenderer:
         colors_mod.paint_cell(self, x, y, char, color)
 
     def _is_arrow_glyph(self, char: str) -> bool:
-        return char in {
-            self.options.edge_arrow_up,
-            self.options.edge_arrow_down,
-            self.options.edge_arrow_l,
-            self.options.edge_arrow_r,
-        }
+        return char in self._all_edge_arrow_glyphs
 
     def _merge_edge_cell_color(self, x: int, y: int, color: Optional[str]) -> None:
         colors_mod.merge_edge_cell_color(self, x, y, color)

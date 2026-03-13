@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import unicodedata
 from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple
 
 
@@ -10,10 +11,44 @@ Token = Tuple[str, Any]
 
 SUPPORTED_SET_KEYS: Dict[str, set[str]] = {
     "node": {"color", "prefix", "suffix", "node_style"},
-    "edge": {"color"},
+    "edge": {
+        "color",
+        "arrow_up",
+        "arrow_down",
+        "arrow_left",
+        "arrow_right",
+        "line_horizontal",
+        "line_vertical",
+        "corner_ul",
+        "corner_ur",
+        "corner_ll",
+        "corner_lr",
+        "tee_up",
+        "tee_down",
+        "tee_left",
+        "tee_right",
+        "cross",
+    },
 }
 
 _NODE_STYLE_TOKENS = {"minimal", "square", "round", "diamond", "custom"}
+_EDGE_GLYPH_KEYS = {
+    "arrow_up",
+    "arrow_down",
+    "arrow_left",
+    "arrow_right",
+    "line_horizontal",
+    "line_vertical",
+    "corner_ul",
+    "corner_ur",
+    "corner_ll",
+    "corner_lr",
+    "tee_up",
+    "tee_down",
+    "tee_left",
+    "tee_right",
+    "cross",
+}
 
 
 @dataclass(frozen=True)
@@ -337,6 +372,29 @@ def _validate_set_values_for_target(target: str, set_values: Dict[str, str]) -> 
             raise ValueError(
                 f"Invalid node_style '{set_values['node_style']}'. Valid: {valid}"
             )
+    if target == "edge":
+        for key in sorted(_EDGE_GLYPH_KEYS):
+            if key not in set_values:
+                continue
+            glyph = set_values[key]
+            if not _is_single_cell_glyph(glyph):
+                raise ValueError(
+                    f"Invalid glyph for edge set key '{key}': '{glyph}'. "
+                    "Edge glyph values must be single-cell glyphs."
+                )
+
+
+def _is_single_cell_glyph(glyph: str) -> bool:
+    if not isinstance(glyph, str) or len(glyph) != 1:
+        return False
+    char = glyph[0]
+    if unicodedata.combining(char):
+        return False
+    if unicodedata.east_asian_width(char) in {"F", "W"}:
+        return False
+    if unicodedata.category(char) in {"Cc", "Cf"}:
+        return False
+    return True
 
 
 def compile_style_rules(raw_rules: Iterable[Dict[str, Any]]) -> List[CompiledStyleRule]:

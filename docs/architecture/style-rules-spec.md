@@ -266,21 +266,21 @@ Style rules are last-write authority for the fields they set.
 
 Execution board (feature branch: `feature/style-rule-node-style`):
 
-| ID  | Workstream                 | Status               | Notes                                                                                           |
-| --- | -------------------------- | -------------------- | ----------------------------------------------------------------------------------------------- |
-| A   | Contracts and option model | Completed (Phase 3a) | Key/target validation active for `node:{color,prefix,suffix,node_style}` and `edge:{color}`     |
-| B   | Node rendering integration | Completed (Phase 3a) | Rule-driven `prefix`/`suffix`/`node_style` wired in shared node line resolution (layout + draw) |
-| C   | Edge rendering integration | Pending              | Color done; glyph-field expansion still pending                                                 |
-| D   | Legacy convergence path    | Pending              | Mapping layer not started                                                                       |
-| E   | CLI / UX surface           | Pending              | CLI exists; field-level docs/examples pending                                                   |
-| F   | Test plan                  | In Progress          | Node-style rule and validation tests added; parity/edge-glyph tests pending                     |
-| G   | Rollout sequencing         | In Progress          | Current branch aligned to steps 1-3 (validation + node rule integration)                        |
+| ID  | Workstream                 | Status               | Notes                                                                                              |
+| --- | -------------------------- | -------------------- | -------------------------------------------------------------------------------------------------- |
+| A   | Contracts and option model | Completed (Phase 3a) | Key/target validation active for `node:{color,prefix,suffix,node_style}` and `edge:{color,glyphs}` |
+| B   | Node rendering integration | Completed (Phase 3a) | Rule-driven `prefix`/`suffix`/`node_style` wired in shared node line resolution (layout + draw)    |
+| C   | Edge rendering integration | Completed (Phase 3b) | Rule-driven `arrow_*`, `line_*`, `corner_*`, `tee_*`, and `cross` integrated into routing/merge    |
+| D   | Legacy convergence path    | Pending              | Mapping layer not started                                                                          |
+| E   | CLI / UX surface           | Pending              | CLI exists; field-level docs/examples pending                                                      |
+| F   | Test plan                  | In Progress          | Node-style + edge-glyph rule and validation tests added; parity tests pending                      |
+| G   | Rollout sequencing         | In Progress          | Current branch aligned to steps 1-4 (validation + node + edge integration)                         |
 
 #### A. Contracts and option model
 
-- [ ] Extend canonical style-rule schema docs with allowed `set` keys per `target`.
-- [ ] Add `StyleSetKey` validation in rule compilation (reject unknown keys early).
-- [ ] Add target/key compatibility checks (for example, disallow `arrow_up` on `node`).
+- [x] Extend canonical style-rule schema docs with allowed `set` keys per `target`.
+- [x] Add `StyleSetKey` validation in rule compilation (reject unknown keys early).
+- [x] Add target/key compatibility checks (for example, disallow `arrow_up` on `node`).
 - [ ] Keep `LayoutOptions` legacy fields unchanged for compatibility (`node_style`, `custom_decorators`, arrow glyph fields).
 - [ ] Add explicit compatibility mapping layer from legacy fields to implicit style rules (feature-flagged initially).
 
@@ -291,15 +291,15 @@ Acceptance criteria:
 
 #### B. Node rendering integration
 
-- [ ] Introduce node style-rule evaluator (`target=node`) that can resolve:
+- [x] Introduce node style-rule evaluator (`target=node`) that can resolve:
   - `color`
   - `prefix`
   - `suffix`
   - `node_style`
   - optional safe padding overrides (`hpad`, `vpad`) only when `bboxes` is true.
-- [ ] Apply resolved node style fields in one place before node glyph composition.
-- [ ] Ensure bbox sizing uses post-rule effective text/decorators.
-- [ ] Ensure multiline label flow remains correct with rule-modified node text wrappers.
+- [x] Apply resolved node style fields in one place before node glyph composition.
+- [x] Ensure bbox sizing uses post-rule effective text/decorators.
+- [x] Ensure multiline label flow remains correct with rule-modified node text wrappers.
 
 Acceptance criteria:
 
@@ -308,13 +308,13 @@ Acceptance criteria:
 
 #### C. Edge rendering integration
 
-- [ ] Extend edge style-rule evaluator (`target=edge`) beyond `color` to support glyph keys:
+- [x] Extend edge style-rule evaluator (`target=edge`) beyond `color` to support glyph keys:
   - arrows: `arrow_up/down/left/right`
   - segments: `line_horizontal/line_vertical`
   - junctions: `corner_*`, `tee_*`
-- [ ] Apply resolved glyphs through routing/canvas paint path without bypassing conflict logic.
-- [ ] Preserve arrow lock semantics for overlapping edges.
-- [ ] Keep single-cell glyph invariant enforced at validation time.
+- [x] Apply resolved glyphs through routing/canvas paint path without bypassing conflict logic.
+- [x] Preserve arrow lock semantics for overlapping edges.
+- [x] Keep single-cell glyph invariant enforced at validation time.
 
 Acceptance criteria:
 

@@ -1765,6 +1765,34 @@ class TestASCIIRenderer(unittest.TestCase):
         renderer.render()
         self.assertEqual(renderer._node_color_map, {})  # noqa: SLF001
 
+    def test_edge_style_rule_can_override_edge_line_and_arrow_glyphs(self):
+        graph = nx.DiGraph()
+        graph.add_edge("A", "B", role="link")
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=True,
+                bboxes=True,
+                hpad=1,
+                layer_spacing=5,
+                flow_direction=FlowDirection.DOWN,
+                style_rules=[
+                    {
+                        "target": "edge",
+                        "when": 'role == "link"',
+                        "set": {
+                            "line_vertical": "!",
+                            "arrow_down": "x",
+                        },
+                    }
+                ],
+            ),
+        )
+        output = renderer.render()
+        self.assertIn("!", output)
+        self.assertIn("x", output)
+
     def test_attr_mode_bidirectional_requires_rule_attribute_agreement(self):
         graph = nx.DiGraph()
         graph.add_edge("Alice", "Bob", relationship="friend")
@@ -2106,6 +2134,30 @@ class TestLayoutOptions(unittest.TestCase):
                         "target": "node",
                         "when": "true",
                         "set": {"node_style": "hexagon"},
+                    }
+                ]
+            )
+
+    def test_style_rule_invalid_edge_glyph_value_raises(self):
+        with self.assertRaises(ValueError):
+            LayoutOptions(
+                style_rules=[
+                    {
+                        "target": "edge",
+                        "when": "true",
+                        "set": {"line_horizontal": "=="},
+                    }
+                ]
+            )
+
+    def test_style_rule_wide_edge_glyph_value_raises(self):
+        with self.assertRaises(ValueError):
+            LayoutOptions(
+                style_rules=[
+                    {
+                        "target": "edge",
+                        "when": "true",
+                        "set": {"line_horizontal": "好"},
                     }
                 ]
             )

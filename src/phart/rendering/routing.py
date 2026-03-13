@@ -46,8 +46,11 @@ def draw_vertical_segment(
 ) -> None:
     # TODO(width): Edge routing currently treats line glyphs as single-cell.
     # Supporting wide/custom edge glyphs will require width-aware stepping.
+    line_vertical = renderer._edge_style_glyph(
+        "line_vertical", renderer.options.edge_vertical
+    )
     for y in range(start_y + 1, end_y):
-        renderer._paint_edge_cell(x, y, renderer.options.edge_vertical, color)
+        renderer._paint_edge_cell(x, y, line_vertical, color)
     if marker is not None:
         mid_y = (start_y + end_y) // 2
         renderer._paint_edge_cell(x, mid_y, marker, color)
@@ -63,8 +66,11 @@ def draw_horizontal_segment(
 ) -> None:
     # TODO(width): Edge routing currently treats line glyphs as single-cell.
     # Supporting wide/custom edge glyphs will require width-aware stepping.
+    line_horizontal = renderer._edge_style_glyph(
+        "line_horizontal", renderer.options.edge_horizontal
+    )
     for x in range(start_x + 1, end_x):
-        renderer._paint_edge_cell(x, y, renderer.options.edge_horizontal, color)
+        renderer._paint_edge_cell(x, y, line_horizontal, color)
     if marker is not None:
         mid_x = (start_x + end_x) // 2
         renderer._paint_edge_cell(mid_x, y, marker, color)
@@ -81,6 +87,9 @@ def safe_draw(
 
 def line_dirs_for_char(renderer: ASCIIRenderer, ch: str) -> Set[str]:
     """Map existing glyphs to line connection directions."""
+    override_dirs = renderer._line_dirs_override_map.get(ch)
+    if override_dirs:
+        return set(override_dirs)
     if ch in (
         renderer.options.edge_vertical,
         renderer.options.edge_arrow_up,
@@ -116,33 +125,49 @@ def glyph_for_line_dirs(renderer: ASCIIRenderer, dirs: Set[str]) -> str:
     if not dirs:
         return " "
 
-    if renderer.options.use_ascii:
-        if ("left" in dirs or "right" in dirs) and ("up" in dirs or "down" in dirs):
-            return "+"
-        if "left" in dirs or "right" in dirs:
-            return "-"
-        return "|"
-
     key = frozenset(dirs)
-    unicode_glyphs = {
-        frozenset({"up", "down"}): renderer.options.edge_vertical,
-        frozenset({"left", "right"}): renderer.options.edge_horizontal,
-        frozenset({"right", "down"}): renderer.options.edge_corner_ul,
-        frozenset({"left", "down"}): renderer.options.edge_corner_ur,
-        frozenset({"right", "up"}): renderer.options.edge_corner_ll,
-        frozenset({"left", "up"}): renderer.options.edge_corner_lr,
-        frozenset({"left", "right", "down"}): renderer.options.edge_tee_down,
-        frozenset({"left", "right", "up"}): renderer.options.edge_tee_up,
-        frozenset({"up", "down", "right"}): renderer.options.edge_tee_right,
-        frozenset({"up", "down", "left"}): renderer.options.edge_tee_left,
-        frozenset({"up", "down", "left", "right"}): renderer.options.edge_cross,
+    glyph_map = {
+        frozenset({"up", "down"}): renderer._edge_style_glyph(
+            "line_vertical", renderer.options.edge_vertical
+        ),
+        frozenset({"left", "right"}): renderer._edge_style_glyph(
+            "line_horizontal", renderer.options.edge_horizontal
+        ),
+        frozenset({"right", "down"}): renderer._edge_style_glyph(
+            "corner_ul", renderer.options.edge_corner_ul
+        ),
+        frozenset({"left", "down"}): renderer._edge_style_glyph(
+            "corner_ur", renderer.options.edge_corner_ur
+        ),
+        frozenset({"right", "up"}): renderer._edge_style_glyph(
+            "corner_ll", renderer.options.edge_corner_ll
+        ),
+        frozenset({"left", "up"}): renderer._edge_style_glyph(
+            "corner_lr", renderer.options.edge_corner_lr
+        ),
+        frozenset({"left", "right", "down"}): renderer._edge_style_glyph(
+            "tee_down", renderer.options.edge_tee_down
+        ),
+        frozenset({"left", "right", "up"}): renderer._edge_style_glyph(
+            "tee_up", renderer.options.edge_tee_up
+        ),
+        frozenset({"up", "down", "right"}): renderer._edge_style_glyph(
+            "tee_right", renderer.options.edge_tee_right
+        ),
+        frozenset({"up", "down", "left"}): renderer._edge_style_glyph(
+            "tee_left", renderer.options.edge_tee_left
+        ),
+        frozenset({"up", "down", "left", "right"}): renderer._edge_style_glyph(
+            "cross", renderer.options.edge_cross
+        ),
     }
 
-    if key in unicode_glyphs:
-        return unicode_glyphs[key]
+    if key in glyph_map:
+        return glyph_map[key]
+
     if "left" in dirs or "right" in dirs:
-        return renderer.options.edge_horizontal
-    return renderer.options.edge_vertical
+        return renderer._edge_style_glyph("line_horizontal", renderer.options.edge_horizontal)
+    return renderer._edge_style_glyph("line_vertical", renderer.options.edge_vertical)
 
 
 def merge_line_cell(
@@ -184,10 +209,7 @@ def draw_direction(
 ) -> None:
     if is_terminal:
         renderer._paint_edge_cell(x, y, direction, color)
-    elif renderer.canvas[y][x] not in (
-        renderer.options.edge_arrow_up,
-        renderer.options.edge_arrow_down,
-    ):
+    elif not renderer._is_arrow_glyph(renderer.canvas[y][x]):
         renderer._paint_edge_cell(x, y, direction, color)
 
 
@@ -211,10 +233,8 @@ def get_jog_row(
             cell = renderer.canvas[jog_y][x]
             if cell == " ":
                 continue
-            if cell == renderer.options.edge_vertical and x in (
-                top_center,
-                bottom_center,
-            ):
+            line_dirs = renderer._line_dirs_for_char(cell)
+            if line_dirs == {"up", "down"} and x in (top_center, bottom_center):
                 continue
             conflict = True
             break
@@ -318,6 +338,10 @@ def draw_edge(
     jog_y: Optional[int] = None
 
     is_bidirectional = renderer._is_bidirectional_edge(start, end)
+    previous_style_set = renderer._active_edge_style_set
+    renderer._active_edge_style_set = renderer._resolve_effective_edge_style_set(
+        start, end
+    )
 
     try:
         if start_y == end_y:
@@ -333,13 +357,13 @@ def draw_edge(
                     renderer._paint_edge_cell(
                         min_x,
                         y,
-                        renderer.options.get_arrow_for_direction("left"),
+                        renderer._edge_arrow_for_direction("left"),
                         edge_color,
                     )
                     renderer._paint_edge_cell(
                         max_x,
                         y,
-                        renderer.options.get_arrow_for_direction("right"),
+                        renderer._edge_arrow_for_direction("right"),
                         edge_color,
                     )
             elif min_x <= max_x:
@@ -347,14 +371,14 @@ def draw_edge(
                     renderer._paint_edge_cell(
                         max_x,
                         y,
-                        renderer.options.get_arrow_for_direction("right"),
+                        renderer._edge_arrow_for_direction("right"),
                         edge_color,
                     )
                 else:
                     renderer._paint_edge_cell(
                         min_x,
                         y,
-                        renderer.options.get_arrow_for_direction("left"),
+                        renderer._edge_arrow_for_direction("left"),
                         edge_color,
                     )
 
@@ -378,7 +402,9 @@ def draw_edge(
                 )
 
             for y in range(top_y + 1, jog_y):
-                if renderer.canvas[y][top_center] != renderer.options.edge_cross:
+                if renderer.canvas[y][top_center] != renderer._edge_style_glyph(
+                    "cross", renderer.options.edge_cross
+                ):
                     renderer._merge_line_cell(top_center, y, {"up", "down"}, edge_color)
 
             if top_center != bottom_center:
@@ -410,13 +436,13 @@ def draw_edge(
                 renderer._paint_edge_cell(
                     top_center,
                     top_terminal_y,
-                    renderer.options.get_arrow_for_direction("up"),
+                    renderer._edge_arrow_for_direction("up"),
                     edge_color,
                 )
                 renderer._paint_edge_cell(
                     bottom_center,
                     bottom_terminal_y,
-                    renderer.options.get_arrow_for_direction("down"),
+                    renderer._edge_arrow_for_direction("down"),
                     edge_color,
                 )
             else:
@@ -424,14 +450,14 @@ def draw_edge(
                     renderer._paint_edge_cell(
                         bottom_center,
                         bottom_terminal_y,
-                        renderer.options.get_arrow_for_direction("down"),
+                        renderer._edge_arrow_for_direction("down"),
                         edge_color,
                     )
                 else:
                     renderer._paint_edge_cell(
                         top_center,
                         top_terminal_y,
-                        renderer.options.get_arrow_for_direction("up"),
+                        renderer._edge_arrow_for_direction("up"),
                         edge_color,
                     )
 
@@ -449,3 +475,5 @@ def draw_edge(
 
     except IndexError as exc:
         raise IndexError(f"Edge drawing exceeded canvas boundaries: {exc}") from exc
+    finally:
+        renderer._active_edge_style_set = previous_style_set
