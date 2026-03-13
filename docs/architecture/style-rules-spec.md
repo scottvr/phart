@@ -253,7 +253,3 @@ rules:
     when: sex == "F"
     set: { color: bright_magenta }
 ```
-
-## 16. Out-of-Scope Note (GEDCOM multiline)
-
-GEDCOM `NOTE/CONT/CONC` reconstruction is parser logic in `examples/gedcom.py` and intentionally out of scope for this style-rule spec.
