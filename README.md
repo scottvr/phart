@@ -481,7 +481,7 @@ options:
   --node-labels [ATTR]  Enable node labels. Optionally provide the node attribute name to display (default: label). Use 'none' to disable node labels explicitly.
   --edge-labels [ATTR]  Enable edge labels. Optionally provide the edge attribute name to display (default: label). Use 'none' to disable edge labels explicitly.
   --node-label-lines SPEC
-                        Comma-separated ordered label line specs used when node labels are enabled and node 'label' is absent. Supports dotted paths (e.g. name,birt.date) and special token 'lifespan'.
+                        Comma-separated ordered label line specs used when node labels are enabled and node 'label' is absent. Supports dotted paths (e.g. name,birt.date,deat.date).
   --node-label-sep NODE_LABEL_SEP
                         Separator for joining multi-value parts within one synthesized label line
   --node-label-max-lines NODE_LABEL_MAX_LINES
@@ -532,14 +532,13 @@ When node labels are enabled with `--labels` (or `--node-labels`), and a node do
 
 ```bash
 phart --labels --bboxes --bbox-multiline-labels \
-  --node-label-lines name,lifespan \
+  --node-label-lines name,birt.date,deat.date \
   examples/gedcom.py
 ```
 
 Notes:
 
-- `name,lifespan` renders two lines per node in bboxes when multiline is enabled.
-- `lifespan` is a convenience token that renders GEDCOM-style `birt.date`/`deat.date` as `BIRTH-DEATH`.
+- `name,birt.date,deat.date` renders those three values in order (multiline in bboxes when enabled).
 - You can also use dotted paths directly, such as `name,birt.date,deat.date`.
 
 ### Text Pagination

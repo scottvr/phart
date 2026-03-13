@@ -199,7 +199,8 @@ class TestASCIIRenderer(unittest.TestCase):
             ),
         )
         result = renderer.render()
-        self.assertIn("Alpha Y-Y", result)
+        self.assertIn("Alpha", result)
+        self.assertNotIn("Y-Y", result)
         self.assertNotIn("n1", result)
 
     def test_node_label_lines_synthesizes_multiline_in_bboxes(self):
@@ -212,16 +213,16 @@ class TestASCIIRenderer(unittest.TestCase):
                 bboxes=True,
                 use_labels=True,
                 bbox_multiline_labels=True,
-                node_label_lines=("name", "lifespan"),
+                node_label_lines=("name", "birt.date"),
                 use_ascii=True,
             ),
         )
         result = renderer.render()
         self.assertIn("Alpha", result)
-        self.assertIn("Y-Y", result)
+        self.assertIn("Y", result)
         self.assertIn("+-------+", result)
 
-    def test_node_label_lines_name_only_is_distinct_from_name_lifespan(self):
+    def test_node_label_lines_name_only_is_distinct_from_name_and_birth_date(self):
         graph = nx.DiGraph()
         graph.add_node("n1", name="Alpha", birt={"date": "Y"}, deat={"date": "Y"})
 
@@ -235,20 +236,20 @@ class TestASCIIRenderer(unittest.TestCase):
                 use_ascii=True,
             ),
         ).render()
-        name_lifespan = ASCIIRenderer(
+        name_birth_date = ASCIIRenderer(
             graph,
             options=LayoutOptions(
                 bboxes=True,
                 use_labels=True,
                 bbox_multiline_labels=True,
-                node_label_lines=("name", "lifespan"),
+                node_label_lines=("name", "birt.date"),
                 use_ascii=True,
             ),
         ).render()
 
         self.assertIn("Alpha", name_only)
-        self.assertNotIn("Y-Y", name_only)
-        self.assertIn("Y-Y", name_lifespan)
+        self.assertNotIn("Y", name_only)
+        self.assertIn("Y", name_birth_date)
 
     def test_node_label_lines_wildcard_includes_remaining_attributes(self):
         graph = nx.DiGraph()

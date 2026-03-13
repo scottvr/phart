@@ -1145,7 +1145,7 @@ def main():
             "phart",
             "--labels",
             "--node-label-lines",
-            "name,lifespan,birt.date",
+            "name,birt.date,deat.date",
             "--node-label-sep",
             " | ",
             "--node-label-max-lines",
@@ -1159,7 +1159,7 @@ def main():
         self.assertTrue(options.use_labels)
         self.assertEqual(options.node_label_attr, "label")
         self.assertEqual(options.edge_label_attr, "label")
-        self.assertEqual(options.node_label_lines, ("name", "lifespan", "birt.date"))
+        self.assertEqual(options.node_label_lines, ("name", "birt.date", "deat.date"))
         self.assertEqual(options.node_label_sep, " | ")
         self.assertEqual(options.node_label_max_lines, 2)
         self.assertTrue(options.bbox_multiline_labels)

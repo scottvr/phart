@@ -60,11 +60,8 @@ def _synthesize_label_from_node_attrs(attrs: Dict[Any, Any]) -> str:
         return ""
 
     name = _extract_scalar_text(attrs.get("name"))
-    birth = _extract_gedcom_event_date(attrs.get("birt"))
-    death = _extract_gedcom_event_date(attrs.get("deat"))
     if name:
-        lifespan = f"{birth or '-'}-{death or '-'}" if (birth or death) else None
-        return f"{name} {lifespan}".strip() if lifespan else name
+        return name
 
     title = _extract_scalar_text(attrs.get("title"))
     if title:
@@ -157,9 +154,6 @@ def _explicit_spec_root(spec: str) -> Optional[str]:
         return None
     if _is_wildcard_label_spec(token):
         return None
-    lowered = token.lower()
-    if lowered == "lifespan":
-        return "lifespan"
     return token.split(".", 1)[0].strip().lower() or None
 
 
@@ -167,12 +161,6 @@ def _resolve_label_line_spec(attrs: Dict[Any, Any], spec: str) -> Optional[str]:
     token = str(spec).strip()
     if not token:
         return None
-    if token.lower() == "lifespan":
-        birth = _extract_gedcom_event_date(attrs.get("birt"))
-        death = _extract_gedcom_event_date(attrs.get("deat"))
-        if not birth and not death:
-            return None
-        return f"{birth or '-'}-{death or '-'}"
 
     value: Any = attrs
     for part in token.split("."):
@@ -196,8 +184,6 @@ def _all_remaining_attr_lines(
         if key_lower == "label":
             continue
         if key_lower in excluded_roots:
-            continue
-        if key_lower in {"birt", "deat"} and "lifespan" in excluded_roots:
             continue
 
         flattened = _flatten_attr_values(key_text, value)
@@ -229,12 +215,6 @@ def _flatten_attr_values(prefix: str, value: Any) -> List[str]:
 
     scalar = _extract_scalar_text(value)
     return [f"{prefix}={scalar}"] if scalar else []
-
-
-def _extract_gedcom_event_date(value: Any) -> Optional[str]:
-    if isinstance(value, dict):
-        return _extract_scalar_text(value.get("date"))
-    return None
 
 
 def _extract_scalar_text(value: Any) -> Optional[str]:

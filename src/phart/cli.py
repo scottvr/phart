@@ -222,9 +222,7 @@ def _resolve_markdown_safe_text(*, output_format: str, whitespace_mode: str) -> 
         return True
     if normalized_mode in {"auto", "ascii_space"}:
         return False
-    raise ValueError(
-        "whitespace mode must be one of: auto, ascii-space, or nbsp"
-    )
+    raise ValueError("whitespace mode must be one of: auto, ascii-space, or nbsp")
 
 
 def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
@@ -444,8 +442,8 @@ def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
         metavar="SPEC",
         help=(
             "Comma-separated ordered label line specs used when --labels is enabled "
-            "and node 'label' is absent. Supports dotted paths (e.g. name,birt.date) "
-            "and special token 'lifespan'."
+            "and node 'label' is absent. Supports dotted paths "
+            "(e.g. name,birt.date,deat.date)."
         ),
     )
     parser.add_argument(
