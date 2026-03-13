@@ -144,6 +144,12 @@ def main():
         self.py_multirow_output_file.write_text(
             multirow_output_content, encoding="utf-8"
         )
+        self.py_ansi_output_file = Path(self.temp_dir) / "test_ansi_output.py"
+        ansi_output_content = """
+def main():
+    print("\\x1b[31mABCDEFGHIJ\\x1b[0m")
+"""
+        self.py_ansi_output_file.write_text(ansi_output_content, encoding="utf-8")
 
         # Create Python file with script-level bbox disabled, for CLI override tests
         self.py_bbox_override_file = Path(self.temp_dir) / "test_bbox_override.py"
@@ -662,6 +668,40 @@ def main():
         self.assertIn(
             "only supported with --output-format text", self.stderr.getvalue()
         )
+
+    def test_paginate_width_ignores_ansi_escape_length(self):
+        sys.argv = [
+            "phart",
+            "--paginate-output-width",
+            "5",
+            "--paginate-overlap",
+            "0",
+            str(self.py_ansi_output_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        stripped = re.sub(r"\x1b\[[0-9;]*m", "", output)
+        self.assertEqual(stripped, "ABCDE")
+
+    def test_paginate_width_preserves_ansi_sequence_integrity(self):
+        sys.argv = [
+            "phart",
+            "--paginate-output-width",
+            "5",
+            "--paginate-overlap",
+            "0",
+            "--page-x",
+            "1",
+            str(self.py_ansi_output_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        stripped = re.sub(r"\x1b\[[0-9;]*m", "", output)
+        self.assertEqual(stripped, "FGHIJ")
+        self.assertIn("\x1b[31m", output)
+        self.assertIn("\x1b[0m", output)
 
     def test_python_bbox_alias_overrides_script_bbox_option(self):
         sys.argv = ["phart", "--bbox", str(self.py_bbox_override_file)]

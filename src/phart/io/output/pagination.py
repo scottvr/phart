@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from phart.rendering.ansi import ANSI_TOKEN_RE
+
 
 @dataclass(frozen=True)
 class TextPage:
@@ -60,7 +62,7 @@ def paginate_text(
     """
     rows = text.splitlines()
     canvas_height = len(rows)
-    canvas_width = max((len(row) for row in rows), default=0)
+    canvas_width = max((_visible_len(row) for row in rows), default=0)
     if page_height is None:
         page_height = canvas_height if canvas_height > 0 else 1
 
@@ -73,7 +75,7 @@ def paginate_text(
         row_slice = rows[y_start:y_end]
         for x_idx, x_start in enumerate(x_starts):
             x_end = min(canvas_width, x_start + page_width)
-            page_rows = [row[x_start:x_end].rstrip() for row in row_slice]
+            page_rows = [_slice_ansi_line(row, x_start, x_end).rstrip() for row in row_slice]
             page_text = "\n".join(page_rows)
             pages.append(
                 TextPage(
@@ -87,6 +89,52 @@ def paginate_text(
                 )
             )
     return pages, canvas_width, canvas_height
+
+
+def _visible_len(line: str) -> int:
+    visible = 0
+    for token in ANSI_TOKEN_RE.findall(line):
+        if token.startswith("\x1b["):
+            continue
+        visible += 1
+    return visible
+
+
+def _slice_ansi_line(line: str, start: int, end: int) -> str:
+    if start >= end:
+        return ""
+
+    visible_idx = 0
+    active_ansi: str | None = None
+    started = False
+    output: list[str] = []
+
+    for token in ANSI_TOKEN_RE.findall(line):
+        if token.startswith("\x1b["):
+            if token == "\x1b[0m":
+                active_ansi = None
+            else:
+                active_ansi = token
+            if started:
+                output.append(token)
+            continue
+
+        in_slice = start <= visible_idx < end
+        if in_slice and not started:
+            started = True
+            if active_ansi is not None:
+                output.append(active_ansi)
+        if in_slice:
+            output.append(token)
+
+        visible_idx += 1
+        if visible_idx >= end and started:
+            break
+
+    if started and active_ansi is not None:
+        output.append("\x1b[0m")
+
+    return "".join(output)
 
 
 def describe_pages(
