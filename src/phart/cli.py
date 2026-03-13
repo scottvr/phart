@@ -594,7 +594,8 @@ def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
         metavar="RULE",
         help=(
             "Advanced style rule expression. Format: "
-            "'<target>: <predicate> -> color=<color>' where target is edge|node. "
+            "'<target>: <predicate> -> color=<color>' where target is "
+            "edge|node|connector|panel_header. "
             "Repeat to add multiple rules."
         ),
     )
@@ -789,9 +790,9 @@ def _parse_style_rule_string(rule: str) -> dict[str, object]:
     head, set_text = text.split("->", 1)
     target_text, when_text = head.split(":", 1)
     target = target_text.strip().lower()
-    if target not in {"edge", "node"}:
+    if target not in {"edge", "node", "connector", "panel_header"}:
         raise ValueError(
-            f"Invalid --style-rule '{rule}': target must be 'edge' or 'node'"
+            f"Invalid --style-rule '{rule}': target must be one of edge, node, connector, panel_header"
         )
     when = when_text.strip()
     set_values: dict[str, str] = {}

@@ -210,6 +210,14 @@ Suggested PR checklist:
 
 - [x] PR1: constrained mode core + partition metadata
 - [x] PR2: panelized output mode + connector stubs
-- [ ] PR3: style-rule targeting for connectors + panel headers
+- [x] PR3: style-rule targeting for connectors + panel headers
 - [ ] PR4: height/left-right support + overlap rendering
 - [ ] PR5: affinity tuning + connector compaction + metadata export finalization
+
+PR Notes:
+
+- PR4 Implementation suggestion:
+  - Enforce hard panel fit: split oversized single layers into subgroups (not just between layers).
+  - Make pagination panel-aware in constrained mode (paginate each panel separately, not whole concatenated text).
+  - Add boundary connector cues at panel edges.
+  - Add connector reference mode (auto|id|label|both) for readable connector text.

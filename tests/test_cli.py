@@ -946,6 +946,20 @@ def main():
         self.assertEqual(len(options.style_rules), 2)
         self.assertEqual(len(options._compiled_style_rules), 2)  # noqa: SLF001
 
+    def test_create_layout_options_with_connector_and_panel_header_style_rules(self):
+        sys.argv = [
+            "phart",
+            "--style-rule",
+            'connector: kind=="incoming" -> prefix=[IN]',
+            "--style-rule",
+            "panel_header: partition_number==1 -> color=red",
+            str(self.test_text_file),
+        ]
+        args, _, explicit_fields, _ = parse_args()
+        options = create_layout_options(args, explicit_fields)
+        self.assertEqual(len(options.style_rules), 2)
+        self.assertEqual(len(options._compiled_style_rules), 2)  # noqa: SLF001
+
     def test_create_layout_options_with_style_rules_file_json(self):
         style_rules_file = Path(self.temp_dir) / "style_rules.json"
         style_rules_file.write_text(

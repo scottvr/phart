@@ -29,6 +29,8 @@ SUPPORTED_SET_KEYS: Dict[str, set[str]] = {
         "tee_right",
         "cross",
     },
+    "connector": {"color", "prefix", "suffix"},
+    "panel_header": {"color", "prefix", "suffix"},
 }
 
 _NODE_STYLE_TOKENS = {"minimal", "square", "round", "diamond", "custom"}
@@ -265,7 +267,15 @@ def _resolve_path(context: Dict[str, Any], path: str) -> Any:
     remainder = ""
     if "." in path:
         root_name, remainder = path.split(".", 1)
-    if root_name not in {"self", "edge", "node", "u", "v"}:
+    if root_name not in {
+        "self",
+        "edge",
+        "node",
+        "u",
+        "v",
+        "connector",
+        "panel_header",
+    }:
         root_name = "self"
         remainder = path
 
@@ -404,8 +414,10 @@ def compile_style_rules(raw_rules: Iterable[Dict[str, Any]]) -> List[CompiledSty
         if not isinstance(raw, dict):
             raise ValueError("Each style rule must be a dict")
         target = str(raw.get("target", "")).strip().lower()
-        if target not in {"edge", "node"}:
-            raise ValueError("style rule target must be 'edge' or 'node'")
+        if target not in {"edge", "node", "connector", "panel_header"}:
+            raise ValueError(
+                "style rule target must be one of: edge, node, connector, panel_header"
+            )
         priority_raw = raw.get("priority", 0)
         try:
             priority = int(priority_raw)

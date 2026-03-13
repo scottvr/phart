@@ -2106,6 +2106,74 @@ class TestASCIIRenderer(unittest.TestCase):
         self.assertIn("ranks=", output)
         self.assertIn("roots=", output)
 
+    def test_constrained_render_supports_connector_and_panel_header_style_rules(self):
+        graph = nx.DiGraph()
+        graph.add_edge("R", "A1")
+        graph.add_edge("R", "A2")
+        graph.add_edge("R", "A3")
+        graph.add_edge("R", "A4")
+        graph.add_edge("A1", "B1")
+        graph.add_edge("A2", "B2")
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="layered",
+                constrained=True,
+                target_canvas_width=12,
+                panel_header_mode="basic",
+                style_rules=[
+                    {
+                        "target": "panel_header",
+                        "when": "partition_number == 1",
+                        "set": {"prefix": "[HDR] "},
+                    },
+                    {
+                        "target": "connector",
+                        "when": 'kind == "incoming"',
+                        "set": {"prefix": "[IN] "},
+                    },
+                ],
+                use_ascii=True,
+            ),
+        )
+        output = renderer.render()
+
+        self.assertIn("[HDR]=== Panel P1/3", output)
+        self.assertIn("[IN]  from [P1] -> A1 (R->A1)", output)
+
+    def test_constrained_render_supports_connector_style_rule_color(self):
+        graph = nx.DiGraph()
+        graph.add_edge("R", "A1")
+        graph.add_edge("R", "A2")
+        graph.add_edge("R", "A3")
+        graph.add_edge("R", "A4")
+        graph.add_edge("A1", "B1")
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="layered",
+                constrained=True,
+                target_canvas_width=12,
+                ansi_colors=True,
+                use_ascii=False,
+                style_rules=[
+                    {
+                        "target": "connector",
+                        "when": 'kind == "outgoing"',
+                        "set": {"color": "red"},
+                    }
+                ],
+            ),
+        )
+        output = renderer.render()
+
+        self.assertIn("\x1b[31m", output)
+        self.assertIn("\x1b[0m", output)
+
     def test_file_writing(self):
         """Test writing to file with proper encoding."""
 
@@ -2281,11 +2349,40 @@ class TestLayoutOptions(unittest.TestCase):
         )
         self.assertEqual(len(options._compiled_style_rules), 1)  # noqa: SLF001
 
+    def test_style_rules_accept_connector_and_panel_header_targets(self):
+        options = LayoutOptions(
+            style_rules=[
+                {
+                    "target": "connector",
+                    "when": 'kind == "incoming"',
+                    "set": {"prefix": "[IN] ", "suffix": " !"},
+                },
+                {
+                    "target": "panel_header",
+                    "when": "partition_number == 1",
+                    "set": {"color": "red"},
+                },
+            ]
+        )
+        self.assertEqual(len(options._compiled_style_rules), 2)  # noqa: SLF001
+
     def test_style_rule_invalid_target_raises(self):
         with self.assertRaises(ValueError):
             LayoutOptions(
                 style_rules=[
                     {"target": "bogus", "when": "true", "set": {"color": "blue"}}
+                ]
+            )
+
+    def test_style_rule_invalid_connector_set_key_raises(self):
+        with self.assertRaises(ValueError):
+            LayoutOptions(
+                style_rules=[
+                    {
+                        "target": "connector",
+                        "when": "true",
+                        "set": {"line_vertical": "!"},
+                    }
                 ]
             )
 

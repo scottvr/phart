@@ -33,6 +33,8 @@ The design goal is a unified rule model that can style both nodes and edges with
   - `self`: current target's attributes
   - `edge`: alias of `self` when target is `edge`
   - `node`: alias of `self` when target is `node`
+  - `connector`: alias of `self` when target is `connector`
+  - `panel_header`: alias of `self` when target is `panel_header`
   - `u`: source-node attributes for an edge
   - `v`: destination-node attributes for an edge
 - Rule: a predicate + style assignment for a target type.
@@ -44,7 +46,7 @@ Rules normalize into this internal structure:
 ```yaml
 id: spouse-male
 priority: 100 # optional integer; higher runs first
-target: edge # edge | node
+target: edge # edge | node | connector | panel_header
 when: role == "spouse" and v.sex == "M"
 set:
   color: blue # required field for color behavior
@@ -55,6 +57,20 @@ Notes:
 - `priority` is optional. If omitted, default priority is `0`.
 - Ties are resolved by declaration order (stable).
 - First matching rule wins for each style field in `set`.
+
+Supported targets:
+
+- `node`
+- `edge`
+- `connector`
+- `panel_header`
+
+Supported `set` keys:
+
+- `node`: `color`, `prefix`, `suffix`, `node_style`
+- `edge`: `color` plus edge glyph keys (`arrow_*`, `line_*`, `corner_*`, `tee_*`, `cross`)
+- `connector`: `color`, `prefix`, `suffix`
+- `panel_header`: `color`, `prefix`, `suffix`
 
 ## 6. Expression Language (v1.5)
 

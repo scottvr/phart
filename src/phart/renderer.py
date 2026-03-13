@@ -593,6 +593,30 @@ class ASCIIRenderer:
         option_kwargs["constrained"] = False
         return LayoutOptions(**option_kwargs)
 
+    def _format_text_with_style_rule(
+        self,
+        *,
+        target: str,
+        text: str,
+        context: Dict[str, Any],
+    ) -> str:
+        style_set = evaluate_style_rule_set(
+            getattr(self.options, "_compiled_style_rules", []),
+            target,
+            context,
+        )
+        if not style_set:
+            return text
+
+        styled = f"{style_set.get('prefix', '')}{text}{style_set.get('suffix', '')}"
+        color_spec = style_set.get("color")
+        if not color_spec or not self._use_ansi_colors():
+            return styled
+        resolved_color = self._resolve_color_spec(color_spec)
+        if not resolved_color:
+            return styled
+        return f"{resolved_color}{styled}{ANSI_RESET}"
+
     def _panel_header_line(
         self,
         *,
@@ -605,14 +629,38 @@ class ASCIIRenderer:
         if mode == "none":
             return ""
 
+        plan = self.layout_manager.partition_plan
         label = f"P{partition_idx + 1}/{total_partitions}"
         if mode == "basic":
-            return f"=== Panel {label} (nodes={len(panel_nodes)}) ==="
+            text = f"=== Panel {label} (nodes={len(panel_nodes)}) ==="
+            return self._format_text_with_style_rule(
+                target="panel_header",
+                text=text,
+                context={
+                    "self": {
+                        "mode": mode,
+                        "partition_index": partition_idx,
+                        "partition_number": partition_idx + 1,
+                        "total_partitions": total_partitions,
+                        "node_count": len(panel_nodes),
+                    },
+                    "panel_header": {
+                        "mode": mode,
+                        "partition_index": partition_idx,
+                        "partition_number": partition_idx + 1,
+                        "total_partitions": total_partitions,
+                        "node_count": len(panel_nodes),
+                    },
+                },
+            )
 
         rank_text = ""
-        plan = self.layout_manager.partition_plan
+        rank_start: Optional[int] = None
+        rank_end: Optional[int] = None
         if plan is not None and partition_idx < len(plan.partition_layer_ranges):
             start_rank, end_rank = plan.partition_layer_ranges[partition_idx]
+            rank_start = start_rank
+            rank_end = max(start_rank, end_rank - 1)
             rank_text = f"ranks={start_rank}-{max(start_rank, end_rank - 1)}"
 
         roots: List[Any] = []
@@ -638,7 +686,37 @@ class ASCIIRenderer:
         if rank_text:
             parts.append(rank_text)
         parts.append(f"roots={root_text}")
-        return " | ".join(parts) + " ==="
+        text = " | ".join(parts) + " ==="
+        return self._format_text_with_style_rule(
+            target="panel_header",
+            text=text,
+            context={
+                "self": {
+                    "mode": mode,
+                    "partition_index": partition_idx,
+                    "partition_number": partition_idx + 1,
+                    "total_partitions": total_partitions,
+                    "node_count": len(panel_nodes),
+                    "primary_node_count": len(primary_nodes),
+                    "rank_start": rank_start,
+                    "rank_end": rank_end,
+                    "roots": [str(node) for node in roots_sorted],
+                    "root_count": len(roots_sorted),
+                },
+                "panel_header": {
+                    "mode": mode,
+                    "partition_index": partition_idx,
+                    "partition_number": partition_idx + 1,
+                    "total_partitions": total_partitions,
+                    "node_count": len(panel_nodes),
+                    "primary_node_count": len(primary_nodes),
+                    "rank_start": rank_start,
+                    "rank_end": rank_end,
+                    "roots": [str(node) for node in roots_sorted],
+                    "root_count": len(roots_sorted),
+                },
+            },
+        )
 
     def _panel_connector_lines(self, partition_idx: int) -> List[str]:
         plan = self.layout_manager.partition_plan
@@ -660,19 +738,102 @@ class ASCIIRenderer:
         if not incoming and not outgoing:
             return []
 
-        lines = ["Connectors:"]
+        lines = [
+            self._format_text_with_style_rule(
+                target="connector",
+                text="Connectors:",
+                context={
+                    "self": {
+                        "kind": "section",
+                        "partition_index": partition_idx,
+                        "partition_number": partition_idx + 1,
+                        "source_partition": partition_idx,
+                        "dest_partition": partition_idx,
+                    },
+                    "connector": {
+                        "kind": "section",
+                        "partition_index": partition_idx,
+                        "partition_number": partition_idx + 1,
+                        "source_partition": partition_idx,
+                        "dest_partition": partition_idx,
+                    },
+                },
+            )
+        ]
         for edge in sorted(
             incoming,
             key=lambda item: (item.source_partition, str(item.u), str(item.v)),
         ):
+            text = f"  from [P{edge.source_partition + 1}] -> {edge.v} ({edge.edge_id})"
             lines.append(
-                f"  from [P{edge.source_partition + 1}] -> {edge.v} ({edge.edge_id})"
+                self._format_text_with_style_rule(
+                    target="connector",
+                    text=text,
+                    context={
+                        "self": {
+                            "kind": "incoming",
+                            "partition_index": partition_idx,
+                            "partition_number": partition_idx + 1,
+                            "source_partition": edge.source_partition,
+                            "source_partition_number": edge.source_partition + 1,
+                            "dest_partition": edge.dest_partition,
+                            "dest_partition_number": edge.dest_partition + 1,
+                            "edge_id": edge.edge_id,
+                            "u": edge.u,
+                            "v": edge.v,
+                        },
+                        "connector": {
+                            "kind": "incoming",
+                            "partition_index": partition_idx,
+                            "partition_number": partition_idx + 1,
+                            "source_partition": edge.source_partition,
+                            "source_partition_number": edge.source_partition + 1,
+                            "dest_partition": edge.dest_partition,
+                            "dest_partition_number": edge.dest_partition + 1,
+                            "edge_id": edge.edge_id,
+                            "u": edge.u,
+                            "v": edge.v,
+                        },
+                    },
+                )
             )
         for edge in sorted(
             outgoing,
             key=lambda item: (item.dest_partition, str(item.u), str(item.v)),
         ):
-            lines.append(f"  -> [P{edge.dest_partition + 1}] {edge.edge_id}")
+            text = f"  -> [P{edge.dest_partition + 1}] {edge.edge_id}"
+            lines.append(
+                self._format_text_with_style_rule(
+                    target="connector",
+                    text=text,
+                    context={
+                        "self": {
+                            "kind": "outgoing",
+                            "partition_index": partition_idx,
+                            "partition_number": partition_idx + 1,
+                            "source_partition": edge.source_partition,
+                            "source_partition_number": edge.source_partition + 1,
+                            "dest_partition": edge.dest_partition,
+                            "dest_partition_number": edge.dest_partition + 1,
+                            "edge_id": edge.edge_id,
+                            "u": edge.u,
+                            "v": edge.v,
+                        },
+                        "connector": {
+                            "kind": "outgoing",
+                            "partition_index": partition_idx,
+                            "partition_number": partition_idx + 1,
+                            "source_partition": edge.source_partition,
+                            "source_partition_number": edge.source_partition + 1,
+                            "dest_partition": edge.dest_partition,
+                            "dest_partition_number": edge.dest_partition + 1,
+                            "edge_id": edge.edge_id,
+                            "u": edge.u,
+                            "v": edge.v,
+                        },
+                    },
+                )
+            )
         return lines
 
     def _render_constrained_panels(self, *, markdown_safe: bool = False) -> str:
