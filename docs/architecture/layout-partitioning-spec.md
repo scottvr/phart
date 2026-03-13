@@ -40,7 +40,9 @@ New options:
 - `--target-canvas-width N|auto` (required when `--constrained` is enabled)
 - `--target-canvas-height N|auto` (optional; disabled when omitted)
 - `--partition-overlap N` (default `0`; duplicate context columns/rows)
+- `--partition-affinity-strength N` (default `1`; `0` disables affinity heuristics)
 - `--cross-partition-edge-style {stub,none}` (default `stub`)
+- `--connector-compaction {none,partition}` (default `none`)
 - `--partition-order {natural,size}` (default `natural`)
 - `--panel-headers {none,basic,lineage}` (default `basic`)
 
@@ -202,9 +204,9 @@ Phase B:
 
 Phase C:
 
-- [ ] Affinity penalties for family/tree adjacency splitting
-- [ ] Optional connector compaction
-- [ ] Stable public/programmatic export surface for partition metadata
+- [x] Affinity penalties for family/tree adjacency splitting
+- [x] Optional connector compaction
+- [x] Stable public/programmatic export surface for partition metadata
 
 Suggested PR checklist:
 
@@ -212,7 +214,7 @@ Suggested PR checklist:
 - [x] PR2: panelized output mode + connector stubs
 - [x] PR3: style-rule targeting for connectors + panel headers
 - [x] PR4: height/left-right support + overlap rendering
-- [ ] PR5: affinity tuning + connector compaction + metadata export finalization
+- [x] PR5: affinity tuning + connector compaction + metadata export finalization
 
 ### 15.1 Additional Implementation Notes
 

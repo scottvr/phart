@@ -124,7 +124,9 @@ class LayoutOptions:
     target_canvas_width: Optional[int] = field(default=None)
     target_canvas_height: Optional[int] = field(default=None)
     partition_overlap: int = field(default=0)
+    partition_affinity_strength: int = field(default=1)
     cross_partition_edge_style: str = field(default="stub")  # stub or none
+    connector_compaction: str = field(default="none")  # none or partition
     partition_order: str = field(default="natural")  # natural or size
     panel_header_mode: str = field(default="basic")  # none, basic, or lineage
     connector_ref_mode: str = field(default="auto")  # auto, id, label, both
@@ -334,12 +336,18 @@ class LayoutOptions:
                 raise ValueError("target_canvas_height must be greater than zero")
         if self.partition_overlap < 0:
             raise ValueError("partition_overlap must be non-negative")
+        if self.partition_affinity_strength < 0:
+            raise ValueError("partition_affinity_strength must be non-negative")
         if isinstance(self.cross_partition_edge_style, str):
             self.cross_partition_edge_style = (
                 self.cross_partition_edge_style.strip().lower()
             )
         if self.cross_partition_edge_style not in {"stub", "none"}:
             raise ValueError("cross_partition_edge_style must be one of: stub, none")
+        if isinstance(self.connector_compaction, str):
+            self.connector_compaction = self.connector_compaction.strip().lower()
+        if self.connector_compaction not in {"none", "partition"}:
+            raise ValueError("connector_compaction must be one of: none, partition")
         if isinstance(self.partition_order, str):
             self.partition_order = self.partition_order.strip().lower()
         if self.partition_order not in {"natural", "size"}:

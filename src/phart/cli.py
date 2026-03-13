@@ -55,7 +55,9 @@ CLI_LAYOUT_FIELD_MAP = {
     "--target-canvas-width": {"target_canvas_width"},
     "--target-canvas-height": {"target_canvas_height"},
     "--partition-overlap": {"partition_overlap"},
+    "--partition-affinity-strength": {"partition_affinity_strength"},
     "--cross-partition-edge-style": {"cross_partition_edge_style"},
+    "--connector-compaction": {"connector_compaction"},
     "--partition-order": {"partition_order"},
     "--panel-headers": {"panel_header_mode"},
     "--connector-ref": {"connector_ref_mode"},
@@ -422,10 +424,28 @@ def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
         help="Context overlap between neighboring constrained partitions (default: 0)",
     )
     parser.add_argument(
+        "--partition-affinity-strength",
+        type=int,
+        default=1,
+        help=(
+            "Affinity weight used to keep closely related nodes together while "
+            "splitting constrained partitions (0 disables)"
+        ),
+    )
+    parser.add_argument(
         "--cross-partition-edge-style",
         choices=["stub", "none"],
         default="stub",
         help="Cross-partition edge rendering style for constrained layout (default: stub)",
+    )
+    parser.add_argument(
+        "--connector-compaction",
+        choices=["none", "partition"],
+        default="none",
+        help=(
+            "Connector listing compaction mode for constrained panels: none "
+            "(default) or partition"
+        ),
     )
     parser.add_argument(
         "--partition-order",
@@ -925,6 +945,8 @@ def create_layout_options(
     )
     if args.partition_overlap < 0:
         raise ValueError("--partition-overlap must be non-negative")
+    if args.partition_affinity_strength < 0:
+        raise ValueError("--partition-affinity-strength must be non-negative")
     if args.constrained and target_canvas_width is None:
         raise ValueError("--constrained requires --target-canvas-width")
     if args.labels:
@@ -948,7 +970,9 @@ def create_layout_options(
         target_canvas_width=target_canvas_width,
         target_canvas_height=target_canvas_height,
         partition_overlap=args.partition_overlap,
+        partition_affinity_strength=args.partition_affinity_strength,
         cross_partition_edge_style=args.cross_partition_edge_style,
+        connector_compaction=args.connector_compaction,
         partition_order=args.partition_order,
         panel_header_mode=args.panel_headers,
         connector_ref_mode=args.connector_ref,

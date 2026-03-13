@@ -1152,8 +1152,12 @@ def main():
             "40",
             "--partition-overlap",
             "2",
+            "--partition-affinity-strength",
+            "3",
             "--cross-partition-edge-style",
             "stub",
+            "--connector-compaction",
+            "partition",
             "--partition-order",
             "size",
             "--panel-headers",
@@ -1170,7 +1174,9 @@ def main():
         self.assertEqual(options.target_canvas_width, 80)
         self.assertEqual(options.target_canvas_height, 40)
         self.assertEqual(options.partition_overlap, 2)
+        self.assertEqual(options.partition_affinity_strength, 3)
         self.assertEqual(options.cross_partition_edge_style, "stub")
+        self.assertEqual(options.connector_compaction, "partition")
         self.assertEqual(options.partition_order, "size")
         self.assertEqual(options.panel_header_mode, "lineage")
         self.assertEqual(options.connector_ref_mode, "both")
@@ -1217,6 +1223,25 @@ def main():
         args, _unknown, explicit_layout_fields, _module_argv = parse_args()
         options = create_layout_options(args, explicit_layout_fields)
         self.assertEqual(options.partition_overlap, 10)
+
+    def test_partition_affinity_strength_must_be_non_negative(self):
+        sys.argv = [
+            "phart",
+            "--constrained",
+            "--layout",
+            "layered",
+            "--target-canvas-width",
+            "10",
+            "--partition-affinity-strength",
+            "-1",
+            str(self.test_text_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 1)
+        self.assertIn(
+            "--partition-affinity-strength must be non-negative",
+            self.stderr.getvalue(),
+        )
 
     def test_paginate_output_width_is_panel_aware_for_constrained_text(self):
         sys.argv = [

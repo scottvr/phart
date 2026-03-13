@@ -2241,6 +2241,66 @@ class TestASCIIRenderer(unittest.TestCase):
         self.assertIn("Alice [A1]->Ben [B1]", output)
         self.assertIn("Root [R]->Asha [A3]", output)
 
+    def test_constrained_render_connector_compaction_groups_by_partition(self):
+        graph = nx.DiGraph()
+        graph.add_edge("R", "A1")
+        graph.add_edge("R", "A2")
+        graph.add_edge("R", "A3")
+        graph.add_edge("R", "A4")
+        graph.add_edge("A1", "B1")
+        graph.add_edge("A2", "B2")
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="layered",
+                constrained=True,
+                target_canvas_width=12,
+                connector_compaction="partition",
+                use_ascii=True,
+            ),
+        )
+        output = renderer.render()
+
+        self.assertIn("Boundary Out:", output)
+        self.assertIn("4 edges", output)
+        self.assertIn("R->A3", output)
+        self.assertIn("R->A4", output)
+        self.assertEqual(output.count("-> [P2]"), 2)
+
+    def test_export_partition_metadata_returns_stable_dict(self):
+        graph = nx.DiGraph()
+        graph.add_edge("R", "A1")
+        graph.add_edge("R", "A2")
+        graph.add_edge("R", "A3")
+        graph.add_edge("R", "A4")
+        graph.add_edge("A1", "B1")
+        graph.add_edge("A2", "B2")
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="layered",
+                constrained=True,
+                target_canvas_width=12,
+                use_ascii=True,
+            ),
+        )
+        metadata = renderer.export_partition_metadata()
+
+        self.assertEqual(metadata["schema_version"], "1.0")
+        self.assertTrue(metadata["constrained"])
+        self.assertEqual(metadata["partition_count"], 2)
+        self.assertEqual(metadata["partitions"][0]["partition_number"], 1)
+        self.assertIn("R", metadata["node_to_partition"])
+        self.assertTrue(
+            any(
+                edge["edge_id"] == "R->A3" for edge in metadata["cross_partition_edges"]
+            )
+        )
+
     def test_file_writing(self):
         """Test writing to file with proper encoding."""
 
@@ -2378,6 +2438,18 @@ class TestLayoutOptions(unittest.TestCase):
     def test_partition_overlap_must_be_non_negative(self):
         with self.assertRaises(ValueError):
             LayoutOptions(partition_overlap=-1)
+
+    def test_partition_affinity_strength_must_be_non_negative(self):
+        with self.assertRaises(ValueError):
+            LayoutOptions(partition_affinity_strength=-1)
+
+    def test_connector_compaction_defaults_to_none(self):
+        options = LayoutOptions()
+        self.assertEqual(options.connector_compaction, "none")
+
+    def test_invalid_connector_compaction_raises(self):
+        with self.assertRaises(ValueError):
+            LayoutOptions(connector_compaction="invalid")
 
     def test_panel_header_mode_defaults_to_basic(self):
         options = LayoutOptions()

@@ -24,6 +24,17 @@ class CrossPartitionEdge:
     u: Any
     v: Any
 
+    def to_export_dict(self) -> Dict[str, Any]:
+        return {
+            "source_partition": self.source_partition,
+            "source_partition_number": self.source_partition + 1,
+            "dest_partition": self.dest_partition,
+            "dest_partition_number": self.dest_partition + 1,
+            "edge_id": self.edge_id,
+            "u": str(self.u),
+            "v": str(self.v),
+        }
+
 
 @dataclass(frozen=True)
 class PartitionPlan:
@@ -31,6 +42,55 @@ class PartitionPlan:
     partition_layer_ranges: List[Tuple[int, int]]
     node_to_partition: Dict[Any, int]
     cross_partition_edges: List[CrossPartitionEdge]
+
+    def to_export_dict(self) -> Dict[str, Any]:
+        sorted_nodes = sorted(
+            self.node_to_partition.items(),
+            key=lambda item: (item[1], str(item[0])),
+        )
+        partition_items: List[Dict[str, Any]] = []
+        for partition_idx, partition_nodes in enumerate(self.partitions):
+            rank_start: Optional[int] = None
+            rank_end: Optional[int] = None
+            if partition_idx < len(self.partition_layer_ranges):
+                start, end = self.partition_layer_ranges[partition_idx]
+                rank_start = start
+                rank_end = max(start, end - 1)
+            primary_nodes = [
+                node
+                for node in partition_nodes
+                if self.node_to_partition.get(node) == partition_idx
+            ]
+            partition_items.append(
+                {
+                    "partition_index": partition_idx,
+                    "partition_number": partition_idx + 1,
+                    "node_ids": [str(node) for node in partition_nodes],
+                    "primary_node_ids": [str(node) for node in primary_nodes],
+                    "node_count": len(partition_nodes),
+                    "primary_node_count": len(primary_nodes),
+                    "rank_start": rank_start,
+                    "rank_end": rank_end,
+                }
+            )
+
+        edges = sorted(
+            self.cross_partition_edges,
+            key=lambda edge: (
+                edge.source_partition,
+                edge.dest_partition,
+                edge.edge_id,
+            ),
+        )
+        return {
+            "schema_version": "1.0",
+            "partition_count": len(self.partitions),
+            "partitions": partition_items,
+            "node_to_partition": {
+                str(node): partition_idx for node, partition_idx in sorted_nodes
+            },
+            "cross_partition_edges": [edge.to_export_dict() for edge in edges],
+        }
 
 
 @dataclass(frozen=True)
@@ -1350,6 +1410,74 @@ class LayoutManager:
         total = sum(self._get_node_width(node) for node in layer)
         return total + (spacing * max(0, len(layer) - 1))
 
+    def _partition_affinity_strength(self) -> int:
+        raw_value = getattr(self.options, "partition_affinity_strength", 1)
+        try:
+            return max(0, int(raw_value))
+        except TypeError, ValueError:
+            return 1
+
+    def _affinity_penalty_between_nodes(
+        self, left: Any, right: Any, *, same_layer: bool
+    ) -> int:
+        strength = self._partition_affinity_strength()
+        if strength <= 0:
+            return 0
+
+        couple_penalty = 8
+        parent_child_penalty = 3
+        shared_parent_penalty = 2
+        shared_child_penalty = 1
+
+        penalty = 0
+        left_to_right = self.graph.has_edge(left, right)
+        right_to_left = self.graph.has_edge(right, left)
+        if left_to_right and right_to_left:
+            penalty += couple_penalty
+        elif left_to_right or right_to_left:
+            penalty += parent_child_penalty
+
+        if same_layer and self.graph.is_directed():
+            left_parents = set(self.graph.predecessors(left))
+            right_parents = set(self.graph.predecessors(right))
+            left_children = set(self.graph.successors(left))
+            right_children = set(self.graph.successors(right))
+            penalty += shared_parent_penalty * len(left_parents & right_parents)
+            penalty += shared_child_penalty * len(left_children & right_children)
+
+        return penalty * strength
+
+    def _affinity_penalty_for_boundary(
+        self,
+        left_nodes: List[Any],
+        right_nodes: List[Any],
+        *,
+        same_layer: bool,
+    ) -> int:
+        if not left_nodes or not right_nodes:
+            return 0
+        penalty = 0
+        for left in left_nodes:
+            for right in right_nodes:
+                penalty += self._affinity_penalty_between_nodes(
+                    left, right, same_layer=same_layer
+                )
+        return penalty
+
+    def _segment_cut_penalties(self, segments: List[_LayerSegment]) -> List[int]:
+        penalties: List[int] = []
+        for idx in range(len(segments) - 1):
+            left = segments[idx]
+            right = segments[idx + 1]
+            penalties.append(
+                self._affinity_penalty_for_boundary(
+                    left.nodes,
+                    right.nodes,
+                    same_layer=(left.layer_index == right.layer_index),
+                )
+            )
+        return penalties
+
     def _split_layer_into_segments(
         self, layer: List[Any], spacing: int, max_width: Optional[int]
     ) -> List[List[Any]]:
@@ -1359,27 +1487,112 @@ class LayoutManager:
         if max_width is None or max_width <= 0:
             return [list(layer)]
 
-        segments: List[List[Any]] = []
-        current_segment: List[Any] = []
-        current_width = 0
-        for node in layer:
-            node_width = self._get_node_width(node)
-            candidate_width = node_width
-            if current_segment:
-                candidate_width = current_width + spacing + node_width
-            if current_segment and candidate_width > max_width:
-                segments.append(current_segment)
-                current_segment = [node]
-                current_width = node_width
-            else:
-                current_segment.append(node)
-                current_width = candidate_width
-        if current_segment:
-            segments.append(current_segment)
-        return segments
+        node_widths = [self._get_node_width(node) for node in layer]
+        prefix_widths = [0]
+        for width in node_widths:
+            prefix_widths.append(prefix_widths[-1] + width)
 
-    @staticmethod
+        def segment_width(start: int, end: int) -> int:
+            nodes_width = prefix_widths[end] - prefix_widths[start]
+            node_count = end - start
+            return nodes_width + (spacing * max(0, node_count - 1))
+
+        boundary_penalties = [
+            self._affinity_penalty_between_nodes(
+                layer[idx], layer[idx + 1], same_layer=True
+            )
+            for idx in range(len(layer) - 1)
+        ]
+
+        # Dynamic programming: minimize segment count first, then affinity split cost.
+        best: List[Optional[Tuple[int, int, int]]] = [None] * (len(layer) + 1)
+        best[0] = (0, 0, -1)
+        for end in range(1, len(layer) + 1):
+            best_candidate: Optional[Tuple[int, int, int]] = None
+            for start in range(end - 1, -1, -1):
+                width = segment_width(start, end)
+                if width > max_width and (end - start) > 1:
+                    break
+                prev = best[start]
+                if prev is None:
+                    continue
+                segment_count = prev[0] + 1
+                penalty = prev[1]
+                if start > 0:
+                    penalty += boundary_penalties[start - 1]
+                candidate = (segment_count, penalty, start)
+                if best_candidate is None:
+                    best_candidate = candidate
+                    continue
+                candidate_key = (
+                    candidate[0],
+                    candidate[1],
+                    -candidate[2],
+                )
+                best_key = (
+                    best_candidate[0],
+                    best_candidate[1],
+                    -best_candidate[2],
+                )
+                if candidate_key < best_key:
+                    best_candidate = candidate
+            if best_candidate is not None:
+                best[end] = best_candidate
+
+        if best[-1] is None:
+            # Fallback: keep prior behavior if DP cannot find a valid split.
+            segments: List[List[Any]] = []
+            current_segment: List[Any] = []
+            current_width = 0
+            for node in layer:
+                node_width = self._get_node_width(node)
+                candidate_width = node_width
+                if current_segment:
+                    candidate_width = current_width + spacing + node_width
+                if current_segment and candidate_width > max_width:
+                    segments.append(current_segment)
+                    current_segment = [node]
+                    current_width = node_width
+                else:
+                    current_segment.append(node)
+                    current_width = candidate_width
+            if current_segment:
+                segments.append(current_segment)
+            return segments
+
+        rebuilt_segments: List[List[Any]] = []
+        cursor = len(layer)
+        while cursor > 0:
+            state = best[cursor]
+            if state is None:
+                break
+            start = state[2]
+            rebuilt_segments.append(layer[start:cursor])
+            cursor = start
+        rebuilt_segments.reverse()
+        return rebuilt_segments
+
+    def _select_partition_cut_boundary(
+        self, start: int, overflow_idx: int, cut_penalties: List[int]
+    ) -> int:
+        strength = self._partition_affinity_strength()
+        fallback_cut = overflow_idx - 1
+        if strength <= 0:
+            return fallback_cut
+
+        best_cut = fallback_cut
+        best_score: Optional[Tuple[int, int]] = None
+        for cut_idx in range(start, overflow_idx):
+            penalty = cut_penalties[cut_idx] if 0 <= cut_idx < len(cut_penalties) else 0
+            # Prefer lower affinity cut cost; if tied, prefer latest cut (legacy-ish).
+            score = (penalty, (overflow_idx - 1) - cut_idx)
+            if best_score is None or score < best_score:
+                best_score = score
+                best_cut = cut_idx
+        return best_cut
+
     def _partition_segment_ranges(
+        self,
         *,
         segment_layer_indices: List[int],
         segment_widths: List[int],
@@ -1387,38 +1600,65 @@ class LayoutManager:
         node_height: int,
         max_width: Optional[int],
         max_height: Optional[int],
+        cut_penalties: Optional[List[int]] = None,
     ) -> List[Tuple[int, int]]:
         if not segment_widths:
             return []
 
+        effective_cut_penalties = cut_penalties or []
         ranges: List[Tuple[int, int]] = []
         start = 0
-        running_width = segment_widths[0]
-        running_segments = 1
+        total_segments = len(segment_widths)
 
-        for idx in range(1, len(segment_widths)):
-            split_same_layer = (
-                segment_layer_indices[idx] == segment_layer_indices[idx - 1]
-            )
-            candidate_width = max(running_width, segment_widths[idx])
-            candidate_segments = running_segments + 1
-            candidate_height = ((candidate_segments - 1) * layer_height) + node_height
+        while start < total_segments:
+            running_width = segment_widths[start]
+            running_segments = 1
+            idx = start + 1
+            did_split = False
 
-            exceeds_width = (
-                max_width is not None and idx > start and candidate_width > max_width
-            )
-            exceeds_height = (
-                max_height is not None and idx > start and candidate_height > max_height
-            )
-            if split_same_layer or exceeds_width or exceeds_height:
-                ranges.append((start, idx))
-                start = idx
-                running_width = segment_widths[idx]
-                running_segments = 1
-            else:
+            while idx < total_segments:
+                split_same_layer = (
+                    segment_layer_indices[idx] == segment_layer_indices[idx - 1]
+                )
+                if split_same_layer:
+                    ranges.append((start, idx))
+                    start = idx
+                    did_split = True
+                    break
+
+                candidate_width = max(running_width, segment_widths[idx])
+                candidate_segments = running_segments + 1
+                candidate_height = (
+                    (candidate_segments - 1) * layer_height
+                ) + node_height
+
+                exceeds_width = (
+                    max_width is not None
+                    and idx > start
+                    and candidate_width > max_width
+                )
+                exceeds_height = (
+                    max_height is not None
+                    and idx > start
+                    and candidate_height > max_height
+                )
+                if exceeds_width or exceeds_height:
+                    cut_idx = self._select_partition_cut_boundary(
+                        start, idx, effective_cut_penalties
+                    )
+                    ranges.append((start, cut_idx + 1))
+                    start = cut_idx + 1
+                    did_split = True
+                    break
+
                 running_width = candidate_width
                 running_segments = candidate_segments
-        ranges.append((start, len(segment_widths)))
+                idx += 1
+
+            if not did_split:
+                ranges.append((start, total_segments))
+                break
+
         return ranges
 
     def _layout_constrained(
@@ -1495,6 +1735,7 @@ class LayoutManager:
             )
             return {}
 
+        cut_penalties = self._segment_cut_penalties(layer_segments)
         base_ranges = self._partition_segment_ranges(
             segment_layer_indices=[segment.layer_index for segment in layer_segments],
             segment_widths=[segment.width for segment in layer_segments],
@@ -1502,6 +1743,7 @@ class LayoutManager:
             node_height=node_height,
             max_width=panel_max_width,
             max_height=panel_max_height,
+            cut_penalties=cut_penalties,
         )
 
         ordered_indices = list(range(len(base_ranges)))
