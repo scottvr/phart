@@ -7,12 +7,29 @@ for ASCII graph visualization.
 import math
 import re
 from collections import deque
+from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 import networkx as nx
 
 from .rendering import nodes as nodes_mod
 from .styles import LayoutOptions
+
+
+@dataclass(frozen=True)
+class CrossPartitionEdge:
+    source_partition: int
+    dest_partition: int
+    edge_id: str
+    u: Any
+    v: Any
+
+
+@dataclass(frozen=True)
+class PartitionPlan:
+    partitions: List[List[Any]]
+    node_to_partition: Dict[Any, int]
+    cross_partition_edges: List[CrossPartitionEdge]
 
 
 class LayoutManager:
@@ -22,6 +39,7 @@ class LayoutManager:
         self.node_positions: Dict[str, Tuple[int, int]] = {}
         self.max_width = 0
         self.max_height = 0
+        self.partition_plan: Optional[PartitionPlan] = None
         self._node_insertion_order = {
             node: idx for idx, node in enumerate(self.graph.nodes())
         }
@@ -470,6 +488,7 @@ class LayoutManager:
         if not self.graph:
             return {}, 0, 0
 
+        self.partition_plan = None
         effective_spacing = self.options.get_effective_node_spacing(has_edges=True)
         strategy = self.options.layout_strategy
 
@@ -503,6 +522,8 @@ class LayoutManager:
             positions = self._layout_layered_fallback(
                 self.graph, effective_spacing, layer_height=self._get_layer_step()
             )
+        elif strategy == "constrained_layered":
+            positions = self._layout_constrained_layered(self.graph, effective_spacing)
 
         else:
             # Auto mode preserves the legacy heuristics.
@@ -522,7 +543,6 @@ class LayoutManager:
             (x + self._get_node_width(node) - 1 for node, (x, _) in positions.items()),
             default=0,
         )
-        node_height = self._get_node_height()
         base_height = max(
             (
                 y + self._get_node_height(node) - 1
@@ -1304,6 +1324,141 @@ class LayoutManager:
             y_offset += (len(ordered_layers) * layer_height) + component_gap
 
         return positions
+
+    def _layer_row_width(self, layer: List[Any], spacing: int) -> int:
+        if not layer:
+            return 0
+        total = sum(self._get_node_width(node) for node in layer)
+        return total + (spacing * max(0, len(layer) - 1))
+
+    @staticmethod
+    def _partition_layer_ranges(
+        layer_widths: List[int], target_width: int
+    ) -> List[Tuple[int, int]]:
+        if not layer_widths:
+            return []
+
+        ranges: List[Tuple[int, int]] = []
+        start = 0
+        running_width = layer_widths[0]
+
+        for idx in range(1, len(layer_widths)):
+            candidate_width = max(running_width, layer_widths[idx])
+            if idx > start and candidate_width > target_width:
+                ranges.append((start, idx))
+                start = idx
+                running_width = layer_widths[idx]
+            else:
+                running_width = candidate_width
+
+        ranges.append((start, len(layer_widths)))
+        return ranges
+
+    def _layout_constrained_layered(
+        self, graph: nx.DiGraph, spacing: int
+    ) -> Dict[str, Tuple[int, int]]:
+        from .styles import FlowDirection
+
+        target_width = self.options.target_canvas_width
+        if target_width is None:
+            raise ValueError(
+                "constrained_layered layout requires target_canvas_width"
+            )
+
+        if self.options.flow_direction not in {FlowDirection.DOWN, FlowDirection.UP}:
+            raise ValueError(
+                "constrained_layered currently supports flow-direction down and up"
+            )
+
+        layer_height = self._get_layer_step()
+        raw_layers = self._build_layers_auto(nx.DiGraph(graph))
+        ordered_layers = [
+            self._ordered_nodes(layer, default_mode="alpha")
+            for layer in raw_layers
+            if layer
+        ]
+        if not ordered_layers:
+            self.partition_plan = PartitionPlan(
+                partitions=[],
+                node_to_partition={},
+                cross_partition_edges=[],
+            )
+            return {}
+
+        layer_widths = [self._layer_row_width(layer, spacing) for layer in ordered_layers]
+        base_ranges = self._partition_layer_ranges(layer_widths, target_width)
+
+        ordered_indices = list(range(len(base_ranges)))
+        if self.options.partition_order == "size":
+            ordered_indices.sort(
+                key=lambda idx: (
+                    -sum(len(ordered_layers[layer_idx]) for layer_idx in range(*base_ranges[idx])),
+                    idx,
+                )
+            )
+
+        rendered_ranges = [base_ranges[idx] for idx in ordered_indices]
+        width_by_range = [max(layer_widths[start:end], default=0) for start, end in rendered_ranges]
+
+        positions: Dict[Any, Tuple[int, int]] = {}
+        node_to_partition: Dict[Any, int] = {}
+        partition_gap = layer_height
+        y_offset = 0
+
+        for partition_idx, (start, end) in enumerate(rendered_ranges):
+            partition_layers = ordered_layers[start:end]
+            partition_width = width_by_range[partition_idx]
+
+            for local_layer_idx, layer in enumerate(partition_layers):
+                layer_width = self._layer_row_width(layer, spacing)
+                current_x = (partition_width - layer_width) // 2
+                y = y_offset + (local_layer_idx * layer_height)
+                for node in layer:
+                    positions[node] = (current_x, y)
+                    node_to_partition[node] = partition_idx
+                    current_x += self._get_node_width(node) + spacing
+
+            y_offset += (len(partition_layers) * layer_height) + partition_gap
+
+        overlap = max(0, self.options.partition_overlap)
+        plan_partitions: List[List[Any]] = []
+        for start, end in rendered_ranges:
+            expanded_start = max(0, start - overlap)
+            expanded_end = min(len(ordered_layers), end + overlap)
+            panel_nodes = [
+                node
+                for layer in ordered_layers[expanded_start:expanded_end]
+                for node in layer
+            ]
+            plan_partitions.append(panel_nodes)
+
+        cross_partition_edges: List[CrossPartitionEdge] = []
+        for u, v in graph.edges():
+            src_partition = node_to_partition.get(u)
+            dst_partition = node_to_partition.get(v)
+            if (
+                src_partition is None
+                or dst_partition is None
+                or src_partition == dst_partition
+            ):
+                continue
+            cross_partition_edges.append(
+                CrossPartitionEdge(
+                    source_partition=src_partition,
+                    dest_partition=dst_partition,
+                    edge_id=f"{u}->{v}",
+                    u=u,
+                    v=v,
+                )
+            )
+
+        self.partition_plan = PartitionPlan(
+            partitions=plan_partitions,
+            node_to_partition=node_to_partition,
+            cross_partition_edges=cross_partition_edges,
+        )
+
+        return self._normalize_positions_to_origin(positions)
 
     def _build_layers_auto(self, subgraph: nx.DiGraph) -> List[List[Any]]:
         if subgraph.is_directed() and nx.is_directed_acyclic_graph(subgraph):

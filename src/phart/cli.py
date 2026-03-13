@@ -23,6 +23,7 @@ LAYOUT_STRATEGIES = {
     "bfs",
     "bipartite",
     "circular",
+    "constrained-layered",
     "planar",
     "kamada-kawai",
     "spring",
@@ -50,6 +51,11 @@ CLI_LAYOUT_FIELD_MAP = {
     "--node-order-reverse": {"node_order_reverse"},
     "--flow-direction": {"flow_direction"},
     "--flow": {"flow_direction"},
+    "--target-canvas-width": {"target_canvas_width"},
+    "--target-canvas-height": {"target_canvas_height"},
+    "--partition-overlap": {"partition_overlap"},
+    "--cross-partition-edge-style": {"cross_partition_edge_style"},
+    "--partition-order": {"partition_order"},
     "--bboxes": {"bboxes"},
     "--bbox": {"bboxes"},
     "--hpad": {"hpad"},
@@ -225,6 +231,34 @@ def _resolve_markdown_safe_text(*, output_format: str, whitespace_mode: str) -> 
     raise ValueError("whitespace mode must be one of: auto, ascii-space, or nbsp")
 
 
+def _resolve_target_canvas_dimension(
+    spec: Optional[Any],
+    *,
+    flag_name: str,
+    output_to_terminal: bool,
+    auto_value: int,
+) -> Optional[int]:
+    if spec is None:
+        return None
+
+    text = str(spec).strip().lower()
+    if text == "auto":
+        if not output_to_terminal:
+            raise ValueError(
+                f"{flag_name} auto requires terminal stdout; "
+                "use an explicit numeric value when redirecting or writing files"
+            )
+        return auto_value
+
+    try:
+        value = int(text)
+    except ValueError as exc:
+        raise ValueError(f"{flag_name} must be an integer or 'auto'") from exc
+    if value <= 0:
+        raise ValueError(f"{flag_name} must be greater than zero")
+    return value
+
+
 def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
     """Parse command line arguments."""
     raw_argv = sys.argv[1:]
@@ -350,6 +384,46 @@ def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
         default="down",
         help="Layout flow direction: down (default, root at top), up (root at bottom), "
         "left (root at right), right (root at left)",
+    )
+    parser.add_argument(
+        "--target-canvas-width",
+        nargs="?",
+        const="auto",
+        default=None,
+        metavar="WIDTH|auto",
+        help=(
+            "Target width for constrained-layered layout. Accepts WIDTH columns or "
+            "'auto' (terminal width on terminal stdout)."
+        ),
+    )
+    parser.add_argument(
+        "--target-canvas-height",
+        nargs="?",
+        const="auto",
+        default=None,
+        metavar="HEIGHT|auto",
+        help=(
+            "Optional target height for constrained partitioning. Accepts HEIGHT rows "
+            "or 'auto' (terminal height on terminal stdout)."
+        ),
+    )
+    parser.add_argument(
+        "--partition-overlap",
+        type=int,
+        default=0,
+        help="Context overlap between neighboring constrained partitions (default: 0)",
+    )
+    parser.add_argument(
+        "--cross-partition-edge-style",
+        choices=["stub", "none"],
+        default="stub",
+        help="Cross-partition edge rendering style for constrained layout (default: stub)",
+    )
+    parser.add_argument(
+        "--partition-order",
+        choices=["natural", "size"],
+        default="natural",
+        help="Constrained partition ordering: natural rank order or size (default: natural)",
     )
     parser.add_argument(
         "--bboxes",
@@ -814,6 +888,38 @@ def create_layout_options(
     allow_ansi_in_ascii = args.charset == CharSet.ANSI and not args.use_legacy_ascii
     node_label_attr = _normalize_label_attr(args.node_labels)
     edge_label_attr = _normalize_label_attr(args.edge_labels)
+    output_to_terminal = args.output is None and sys.stdout.isatty()
+    term_size = shutil.get_terminal_size((80, 24))
+    target_canvas_width = _resolve_target_canvas_dimension(
+        args.target_canvas_width,
+        flag_name="--target-canvas-width",
+        output_to_terminal=output_to_terminal,
+        auto_value=term_size.columns,
+    )
+    target_canvas_height = _resolve_target_canvas_dimension(
+        args.target_canvas_height,
+        flag_name="--target-canvas-height",
+        output_to_terminal=output_to_terminal,
+        auto_value=term_size.lines,
+    )
+    if args.partition_overlap < 0:
+        raise ValueError("--partition-overlap must be non-negative")
+    if (
+        target_canvas_width is not None
+        and args.partition_overlap >= target_canvas_width
+    ):
+        raise ValueError("--partition-overlap must be smaller than --target-canvas-width")
+    if (
+        target_canvas_height is not None
+        and args.partition_overlap >= target_canvas_height
+    ):
+        raise ValueError(
+            "--partition-overlap must be smaller than --target-canvas-height"
+        )
+    if layout_strategy == "constrained_layered" and target_canvas_width is None:
+        raise ValueError(
+            "--layout constrained-layered requires --target-canvas-width"
+        )
     if args.labels:
         if node_label_attr is None:
             node_label_attr = "label"
@@ -831,6 +937,11 @@ def create_layout_options(
         node_order_attr=args.node_order_attr,
         node_order_reverse=args.node_order_reverse,
         flow_direction=args.flow_direction,
+        target_canvas_width=target_canvas_width,
+        target_canvas_height=target_canvas_height,
+        partition_overlap=args.partition_overlap,
+        cross_partition_edge_style=args.cross_partition_edge_style,
+        partition_order=args.partition_order,
         bboxes=args.bboxes,
         hpad=args.hpad,
         vpad=args.vpad,

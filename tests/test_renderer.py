@@ -2142,11 +2142,27 @@ class TestLayoutOptions(unittest.TestCase):
         options = LayoutOptions(layout_strategy="spring")
         self.assertEqual(options.layout_strategy, "spring")
 
+    def test_layout_strategy_accepts_constrained_layered_with_target_width(self):
+        options = LayoutOptions(
+            layout_strategy="constrained-layered",
+            target_canvas_width=80,
+        )
+        self.assertEqual(options.layout_strategy, "constrained_layered")
+        self.assertEqual(options.target_canvas_width, 80)
+
+    def test_constrained_layered_requires_target_canvas_width(self):
+        with self.assertRaises(ValueError):
+            LayoutOptions(layout_strategy="constrained_layered")
+
     def test_layout_strategy_accepts_arf_spiral_shell(self):
         for strategy in ("arf", "spiral", "shell"):
             with self.subTest(strategy=strategy):
                 options = LayoutOptions(layout_strategy=strategy)
                 self.assertEqual(options.layout_strategy, strategy)
+
+    def test_partition_overlap_must_be_non_negative(self):
+        with self.assertRaises(ValueError):
+            LayoutOptions(partition_overlap=-1)
 
     def test_invalid_edge_color_mode(self):
         with self.assertRaises(ValueError):

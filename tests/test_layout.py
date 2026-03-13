@@ -518,6 +518,90 @@ class TestLayoutManager(unittest.TestCase):
         self.assertNotEqual(positions["A"][1], positions["C"][1])
         self.assertNotEqual(positions["C"][1], positions["E"][1])
 
+    def test_constrained_layered_populates_partition_plan(self):
+        graph = nx.DiGraph()
+        graph.add_edge("R", "A1")
+        graph.add_edge("R", "A2")
+        graph.add_edge("R", "A3")
+        graph.add_edge("R", "A4")
+        graph.add_edge("A1", "B1")
+        graph.add_edge("A2", "B2")
+
+        manager = LayoutManager(
+            graph,
+            LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="constrained_layered",
+                target_canvas_width=12,
+                node_spacing=4,
+                use_ascii=True,
+            ),
+        )
+        positions, _, _ = manager.calculate_layout()
+
+        self.assertEqual(set(positions.keys()), set(graph.nodes()))
+        self.assertIsNotNone(manager.partition_plan)
+        assert manager.partition_plan is not None
+        self.assertEqual(len(manager.partition_plan.partitions), 3)
+        self.assertEqual(manager.partition_plan.node_to_partition["R"], 0)
+        self.assertEqual(manager.partition_plan.node_to_partition["A1"], 1)
+        self.assertEqual(manager.partition_plan.node_to_partition["B1"], 2)
+        self.assertTrue(
+            any(
+                edge.u == "R" and edge.v == "A1"
+                for edge in manager.partition_plan.cross_partition_edges
+            )
+        )
+
+    def test_constrained_layered_partition_order_size_reorders_panels(self):
+        graph = nx.DiGraph()
+        graph.add_edge("R", "A1")
+        graph.add_edge("R", "A2")
+        graph.add_edge("R", "A3")
+        graph.add_edge("R", "A4")
+        graph.add_edge("A1", "B1")
+        graph.add_edge("A2", "B2")
+
+        manager = LayoutManager(
+            graph,
+            LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="constrained_layered",
+                target_canvas_width=12,
+                partition_order="size",
+                node_spacing=4,
+                use_ascii=True,
+            ),
+        )
+        positions, _, _ = manager.calculate_layout()
+
+        self.assertEqual(positions["A1"][1], 0)
+        self.assertEqual(positions["A2"][1], 0)
+        self.assertEqual(positions["A3"][1], 0)
+        self.assertEqual(positions["A4"][1], 0)
+        self.assertGreater(positions["R"][1], positions["A1"][1])
+        self.assertIsNotNone(manager.partition_plan)
+        assert manager.partition_plan is not None
+        self.assertEqual(manager.partition_plan.node_to_partition["A1"], 0)
+        self.assertEqual(manager.partition_plan.node_to_partition["B1"], 1)
+        self.assertEqual(manager.partition_plan.node_to_partition["R"], 2)
+
+    def test_constrained_layered_rejects_left_right_flow(self):
+        graph = nx.DiGraph([("A", "B")])
+        manager = LayoutManager(
+            graph,
+            LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="constrained_layered",
+                target_canvas_width=10,
+                flow_direction="left",
+                use_ascii=True,
+            ),
+        )
+
+        with self.assertRaises(ValueError):
+            manager.calculate_layout()
+
 
 if __name__ == "__main__":
     unittest.main()

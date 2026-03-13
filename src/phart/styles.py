@@ -119,7 +119,12 @@ class LayoutOptions:
     binary_tree_layout: bool = field(default=False)  # Use binary tree positioning
     layout_strategy: str = field(
         default="auto"
-    )  # auto, bfs, bipartite, circular, hierarchical, planar, layered, kamada_kawai, spring, arf, spiral, shell, random, multipartite, vertical
+    )  # auto, bfs, bipartite, circular, hierarchical, planar, layered, constrained_layered, kamada_kawai, spring, arf, spiral, shell, random, multipartite, vertical
+    target_canvas_width: Optional[int] = field(default=None)
+    target_canvas_height: Optional[int] = field(default=None)
+    partition_overlap: int = field(default=0)
+    cross_partition_edge_style: str = field(default="stub")  # stub or none
+    partition_order: str = field(default="natural")  # natural or size
     node_order_mode: str = field(
         default="layout_default"
     )  # layout_default, preserve, alpha, natural, numeric
@@ -302,6 +307,7 @@ class LayoutOptions:
             "bfs",
             "bipartite",
             "circular",
+            "constrained_layered",
             "planar",
             "kamada_kawai",
             "spring",
@@ -316,7 +322,31 @@ class LayoutOptions:
         }:
             raise ValueError(
                 "layout_strategy must be one of: legacy, bfs, bipartite, circular, hierarchical, layered, "
-                "planar, kamada_kawai, spring, arf, spiral, shell, random, multipartite, vertical"
+                "constrained_layered, planar, kamada_kawai, spring, arf, spiral, shell, random, multipartite, vertical"
+            )
+        if self.target_canvas_width is not None:
+            if self.target_canvas_width <= 0:
+                raise ValueError("target_canvas_width must be greater than zero")
+        if self.target_canvas_height is not None:
+            if self.target_canvas_height <= 0:
+                raise ValueError("target_canvas_height must be greater than zero")
+        if self.partition_overlap < 0:
+            raise ValueError("partition_overlap must be non-negative")
+        if isinstance(self.cross_partition_edge_style, str):
+            self.cross_partition_edge_style = (
+                self.cross_partition_edge_style.strip().lower()
+            )
+        if self.cross_partition_edge_style not in {"stub", "none"}:
+            raise ValueError("cross_partition_edge_style must be one of: stub, none")
+        if isinstance(self.partition_order, str):
+            self.partition_order = self.partition_order.strip().lower()
+        if self.partition_order not in {"natural", "size"}:
+            raise ValueError("partition_order must be one of: natural, size")
+        if self.layout_strategy == "constrained_layered" and (
+            self.target_canvas_width is None
+        ):
+            raise ValueError(
+                "constrained_layered layout requires target_canvas_width"
             )
 
         if isinstance(self.node_order_mode, str):

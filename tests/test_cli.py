@@ -1114,6 +1114,78 @@ def main():
             self.assertEqual(exit_code, 0)
             self.assertNotIn("Error", self.stderr.getvalue())
 
+    def test_constrained_layered_flags_populate_layout_options(self):
+        sys.argv = [
+            "phart",
+            "--layout",
+            "constrained-layered",
+            "--target-canvas-width",
+            "80",
+            "--target-canvas-height",
+            "40",
+            "--partition-overlap",
+            "2",
+            "--cross-partition-edge-style",
+            "stub",
+            "--partition-order",
+            "size",
+            str(self.test_text_file),
+        ]
+        args, _unknown, explicit_layout_fields, _module_argv = parse_args()
+        options = create_layout_options(args, explicit_layout_fields)
+
+        self.assertEqual(options.layout_strategy, "constrained_layered")
+        self.assertEqual(options.target_canvas_width, 80)
+        self.assertEqual(options.target_canvas_height, 40)
+        self.assertEqual(options.partition_overlap, 2)
+        self.assertEqual(options.cross_partition_edge_style, "stub")
+        self.assertEqual(options.partition_order, "size")
+
+    def test_constrained_layered_requires_target_canvas_width(self):
+        sys.argv = [
+            "phart",
+            "--layout",
+            "constrained-layered",
+            str(self.test_text_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 1)
+        self.assertIn(
+            "requires --target-canvas-width",
+            self.stderr.getvalue(),
+        )
+
+    def test_target_canvas_width_auto_requires_tty_stdout(self):
+        sys.argv = [
+            "phart",
+            "--layout",
+            "constrained-layered",
+            "--target-canvas-width",
+            "auto",
+            str(self.test_text_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 1)
+        self.assertIn("requires terminal stdout", self.stderr.getvalue())
+
+    def test_partition_overlap_must_be_smaller_than_target_canvas_width(self):
+        sys.argv = [
+            "phart",
+            "--layout",
+            "constrained-layered",
+            "--target-canvas-width",
+            "10",
+            "--partition-overlap",
+            "10",
+            str(self.test_text_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 1)
+        self.assertIn(
+            "--partition-overlap must be smaller than --target-canvas-width",
+            self.stderr.getvalue(),
+        )
+
     def test_node_order_flags_populate_layout_options(self):
         sys.argv = [
             "phart",
