@@ -201,6 +201,42 @@ class TestASCIIRenderer(unittest.TestCase):
         self.assertIn("Alpha Y-Y", result)
         self.assertNotIn("n1", result)
 
+    def test_node_label_lines_synthesizes_multiline_in_bboxes(self):
+        graph = nx.DiGraph()
+        graph.add_node("n1", name="Alpha", birt={"date": "Y"}, deat={"date": "Y"})
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                bboxes=True,
+                use_labels=True,
+                bbox_multiline_labels=True,
+                node_label_lines=("name", "lifespan"),
+                use_ascii=True,
+            ),
+        )
+        result = renderer.render()
+        self.assertIn("Alpha", result)
+        self.assertIn("Y-Y", result)
+        self.assertIn("+-------+", result)
+
+    def test_multiline_label_uses_single_line_when_bbox_multiline_disabled(self):
+        graph = nx.DiGraph()
+        graph.add_node("n1", label="Alpha\nBeta")
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                bboxes=True,
+                use_labels=True,
+                bbox_multiline_labels=False,
+                use_ascii=True,
+            ),
+        )
+        result = renderer.render()
+        self.assertIn("Alpha Beta", result)
+        self.assertNotIn("Alpha\nBeta", result)
+
     def test_edge_label_renders_on_horizontal_edges(self):
         graph = nx.DiGraph()
         graph.add_edge("A", "B", label="E_H")

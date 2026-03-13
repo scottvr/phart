@@ -12,9 +12,12 @@
 - Handles cycles and complex layouts
 - Bidirectional edge support
 - Edge attribute support (and attribute-based coloring of edges)
+- Edge label rendering from edge `label` attributes
 - Over ten layout strategies
 - Orthogonal edge paths (all 90 degree turns, "Manhattan" style)
 - Node labels using multi-column character sets (such as CJK)
+- Optional width/height pagination for text output
+- Optional multiline node labels in bounding boxes
 
 ---
 
@@ -124,6 +127,7 @@ You probably won't need it.
 - binary_tree sort can respect "side" properties ("left", 'right")
 - bounding box mode (line art rectangles with configurable inner padding)
 - (optionally) use labels instead of node names when rendering diagram.
+- (optionally) synthesize labels from ordered node attributes and render multiline bbox labels
 - (optionally) color edges with ANSI colors to help discern edge paths in dense complex diagrams
 - and several **new layout strategies** including `circular`, `bfs`, `shell`, `Kamada-Kawai`, and others.
 
@@ -416,10 +420,15 @@ usage: phart [-h] [--output OUTPUT] [--version] [--output-format {ditaa,ditaa-pu
              [--node-order {layout-default,preserve,alpha,natural,numeric}] [--node-order-attr NODE_ORDER_ATTR] [--node-order-reverse]
              [--flow-direction {down,up,left,right}] [--bboxes] [--hpad HPAD] [--vpad VPAD] [--uniform]
              [--edge-anchors {auto,center,ports}] [--shared-ports {any,minimize,none}]
-             [--bidirectional-mode {coalesce,separate}] [--labels] [--colors {attr,none,path,source,target}]
+             [--bidirectional-mode {coalesce,separate}] [--labels] [--node-label-lines SPEC]
+             [--node-label-sep NODE_LABEL_SEP] [--node-label-max-lines NODE_LABEL_MAX_LINES] [--bbox-multiline-labels]
+             [--colors {attr,none,path,source,target}]
              [--no-color-nodes] [--edge-color-rule RULE] [--svg-cell-size SVG_CELL_SIZE]
              [--svg-font-family SVG_FONT_FAMILY] [--svg-text-mode {text,path}] [--svg-font-path SVG_FONT_PATH]
-             [--svg-fg SVG_FG] [--svg-bg SVG_BG]
+             [--svg-fg SVG_FG] [--svg-bg SVG_BG] [--whitespace {auto,ascii-space,nbsp}]
+             [--paginate-output-width [WIDTH|auto]] [--paginate-output-height [HEIGHT|auto]]
+             [--paginate-overlap COLUMNS] [--select-output-page-x PAGE_X] [--select-output-page-y PAGE_Y]
+             [--list-pages] [--write-pages DIR]
              input
 
 PHART: Python Hierarchical ASCII Rendering Tool
@@ -473,7 +482,18 @@ options:
   --bidirectional-mode {coalesce,separate}
                         How to render reciprocal directed edges: coalesce (default) draws one shared route with arrows
                         at both ends; separate draws each direction independently
-  --labels              Use node labels (if present) for displayed node text
+  --labels              Use node labels for displayed node text. If 'label' is missing,
+                        synthesize text from node attributes.
+  --node-label-lines SPEC
+                        Comma-separated ordered label line specs used when --labels is enabled and
+                        node 'label' is absent. Supports dotted paths (e.g. name,birt.date)
+                        and special token 'lifespan'.
+  --node-label-sep NODE_LABEL_SEP
+                        Separator for joining multi-value parts within one synthesized label line
+  --node-label-max-lines NODE_LABEL_MAX_LINES
+                        Optional maximum number of synthesized label lines
+  --bbox-multiline-labels
+                        Enable multiline node labels and bbox height expansion when labels contain line breaks
   --colors {attr,none,path,source,target}
                         ANSI edge coloring mode: none (default), source, target, path, or attr
   --no-color-nodes      Color edges only, not nodes
@@ -490,7 +510,56 @@ options:
                         Font file path required when --svg-text-mode path is used
   --svg-fg SVG_FG       Foreground color for SVG/HTML/LaTeX output
   --svg-bg SVG_BG       Background color for SVG/HTML output
+  --whitespace {auto,ascii-space,nbsp}
+                        Text output whitespace mode: auto (default), ascii-space, or nbsp.
+  --paginate-output-width [WIDTH|auto]
+                        Paginate text output horizontally by terminal width (auto) or WIDTH columns
+  --paginate-output-height [HEIGHT|auto]
+                        Paginate text output vertically by terminal height (auto) or HEIGHT rows.
+                        If omitted, row pagination is disabled and all rows remain in one page.
+  --paginate-overlap COLUMNS
+                        Overlap columns between neighboring output pages (default: 8)
+  --select-output-page-x PAGE_X, --page-x PAGE_X, -x PAGE_X
+                        Select horizontal page index (default: 0)
+  --select-output-page-y PAGE_Y, --page-y PAGE_Y, -y PAGE_Y
+                        Select vertical page index (default: 0)
+  --list-pages          Print page index metadata when pagination is enabled
+  --write-pages DIR     Write all paginated pages to DIR as page_xNN_yNN.txt files
 ```
+
+### Label Synthesis and Multiline BBoxes
+
+When `--labels` is enabled and a node does not define `label`, PHART can synthesize label text from ordered attribute paths:
+
+```bash
+phart --labels --bboxes --bbox-multiline-labels \
+  --node-label-lines name,lifespan \
+  examples/gedcom.py
+```
+
+Notes:
+
+- `name,lifespan` renders two lines per node in bboxes when multiline is enabled.
+- `lifespan` is a convenience token that renders GEDCOM-style `birt.date`/`deat.date` as `BIRTH-DEATH`.
+- You can also use dotted paths directly, such as `name,birt.date,deat.date`.
+
+### Text Pagination
+
+Pagination is available for `--output-format text` and is useful for wide/tall renders:
+
+```bash
+phart --labels --bboxes \
+  --paginate-output-width 100 \
+  --paginate-output-height 30 \
+  --page-x 1 --page-y 0 \
+  --list-pages \
+  examples/gedcom.py
+```
+
+Notes:
+
+- `--paginate-output-width auto` and `--paginate-output-height auto` require terminal stdout.
+- Pagination is ANSI-aware: escape sequences are not counted toward visible width, and page slices preserve complete ANSI sequences.
 
 ## Quick Start
 

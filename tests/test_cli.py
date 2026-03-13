@@ -946,3 +946,25 @@ def main():
         args, _unknown, explicit_layout_fields, _module_argv = parse_args()
         options = create_layout_options(args, explicit_layout_fields)
         self.assertEqual(options.whitespace_mode, "ascii_space")
+
+    def test_node_label_line_flags_populate_layout_options(self):
+        sys.argv = [
+            "phart",
+            "--labels",
+            "--node-label-lines",
+            "name,lifespan,birt.date",
+            "--node-label-sep",
+            " | ",
+            "--node-label-max-lines",
+            "2",
+            "--bbox-multiline-labels",
+            str(self.test_text_file),
+        ]
+        args, _unknown, explicit_layout_fields, _module_argv = parse_args()
+        options = create_layout_options(args, explicit_layout_fields)
+
+        self.assertTrue(options.use_labels)
+        self.assertEqual(options.node_label_lines, ("name", "lifespan", "birt.date"))
+        self.assertEqual(options.node_label_sep, " | ")
+        self.assertEqual(options.node_label_max_lines, 2)
+        self.assertTrue(options.bbox_multiline_labels)

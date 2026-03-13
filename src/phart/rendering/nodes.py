@@ -8,27 +8,36 @@ if TYPE_CHECKING:
     from phart.renderer import ASCIIRenderer
 
 
-def normalize_label_value(label: Any) -> str:
-    """Normalize node labels for single-line display."""
+def normalize_label_value(label: Any, *, keep_newlines: bool = False) -> str:
+    """Normalize node labels for display."""
     text = str(label).strip()
     if len(text) >= 2 and text[0] == text[-1] and text[0] in {"'", '"'}:
         text = text[1:-1]
-    text = text.replace("\r\n", " ").replace("\n", " ")
+    text = text.replace("\r\n", "\n")
+    if keep_newlines:
+        text = "\n".join(part.strip() for part in text.split("\n"))
+    else:
+        text = text.replace("\n", " ")
     return text.strip()
 
 
 def get_display_node_text(renderer: ASCIIRenderer, node: Any) -> str:
     """Resolve display text for a node key."""
+    multiline = _allow_multiline_labels(renderer)
     if renderer.options.use_labels:
         attrs = renderer.graph.nodes[node] if node in renderer.graph else {}
         label = attrs.get("label")
         if label is not None:
-            normalized = renderer._normalize_label_value(label)
+            normalized = normalize_label_value(label, keep_newlines=multiline)
             if normalized:
                 return normalized
+        if renderer.options.node_label_lines:
+            synthesized = _synthesize_label_from_line_specs(renderer, attrs)
+            if synthesized:
+                return synthesized
         synthesized = _synthesize_label_from_node_attrs(attrs)
         if synthesized:
-            normalized = renderer._normalize_label_value(synthesized)
+            normalized = normalize_label_value(synthesized, keep_newlines=multiline)
             if normalized:
                 return normalized
     return str(node)
@@ -65,6 +74,54 @@ def _synthesize_label_from_node_attrs(attrs: Dict[Any, Any]) -> str:
     return ", ".join(parts)
 
 
+def _allow_multiline_labels(renderer: ASCIIRenderer) -> bool:
+    return bool(renderer.options.bboxes and renderer.options.bbox_multiline_labels)
+
+
+def _synthesize_label_from_line_specs(renderer: ASCIIRenderer, attrs: Dict[Any, Any]) -> str:
+    lines: list[str] = []
+    for spec in renderer.options.node_label_lines:
+        text = _resolve_label_line_spec(attrs, spec)
+        if text is None:
+            text = ""
+        lines.append(text)
+        if (
+            renderer.options.node_label_max_lines is not None
+            and len(lines) >= renderer.options.node_label_max_lines
+        ):
+            break
+
+    if not any(line.strip() for line in lines):
+        return ""
+
+    if _allow_multiline_labels(renderer):
+        return "\n".join(lines)
+    return renderer.options.node_label_sep.join(line for line in lines if line.strip())
+
+
+def _resolve_label_line_spec(attrs: Dict[Any, Any], spec: str) -> Optional[str]:
+    token = str(spec).strip()
+    if not token:
+        return None
+    if token.lower() == "lifespan":
+        birth = _extract_gedcom_event_date(attrs.get("birt"))
+        death = _extract_gedcom_event_date(attrs.get("deat"))
+        if not birth and not death:
+            return None
+        return f"{birth or '-'}-{death or '-'}"
+
+    value: Any = attrs
+    for part in token.split("."):
+        part = part.strip()
+        if not part:
+            return None
+        if isinstance(value, dict):
+            value = value.get(part)
+        else:
+            return None
+    return _extract_scalar_text(value)
+
+
 def _extract_gedcom_event_date(value: Any) -> Optional[str]:
     if isinstance(value, dict):
         return _extract_scalar_text(value.get("date"))
@@ -94,8 +151,12 @@ def get_widest_node_text_width(renderer: ASCIIRenderer) -> Optional[int]:
         return None
     return max(
         (
-            renderer.options.get_text_display_width(
-                renderer.options.get_node_text(renderer._get_display_node_text(node))
+            max(
+                (
+                    renderer.options.get_text_display_width(line)
+                    for line in _resolved_node_label_lines(renderer, node)
+                ),
+                default=0,
             )
             for node in renderer.graph.nodes()
         ),
@@ -104,10 +165,22 @@ def get_widest_node_text_width(renderer: ASCIIRenderer) -> Optional[int]:
 
 
 def get_node_dimensions(renderer: ASCIIRenderer, node: Any) -> Tuple[int, int]:
-    return renderer.options.get_node_dimensions(
-        renderer._get_display_node_text(node),
-        widest_text_width=renderer._get_widest_node_text_width(),
+    lines = _resolved_node_label_lines(renderer, node)
+    text_width = max(
+        (renderer.options.get_text_display_width(line) for line in lines),
+        default=0,
     )
+    widest = renderer._get_widest_node_text_width()
+    if renderer.options.bboxes and renderer.options.uniform and widest is not None:
+        text_width = max(text_width, widest)
+
+    if not renderer.options.bboxes:
+        return text_width, 1
+
+    width = text_width + (2 * renderer.options.hpad) + 2
+    content_rows = len(lines) if _allow_multiline_labels(renderer) else 1
+    height = (2 * renderer.options.vpad) + 2 + max(1, content_rows)
+    return width, height
 
 
 def get_node_bounds(
@@ -132,25 +205,18 @@ def get_node_bounds(
 
 
 def draw_node(renderer: ASCIIRenderer, node: Any, x: int, y: int) -> None:
-    label = renderer.options.get_node_text(renderer._get_display_node_text(node))
+    label_lines = _resolved_node_label_lines(renderer, node)
     node_width, node_height = renderer._get_node_dimensions(node)
     node_color = renderer._node_color_map.get(node)
 
     # if  renderer._use_ansi_colors and not renderer.options.bboxes:
     if not renderer.options.bboxes:
-        _paint_label(renderer, label, x, y, node_color)
+        _paint_label(renderer, label_lines[0] if label_lines else "", x, y, node_color)
         return
 
     right_x = x + node_width - 1
     bottom_y = y + node_height - 1
     inner_width = max(0, node_width - 2 - (2 * renderer.options.hpad))
-    label_offset = (
-        max(0, (inner_width - renderer.options.get_text_display_width(label)) // 2)
-        if renderer.options.uniform
-        else 0
-    )
-    inner_start_x = x + 1 + renderer.options.hpad + label_offset
-    label_y = y + 1 + renderer.options.vpad
 
     renderer._paint_cell(x, y, renderer.options.box_top_left, node_color)
     renderer._paint_cell(right_x, y, renderer.options.box_top_right, node_color)
@@ -173,7 +239,29 @@ def draw_node(renderer: ASCIIRenderer, node: Any, x: int, y: int) -> None:
         renderer._paint_cell(x, row, renderer.options.edge_vertical, node_color)
         renderer._paint_cell(right_x, row, renderer.options.edge_vertical, node_color)
 
-    _paint_label(renderer, label, inner_start_x, label_y, node_color)
+    content_top = y + 1 + renderer.options.vpad
+    lines_to_draw = (
+        label_lines if _allow_multiline_labels(renderer) else label_lines[:1]
+    )
+    for line_index, line_text in enumerate(lines_to_draw):
+        label_offset = (
+            max(0, (inner_width - renderer.options.get_text_display_width(line_text)) // 2)
+            if renderer.options.uniform
+            else 0
+        )
+        inner_start_x = x + 1 + renderer.options.hpad + label_offset
+        _paint_label(renderer, line_text, inner_start_x, content_top + line_index, node_color)
+
+
+def _resolved_node_label_lines(renderer: ASCIIRenderer, node: Any) -> list[str]:
+    display_text = renderer._get_display_node_text(node)
+    if _allow_multiline_labels(renderer):
+        raw_lines = [segment for segment in display_text.split("\n")]
+    else:
+        raw_lines = [display_text]
+
+    decorated = [renderer.options.get_node_text(line) for line in raw_lines]
+    return decorated if decorated else [renderer.options.get_node_text("")]
 
 
 def _paint_label(

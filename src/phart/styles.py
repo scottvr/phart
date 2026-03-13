@@ -132,6 +132,18 @@ class LayoutOptions:
     shared_ports_mode: str = field(default="any")  # any, minimize, or none
     bidirectional_mode: str = field(default="coalesce")  # coalesce or separate
     use_labels: bool = field(default=False)  # Prefer node labels for display text
+    node_label_lines: tuple[str, ...] = field(
+        default_factory=tuple
+    )  # Ordered attribute-path specs for synthesized labels
+    node_label_sep: str = field(
+        default=" "
+    )  # Separator used when composing multi-value label line parts
+    node_label_max_lines: Optional[int] = field(
+        default=None
+    )  # Optional cap for synthesized label lines
+    bbox_multiline_labels: bool = field(
+        default=False
+    )  # Expand bbox height and paint multiline labels when enabled
     ansi_colors: bool = field(default=False)  # ANSI colorized render output
     allow_ansi_in_ascii: bool = field(
         default=False
@@ -330,6 +342,19 @@ class LayoutOptions:
         if self.whitespace_mode not in {"auto", "ascii_space", "nbsp"}:
             raise ValueError("whitespace_mode must be one of: auto, ascii_space, nbsp")
 
+        if self.node_label_max_lines is not None and self.node_label_max_lines < 1:
+            raise ValueError("node_label_max_lines must be >= 1 when provided")
+
+        if not isinstance(self.node_label_sep, str):
+            self.node_label_sep = str(self.node_label_sep)
+
+        normalized_label_lines: list[str] = []
+        for raw in self.node_label_lines:
+            spec = str(raw).strip()
+            if spec:
+                normalized_label_lines.append(spec)
+        self.node_label_lines = tuple(normalized_label_lines)
+
         if not isinstance(self.edge_color_rules, dict):
             raise ValueError("edge_color_rules must be a dict of dicts")
 
@@ -469,18 +494,24 @@ class LayoutOptions:
         prefix, suffix = self.get_node_decorators(node_str)
         return f"{prefix}{node_str}{suffix}"
 
-    def get_node_height(self) -> int:
+    def get_node_height(self, *, content_lines: int = 1) -> int:
         """Get rendered node height in rows."""
         if not self.bboxes:
             return 1
-        # top border + bottom border + content row + optional vertical padding rows
-        return (2 * self.vpad) + 3
+        # top border + bottom border + content rows + optional vertical padding rows
+        return (2 * self.vpad) + 2 + max(1, content_lines)
 
     def get_node_dimensions(
         self, node_str: str, widest_text_width: Optional[int] = None
     ) -> Tuple[int, int]:
         """Get rendered node width/height for a given node text."""
-        text_width = self.get_text_display_width(self.get_node_text(node_str))
+        multiline = self.bboxes and self.bbox_multiline_labels
+        raw_lines = node_str.split("\n") if multiline else [node_str]
+        rendered_lines = [self.get_node_text(line) for line in raw_lines]
+        text_width = max(
+            (self.get_text_display_width(line) for line in rendered_lines),
+            default=0,
+        )
         if self.bboxes and self.uniform and widest_text_width is not None:
             text_width = max(text_width, widest_text_width)
 
@@ -488,7 +519,8 @@ class LayoutOptions:
             return text_width, 1
 
         width = text_width + (2 * self.hpad) + 2  # left/right border columns
-        return width, self.get_node_height()
+        content_lines = len(rendered_lines) if multiline else 1
+        return width, self.get_node_height(content_lines=content_lines)
 
     @staticmethod
     def get_char_display_width(char: str) -> int:

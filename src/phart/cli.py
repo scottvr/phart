@@ -59,6 +59,10 @@ CLI_LAYOUT_FIELD_MAP = {
     "--shared-ports": {"shared_ports_mode"},
     "--bidirectional-mode": {"bidirectional_mode"},
     "--labels": {"use_labels"},
+    "--node-label-lines": {"node_label_lines"},
+    "--node-label-sep": {"node_label_sep"},
+    "--node-label-max-lines": {"node_label_max_lines"},
+    "--bbox-multiline-labels": {"bbox_multiline_labels"},
     "--colors": {"ansi_colors", "edge_color_mode"},
     "--no-color-nodes": {"color_nodes"},
     "--edge-color-rule": {"edge_color_rules"},
@@ -332,6 +336,34 @@ def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
         ),
     )
     parser.add_argument(
+        "--node-label-lines",
+        type=str,
+        default=None,
+        metavar="SPEC",
+        help=(
+            "Comma-separated ordered label line specs used when --labels is enabled "
+            "and node 'label' is absent. Supports dotted paths (e.g. name,birt.date) "
+            "and special token 'lifespan'."
+        ),
+    )
+    parser.add_argument(
+        "--node-label-sep",
+        type=str,
+        default=" ",
+        help="Separator for joining multi-value parts within one synthesized label line",
+    )
+    parser.add_argument(
+        "--node-label-max-lines",
+        type=int,
+        default=None,
+        help="Optional maximum number of synthesized label lines",
+    )
+    parser.add_argument(
+        "--bbox-multiline-labels",
+        action="store_true",
+        help="Enable multiline node labels and bbox height expansion when labels contain line breaks",
+    )
+    parser.add_argument(
         "--colors",
         choices=sorted(COLOR_MODES),
         default="none",
@@ -529,6 +561,13 @@ def create_layout_options(
     layout_strategy = args.layout_strategy.replace("-", "_")
     binary_tree_layout = args.binary_tree
     edge_color_rules = _parse_edge_color_rules(args.edge_color_rule)
+    node_label_lines: tuple[str, ...] = tuple()
+    if args.node_label_lines:
+        node_label_lines = tuple(
+            token.strip()
+            for token in str(args.node_label_lines).split(",")
+            if token.strip()
+        )
     color_nodes = not args.no_color_nodes
     if color_mode == "attr" and not edge_color_rules:
         raise ValueError("--colors attr requires --edge-color-rule")
@@ -553,6 +592,10 @@ def create_layout_options(
         shared_ports_mode=args.shared_ports,
         bidirectional_mode=args.bidirectional_mode,
         use_labels=args.labels,
+        node_label_lines=node_label_lines,
+        node_label_sep=args.node_label_sep,
+        node_label_max_lines=args.node_label_max_lines,
+        bbox_multiline_labels=args.bbox_multiline_labels,
         ansi_colors=(color_mode != "none"),
         allow_ansi_in_ascii=allow_ansi_in_ascii,
         edge_color_mode="source" if color_mode == "none" else color_mode,
