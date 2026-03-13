@@ -171,3 +171,40 @@ Phase C:
 - Do we want a dedicated output mode for multi-panel files by default?
 - Should connector stubs be style-rule targetable (e.g., `target=connector`)?
 - Should panel headers include lineage summary (root ids, rank range)?
+
+## 15. Implementation Tracker (As of March 13, 2026)
+
+Legend:
+
+- `[x]` implemented in branch
+- `[ ]` not implemented yet
+
+Phase A:
+
+- [x] `--constrained` mode and constrained-layout option surface
+- [x] Width-only partitioning using `target_canvas_width`
+- [x] Down/up flow support in constrained mode
+- [x] Deterministic partition assignment and ordering (`partition_order`)
+- [x] `PartitionPlan` metadata with cross-partition edge metadata
+- [ ] Connector stub rendering in output panels
+- [ ] Dedicated multi-panel output UX
+
+Phase B:
+
+- [ ] Height constraint behavior (`target_canvas_height`) in partitioning
+- [ ] Left/right flow support parity in constrained mode
+- [ ] Overlap context rendering in panel output
+
+Phase C:
+
+- [ ] Affinity penalties for family/tree adjacency splitting
+- [ ] Optional connector compaction
+- [ ] Stable public/programmatic export surface for partition metadata
+
+Suggested PR checklist:
+
+- [x] PR1: constrained mode core + partition metadata
+- [ ] PR2: panelized output mode + connector stubs
+- [ ] PR3: style-rule targeting for connectors + panel headers
+- [ ] PR4: height/left-right support + overlap rendering
+- [ ] PR5: affinity tuning + connector compaction + metadata export finalization
