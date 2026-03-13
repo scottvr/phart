@@ -127,6 +127,23 @@ def main():
     print(f"DEPTH:{depth}")
 """
         self.py_argv_file.write_text(argv_content, encoding="utf-8")
+        self.py_wide_output_file = Path(self.temp_dir) / "test_wide_output.py"
+        wide_output_content = """
+def main():
+    print("ABCDEFGHIJKLMNO")
+"""
+        self.py_wide_output_file.write_text(wide_output_content, encoding="utf-8")
+        self.py_multirow_output_file = Path(self.temp_dir) / "test_multirow_output.py"
+        multirow_output_content = """
+def main():
+    print("ROW0")
+    print("ROW1")
+    print("ROW2")
+    print("ROW3")
+"""
+        self.py_multirow_output_file.write_text(
+            multirow_output_content, encoding="utf-8"
+        )
 
         # Create Python file with script-level bbox disabled, for CLI override tests
         self.py_bbox_override_file = Path(self.temp_dir) / "test_bbox_override.py"
@@ -538,6 +555,113 @@ def main():
         output = self.stdout.getvalue()
         self.assertIn("DEPTH:7", output)
         self.assertNotIn("Error", self.stderr.getvalue())
+
+    def test_paginate_output_width_selects_page_x(self):
+        sys.argv = [
+            "phart",
+            "--paginate-output-width",
+            "10",
+            str(self.py_wide_output_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(self.stdout.getvalue(), "ABCDEFGHIJ")
+
+    def test_paginate_output_width_supports_overlap_and_page_x(self):
+        sys.argv = [
+            "phart",
+            "--paginate-output-width",
+            "10",
+            "--paginate-overlap",
+            "2",
+            "--page-x",
+            "1",
+            str(self.py_wide_output_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(self.stdout.getvalue(), "FGHIJKLMNO")
+
+    def test_paginate_output_width_list_pages_writes_index_to_stderr(self):
+        sys.argv = [
+            "phart",
+            "--paginate-output-width",
+            "10",
+            "--list-pages",
+            str(self.py_wide_output_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        self.assertIn("Pagination:", self.stderr.getvalue())
+        self.assertIn("page[x=0,y=0]", self.stderr.getvalue())
+
+    def test_paginate_output_width_write_pages_emits_files(self):
+        page_dir = Path(self.temp_dir) / "pages"
+        sys.argv = [
+            "phart",
+            "--paginate-output-width",
+            "10",
+            "--write-pages",
+            str(page_dir),
+            str(self.py_wide_output_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        self.assertTrue((page_dir / "page_x00_y00.txt").exists())
+        self.assertTrue((page_dir / "page_x01_y00.txt").exists())
+
+    def test_paginate_output_width_auto_requires_tty_stdout(self):
+        sys.argv = [
+            "phart",
+            "--paginate-output-width",
+            "auto",
+            str(self.py_wide_output_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 1)
+        self.assertIn("requires terminal stdout", self.stderr.getvalue())
+
+    def test_paginate_output_height_selects_page_y(self):
+        sys.argv = [
+            "phart",
+            "--paginate-output-height",
+            "2",
+            "--page-y",
+            "1",
+            str(self.py_multirow_output_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(self.stdout.getvalue(), "ROW2\nROW3")
+
+    def test_paginate_output_height_auto_requires_tty_stdout(self):
+        sys.argv = [
+            "phart",
+            "--paginate-output-height",
+            "auto",
+            str(self.py_multirow_output_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 1)
+        self.assertIn(
+            "paginate-output-height auto requires terminal stdout",
+            self.stderr.getvalue(),
+        )
+
+    def test_paginate_output_width_rejects_non_text_format(self):
+        sys.argv = [
+            "phart",
+            "--output-format",
+            "svg",
+            "--paginate-output-width",
+            "10",
+            str(self.py_wide_output_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 1)
+        self.assertIn(
+            "only supported with --output-format text", self.stderr.getvalue()
+        )
 
     def test_python_bbox_alias_overrides_script_bbox_option(self):
         sys.argv = ["phart", "--bbox", str(self.py_bbox_override_file)]

@@ -2,6 +2,7 @@
 
 import sys
 import argparse
+import shutil
 from pathlib import Path
 from typing import Optional
 
@@ -11,6 +12,7 @@ from .charset import CharSet
 from .core.contracts import OutputRenderConfig, RendererOutputConfig
 from .io.input import load_renderer_from_file, run_python_source
 from .io.output import render_captured_text, render_renderer_output
+from .io.output.pagination import describe_pages, paginate_text
 from .styles import LayoutOptions, NodeStyle
 
 COLOR_MODES = {"none", "source", "target", "path", "attr"}
@@ -394,6 +396,65 @@ def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
             "In auto mode, .md/.markdown outputs use nbsp for padding."
         ),
     )
+    parser.add_argument(
+        "--paginate-output-width",
+        nargs="?",
+        const="auto",
+        default=None,
+        metavar="WIDTH|auto",
+        help=(
+            "Paginate text output horizontally by terminal width (auto) or WIDTH columns. "
+            "With no value, defaults to auto."
+        ),
+    )
+    parser.add_argument(
+        "--paginate-output-height",
+        nargs="?",
+        const="auto",
+        default=None,
+        metavar="HEIGHT|auto",
+        help=(
+            "Paginate text output vertically by terminal height (auto) or HEIGHT rows. "
+            "If omitted, row pagination is disabled and all rows remain in one page."
+        ),
+    )
+    parser.add_argument(
+        "--paginate-overlap",
+        type=int,
+        default=8,
+        metavar="COLUMNS",
+        help="Overlap columns between neighboring output pages (default: 8)",
+    )
+    parser.add_argument(
+        "--select-output-page-x",
+        "--page-x",
+        "-x",
+        type=int,
+        default=0,
+        dest="page_x",
+        help="Select horizontal page index (default: 0)",
+    )
+    parser.add_argument(
+        "--select-output-page-y",
+        "--page-y",
+        "-y",
+        type=int,
+        default=0,
+        dest="page_y",
+        help="Select vertical page index (currently must be 0)",
+    )
+    parser.add_argument(
+        "--list-pages",
+        action="store_true",
+        help="Print page index metadata when pagination is enabled",
+    )
+    parser.add_argument(
+        "--write-pages",
+        type=Path,
+        default=None,
+        metavar="DIR",
+        help="Write all paginated pages to DIR as page_xNN_yNN.txt files",
+    )
     args, unknown = parser.parse_known_args(argv)
     explicit_layout_fields = _collect_explicit_layout_fields(argv, args)
     return args, unknown, explicit_layout_fields, module_argv
@@ -534,6 +595,70 @@ def main() -> Optional[int]:
             svg_bg=args.svg_bg,
             markdown_safe_text=markdown_safe_text,
         )
+        paginate_width: Optional[int] = None
+        paginate_height: Optional[int] = None
+        paginate_enabled = (
+            args.paginate_output_width is not None
+            or args.paginate_output_height is not None
+        )
+        if paginate_enabled:
+            if args.output_format != "text":
+                raise ValueError(
+                    "Pagination is only supported with --output-format text"
+                )
+            term_size = shutil.get_terminal_size((80, 24))
+            output_to_terminal = args.output is None and sys.stdout.isatty()
+
+            if args.paginate_output_width is not None:
+                width_spec = str(args.paginate_output_width).strip().lower()
+                if width_spec == "auto":
+                    if not output_to_terminal:
+                        raise ValueError(
+                            "--paginate-output-width auto requires terminal stdout; "
+                            "use an explicit numeric width when redirecting or writing files"
+                        )
+                    paginate_width = term_size.columns
+                else:
+                    try:
+                        paginate_width = int(width_spec)
+                    except ValueError as exc:
+                        raise ValueError(
+                            "--paginate-output-width must be an integer or 'auto'"
+                        ) from exc
+                if paginate_width <= 0:
+                    raise ValueError(
+                        "--paginate-output-width must be greater than zero"
+                    )
+
+            if args.paginate_output_height is not None:
+                height_spec = str(args.paginate_output_height).strip().lower()
+                if height_spec == "auto":
+                    if not output_to_terminal:
+                        raise ValueError(
+                            "--paginate-output-height auto requires terminal stdout; "
+                            "use an explicit numeric height when redirecting or writing files"
+                        )
+                    paginate_height = term_size.lines
+                else:
+                    try:
+                        paginate_height = int(height_spec)
+                    except ValueError as exc:
+                        raise ValueError(
+                            "--paginate-output-height must be an integer or 'auto'"
+                        ) from exc
+                if paginate_height <= 0:
+                    raise ValueError(
+                        "--paginate-output-height must be greater than zero"
+                    )
+
+            if args.paginate_overlap < 0:
+                raise ValueError("--paginate-overlap must be non-negative")
+            if paginate_width is not None and args.paginate_overlap >= paginate_width:
+                raise ValueError(
+                    "--paginate-overlap must be smaller than --paginate-output-width"
+                )
+            if args.page_x < 0 or args.page_y < 0:
+                raise ValueError("--page-x and --page-y must be non-negative")
 
         if args.input.suffix == ".py":
             if unknown:
@@ -555,6 +680,10 @@ def main() -> Optional[int]:
             rendered_output = render_captured_text(
                 raw_output, config=output_render_config
             )
+            if paginate_enabled:
+                rendered_output = _apply_text_pagination(
+                    args, rendered_output, paginate_width, paginate_height
+                )
             if args.output:
                 args.output.write_text(rendered_output, encoding="utf-8")
             else:
@@ -580,6 +709,10 @@ def main() -> Optional[int]:
             rendered_output = render_renderer_output(
                 renderer, config=renderer_output_config
             )
+            if paginate_enabled:
+                rendered_output = _apply_text_pagination(
+                    args, rendered_output, paginate_width, paginate_height
+                )
             if args.output:
                 args.output.write_text(rendered_output, encoding="utf-8")
             else:
@@ -589,6 +722,63 @@ def main() -> Optional[int]:
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         return 1
+
+
+def _apply_text_pagination(
+    args: argparse.Namespace,
+    rendered_output: str,
+    paginate_width: Optional[int],
+    paginate_height: Optional[int],
+) -> str:
+    rows = rendered_output.splitlines()
+    canvas_width = max((len(row) for row in rows), default=1)
+    page_width = paginate_width if paginate_width is not None else max(1, canvas_width)
+    overlap_x = args.paginate_overlap if paginate_width is not None else 0
+
+    pages, canvas_width, canvas_height = paginate_text(
+        rendered_output,
+        page_width=page_width,
+        overlap=overlap_x,
+        page_height=paginate_height,
+        overlap_y=0,
+    )
+
+    if args.list_pages:
+        print(
+            describe_pages(
+                pages,
+                canvas_width=canvas_width,
+                canvas_height=canvas_height,
+                page_width=page_width,
+                overlap=overlap_x,
+            ),
+            file=sys.stderr,
+        )
+
+    if args.write_pages is not None:
+        args.write_pages.mkdir(parents=True, exist_ok=True)
+        for page in pages:
+            page_file = args.write_pages / (
+                f"page_x{page.x_index:02d}_y{page.y_index:02d}.txt"
+            )
+            page_file.write_text(page.text, encoding="utf-8")
+
+    selected_page = next(
+        (
+            page
+            for page in pages
+            if page.x_index == args.page_x and page.y_index == args.page_y
+        ),
+        None,
+    )
+    if selected_page is None:
+        max_x = max((page.x_index for page in pages), default=0)
+        max_y = max((page.y_index for page in pages), default=0)
+        raise ValueError(
+            f"Requested page x={args.page_x}, y={args.page_y} is out of range "
+            f"(max x={max_x}, y={max_y})"
+        )
+    return selected_page.text
 
 
 if __name__ == "__main__":
