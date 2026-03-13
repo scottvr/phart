@@ -251,6 +251,8 @@ def build_person_graph(
                     husband, child, role="parent", parenttype="father"
                 )
         for wife in wives:
+            for husband in husbands:
+                person_graph.add_edge(wife, husband, role="spouse")
             for child in children:
                 person_graph.add_edge(wife, child, role="parent", parenttype="mother")
 
