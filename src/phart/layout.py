@@ -33,11 +33,13 @@ class LayoutManager:
                 (
                     max(
                         (
-                            self.options.get_text_display_width(
-                                self.options.get_node_text(line)
-                            )
-                            for line in self._label_lines_for_text(
-                                self._node_display_cache[node]
+                            self.options.get_text_display_width(line)
+                            for line in nodes_mod.resolved_node_label_lines(
+                                self.options,
+                                self.graph.nodes[node]
+                                if node in self.graph
+                                else {},
+                                node,
                             )
                         ),
                         default=0,
@@ -79,11 +81,7 @@ class LayoutManager:
         """Get rendered node height for current options."""
         if node is None:
             return self._max_node_height
-        display_text = self._node_display_cache.get(node, self._get_node_display_text(node))
-        return self.options.get_node_dimensions(
-            display_text,
-            widest_text_width=self._widest_node_text_width,
-        )[1]
+        return self._get_node_dimensions(node)[1]
 
     def _get_layer_step(self) -> int:
         """Get vertical step between layer top rows."""
@@ -103,11 +101,32 @@ class LayoutManager:
         int
             Total width of node when rendered
         """
-        width, _ = self.options.get_node_dimensions(
-            self._node_display_cache.get(node, self._get_node_display_text(node)),
-            widest_text_width=self._widest_node_text_width,
-        )
+        width, _ = self._get_node_dimensions(node)
         return width
+
+    def _get_node_dimensions(self, node: Any) -> Tuple[int, int]:
+        lines = nodes_mod.resolved_node_label_lines(
+            self.options,
+            self.graph.nodes[node] if node in self.graph else {},
+            node,
+        )
+        text_width = max(
+            (self.options.get_text_display_width(line) for line in lines),
+            default=0,
+        )
+        if (
+            self.options.bboxes
+            and self.options.uniform
+            and self._widest_node_text_width is not None
+        ):
+            text_width = max(text_width, self._widest_node_text_width)
+        if not self.options.bboxes:
+            return text_width, 1
+        width = text_width + (2 * self.options.hpad) + 2
+        multiline = bool(self.options.bboxes and self.options.bbox_multiline_labels)
+        content_rows = len(lines) if multiline else 1
+        height = (2 * self.options.vpad) + 2 + max(1, content_rows)
+        return width, height
 
     @staticmethod
     def _natural_sort_tokens(value: Any) -> Tuple[Tuple[Any, ...], ...]:

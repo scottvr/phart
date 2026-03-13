@@ -264,6 +264,18 @@ Style rules are last-write authority for the fields they set.
 
 ### 13.2 Phase 3 Implementation Checklist
 
+Execution board (feature branch: `feature/style-rule-node-style`):
+
+| ID  | Workstream                 | Status               | Notes                                                                                           |
+| --- | -------------------------- | -------------------- | ----------------------------------------------------------------------------------------------- |
+| A   | Contracts and option model | Completed (Phase 3a) | Key/target validation active for `node:{color,prefix,suffix,node_style}` and `edge:{color}`     |
+| B   | Node rendering integration | Completed (Phase 3a) | Rule-driven `prefix`/`suffix`/`node_style` wired in shared node line resolution (layout + draw) |
+| C   | Edge rendering integration | Pending              | Color done; glyph-field expansion still pending                                                 |
+| D   | Legacy convergence path    | Pending              | Mapping layer not started                                                                       |
+| E   | CLI / UX surface           | Pending              | CLI exists; field-level docs/examples pending                                                   |
+| F   | Test plan                  | In Progress          | Node-style rule and validation tests added; parity/edge-glyph tests pending                     |
+| G   | Rollout sequencing         | In Progress          | Current branch aligned to steps 1-3 (validation + node rule integration)                        |
+
 #### A. Contracts and option model
 
 - [ ] Extend canonical style-rule schema docs with allowed `set` keys per `target`.

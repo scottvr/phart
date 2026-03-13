@@ -8,6 +8,13 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tupl
 
 Token = Tuple[str, Any]
 
+SUPPORTED_SET_KEYS: Dict[str, set[str]] = {
+    "node": {"color", "prefix", "suffix", "node_style"},
+    "edge": {"color"},
+}
+
+_NODE_STYLE_TOKENS = {"minimal", "square", "round", "diamond", "custom"}
+
 
 @dataclass(frozen=True)
 class CompiledStyleRule:
@@ -313,6 +320,25 @@ def _normalize_set_values(raw_set: Any) -> Dict[str, str]:
     return normalized
 
 
+def _validate_set_values_for_target(target: str, set_values: Dict[str, str]) -> None:
+    allowed = SUPPORTED_SET_KEYS[target]
+    unsupported = sorted(key for key in set_values if key not in allowed)
+    if unsupported:
+        keys = ", ".join(unsupported)
+        allowed_keys = ", ".join(sorted(allowed))
+        raise ValueError(
+            f"Unsupported style rule set key(s) for target '{target}': {keys}. "
+            f"Allowed keys: {allowed_keys}"
+        )
+    if target == "node" and "node_style" in set_values:
+        token = str(set_values["node_style"]).strip().lower()
+        if token not in _NODE_STYLE_TOKENS:
+            valid = ", ".join(sorted(_NODE_STYLE_TOKENS))
+            raise ValueError(
+                f"Invalid node_style '{set_values['node_style']}'. Valid: {valid}"
+            )
+
+
 def compile_style_rules(raw_rules: Iterable[Dict[str, Any]]) -> List[CompiledStyleRule]:
     """Compile canonical style rule dictionaries."""
     compiled: List[CompiledStyleRule] = []
@@ -328,6 +354,7 @@ def compile_style_rules(raw_rules: Iterable[Dict[str, Any]]) -> List[CompiledSty
         except (TypeError, ValueError) as exc:
             raise ValueError("style rule priority must be an integer") from exc
         set_values = _normalize_set_values(raw.get("set", {}))
+        _validate_set_values_for_target(target, set_values)
         predicate = compile_predicate(str(raw.get("when", "")).strip())
         compiled.append(
             CompiledStyleRule(
@@ -346,11 +373,20 @@ def evaluate_style_rule_color(
     compiled_rules: Sequence[CompiledStyleRule], target: str, context: Dict[str, Any]
 ) -> Optional[str]:
     """Return first matching color assignment for the target context."""
+    return evaluate_style_rule_set(compiled_rules, target, context).get("color")
+
+
+def evaluate_style_rule_set(
+    compiled_rules: Sequence[CompiledStyleRule], target: str, context: Dict[str, Any]
+) -> Dict[str, str]:
+    """Return resolved set fields for a target context."""
+    resolved: Dict[str, str] = {}
     for rule in compiled_rules:
         if rule.target != target:
             continue
-        if not rule.set_values.get("color"):
+        if not rule.set_values:
             continue
         if rule.predicate(context):
-            return rule.set_values["color"]
-    return None
+            for key, value in rule.set_values.items():
+                resolved.setdefault(key, value)
+    return resolved

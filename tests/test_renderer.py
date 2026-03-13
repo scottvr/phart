@@ -9,6 +9,7 @@ import networkx as nx  # type: ignore
 
 from phart import ASCIIRenderer
 from phart.layout import LayoutOptions
+from phart.rendering import nodes as nodes_mod
 from phart.rendering import ports as ports_mod
 from phart.styles import FlowDirection, NodeStyle
 from phart.renderer import merge_layout_options
@@ -1686,6 +1687,84 @@ class TestASCIIRenderer(unittest.TestCase):
         renderer.render()
         self.assertEqual(renderer._edge_color_map[("A", "B")], "\x1b[32m")  # noqa: SLF001
 
+    def test_node_style_rule_prefix_suffix_applies_to_labels(self):
+        graph = nx.DiGraph()
+        graph.add_node("n1", name="Alice")
+        options = LayoutOptions(
+            use_labels=True,
+            style_rules=[
+                {
+                    "target": "node",
+                    "when": 'name == "Alice"',
+                    "set": {"prefix": "{", "suffix": "}"},
+                }
+            ],
+        )
+        lines = nodes_mod.resolved_node_label_lines(options, graph.nodes["n1"], "n1")
+        self.assertEqual(lines, ["{Alice}"])
+
+    def test_node_style_rule_node_style_overrides_global_style(self):
+        graph = nx.DiGraph()
+        graph.add_node("n1", name="Alice", sex="F")
+        graph.add_node("n2", name="Bob", sex="M")
+        options = LayoutOptions(
+            use_labels=True,
+            node_style=NodeStyle.SQUARE,
+            style_rules=[
+                {
+                    "target": "node",
+                    "when": 'sex == "F"',
+                    "set": {"node_style": "round"},
+                }
+            ],
+        )
+        f_lines = nodes_mod.resolved_node_label_lines(options, graph.nodes["n1"], "n1")
+        m_lines = nodes_mod.resolved_node_label_lines(options, graph.nodes["n2"], "n2")
+        self.assertEqual(f_lines, ["(Alice)"])
+        self.assertEqual(m_lines, ["[Bob]"])
+
+    def test_node_style_rule_can_override_node_color(self):
+        graph = nx.DiGraph([("A", "B")])
+        graph.nodes["A"]["sex"] = "F"
+        graph.nodes["B"]["sex"] = "M"
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                ansi_colors=True,
+                edge_color_mode="source",
+                style_rules=[
+                    {
+                        "target": "node",
+                        "when": 'sex == "F"',
+                        "set": {"color": "red"},
+                    }
+                ],
+            ),
+        )
+        renderer.render()
+        self.assertEqual(renderer._node_color_map["A"], "\x1b[31m")  # noqa: SLF001
+
+    def test_node_style_rule_color_respects_no_color_nodes(self):
+        graph = nx.DiGraph([("A", "B")])
+        graph.nodes["A"]["sex"] = "F"
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                ansi_colors=True,
+                edge_color_mode="source",
+                color_nodes=False,
+                style_rules=[
+                    {
+                        "target": "node",
+                        "when": 'sex == "F"',
+                        "set": {"color": "red"},
+                    }
+                ],
+            ),
+        )
+        renderer.render()
+        self.assertEqual(renderer._node_color_map, {})  # noqa: SLF001
+
     def test_attr_mode_bidirectional_requires_rule_attribute_agreement(self):
         graph = nx.DiGraph()
         graph.add_edge("Alice", "Bob", relationship="friend")
@@ -2004,6 +2083,30 @@ class TestLayoutOptions(unittest.TestCase):
             LayoutOptions(
                 style_rules=[
                     {"target": "bogus", "when": "true", "set": {"color": "blue"}}
+                ]
+            )
+
+    def test_style_rule_invalid_set_key_raises(self):
+        with self.assertRaises(ValueError):
+            LayoutOptions(
+                style_rules=[
+                    {
+                        "target": "edge",
+                        "when": "true",
+                        "set": {"prefix": "<"},
+                    }
+                ]
+            )
+
+    def test_style_rule_invalid_node_style_value_raises(self):
+        with self.assertRaises(ValueError):
+            LayoutOptions(
+                style_rules=[
+                    {
+                        "target": "node",
+                        "when": "true",
+                        "set": {"node_style": "hexagon"},
+                    }
                 ]
             )
 

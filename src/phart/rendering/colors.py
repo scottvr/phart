@@ -84,6 +84,20 @@ def initialize_color_maps(
 
     if renderer.options.color_nodes:
         renderer._node_color_map = node_palette_map.copy()
+        for node, _ in sorted_nodes:
+            attrs = renderer.graph.nodes.get(node, {})
+            node_context = {"self": attrs, "node": attrs}
+            style_color = evaluate_style_rule_color(
+                getattr(renderer.options, "_compiled_style_rules", []),
+                "node",
+                node_context,
+            )
+            if not style_color:
+                continue
+            resolved = renderer._resolve_color_spec(style_color)
+            if resolved is None:
+                continue
+            renderer._node_color_map[node] = resolved
 
     sorted_edges = sorted(
         (

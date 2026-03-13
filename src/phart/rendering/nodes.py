@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
+from phart.style_rules import evaluate_style_rule_set
+
 if TYPE_CHECKING:
     from phart.renderer import ASCIIRenderer
     from phart.styles import LayoutOptions
@@ -270,7 +272,11 @@ def get_widest_node_text_width(renderer: ASCIIRenderer) -> Optional[int]:
 
 
 def get_node_dimensions(renderer: ASCIIRenderer, node: Any) -> Tuple[int, int]:
-    lines = _resolved_node_label_lines(renderer, node)
+    lines = resolved_node_label_lines(
+        renderer.options,
+        renderer.graph.nodes[node] if node in renderer.graph else {},
+        node,
+    )
     text_width = max(
         (renderer.options.get_text_display_width(line) for line in lines),
         default=0,
@@ -310,7 +316,11 @@ def get_node_bounds(
 
 
 def draw_node(renderer: ASCIIRenderer, node: Any, x: int, y: int) -> None:
-    label_lines = _resolved_node_label_lines(renderer, node)
+    label_lines = resolved_node_label_lines(
+        renderer.options,
+        renderer.graph.nodes[node] if node in renderer.graph else {},
+        node,
+    )
     node_width, node_height = renderer._get_node_dimensions(node)
     node_color = renderer._node_color_map.get(node)
 
@@ -364,14 +374,96 @@ def draw_node(renderer: ASCIIRenderer, node: Any, x: int, y: int) -> None:
 
 
 def _resolved_node_label_lines(renderer: ASCIIRenderer, node: Any) -> list[str]:
-    display_text = renderer._get_display_node_text(node)
-    if _allow_multiline_labels(renderer):
+    attrs = renderer.graph.nodes[node] if node in renderer.graph else {}
+    return resolved_node_label_lines(renderer.options, attrs, node)
+
+
+def resolved_node_label_lines(
+    options: LayoutOptions,
+    attrs: Dict[Any, Any],
+    fallback_node: Any,
+) -> list[str]:
+    display_text = resolve_display_node_text(options, attrs, fallback_node)
+    if _allow_multiline_labels_for_options(options):
         raw_lines = [segment for segment in display_text.split("\n")]
     else:
         raw_lines = [display_text]
+    style_set = resolve_effective_node_style_set(options, attrs)
+    decorated = [
+        _decorate_node_line(
+            options=options,
+            line=line,
+            fallback_node=fallback_node,
+            style_set=style_set,
+        )
+        for line in raw_lines
+    ]
+    empty = _decorate_node_line(
+        options=options,
+        line="",
+        fallback_node=fallback_node,
+        style_set=style_set,
+    )
+    return decorated if decorated else [empty]
 
-    decorated = [renderer.options.get_node_text(line) for line in raw_lines]
-    return decorated if decorated else [renderer.options.get_node_text("")]
+
+def resolve_effective_node_style_set(
+    options: LayoutOptions, attrs: Dict[Any, Any]
+) -> Dict[str, str]:
+    context = {
+        "self": attrs,
+        "node": attrs,
+    }
+    return evaluate_style_rule_set(
+        getattr(options, "_compiled_style_rules", []),
+        "node",
+        context,
+    )
+
+
+def _node_style_decorators_for(
+    options: LayoutOptions,
+    node_style_token: str,
+    *,
+    fallback_node: Any,
+) -> Tuple[str, str]:
+    token = str(node_style_token).strip().lower()
+    if token == "minimal":
+        return "", ""
+    if token == "square":
+        return "[", "]"
+    if token == "round":
+        return "(", ")"
+    if token == "diamond":
+        return "<", ">"
+    if token == "custom":
+        decorators = options.custom_decorators or {}
+        return decorators.get(str(fallback_node), ("*", "*"))
+    return options.get_node_decorators(str(fallback_node))
+
+
+def _decorate_node_line(
+    *,
+    options: LayoutOptions,
+    line: str,
+    fallback_node: Any,
+    style_set: Dict[str, str],
+) -> str:
+    if not style_set:
+        return options.get_node_text(line)
+
+    if "node_style" in style_set:
+        prefix, suffix = _node_style_decorators_for(
+            options, style_set["node_style"], fallback_node=fallback_node
+        )
+    else:
+        prefix, suffix = options.get_node_decorators(line)
+
+    if "prefix" in style_set:
+        prefix = style_set["prefix"]
+    if "suffix" in style_set:
+        suffix = style_set["suffix"]
+    return f"{prefix}{line}{suffix}"
 
 
 def _paint_label(
