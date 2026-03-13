@@ -262,6 +262,112 @@ Style rules are last-write authority for the fields they set.
 - Rule-driven style changes must not violate routing assumptions (cell widths, arrow locking).
 - If a rule sets an unsupported field for a target, fail fast with precise diagnostics.
 
+### 13.2 Phase 3 Implementation Checklist
+
+#### A. Contracts and option model
+
+- [ ] Extend canonical style-rule schema docs with allowed `set` keys per `target`.
+- [ ] Add `StyleSetKey` validation in rule compilation (reject unknown keys early).
+- [ ] Add target/key compatibility checks (for example, disallow `arrow_up` on `node`).
+- [ ] Keep `LayoutOptions` legacy fields unchanged for compatibility (`node_style`, `custom_decorators`, arrow glyph fields).
+- [ ] Add explicit compatibility mapping layer from legacy fields to implicit style rules (feature-flagged initially).
+
+Acceptance criteria:
+
+- Invalid key/target combinations fail at startup with precise error messages.
+- Existing code paths without style rules behave exactly as before.
+
+#### B. Node rendering integration
+
+- [ ] Introduce node style-rule evaluator (`target=node`) that can resolve:
+  - `color`
+  - `prefix`
+  - `suffix`
+  - `node_style`
+  - optional safe padding overrides (`hpad`, `vpad`) only when `bboxes` is true.
+- [ ] Apply resolved node style fields in one place before node glyph composition.
+- [ ] Ensure bbox sizing uses post-rule effective text/decorators.
+- [ ] Ensure multiline label flow remains correct with rule-modified node text wrappers.
+
+Acceptance criteria:
+
+- Per-node rule-driven decorators render deterministically.
+- No regressions in existing bbox/multiline tests.
+
+#### C. Edge rendering integration
+
+- [ ] Extend edge style-rule evaluator (`target=edge`) beyond `color` to support glyph keys:
+  - arrows: `arrow_up/down/left/right`
+  - segments: `line_horizontal/line_vertical`
+  - junctions: `corner_*`, `tee_*`
+- [ ] Apply resolved glyphs through routing/canvas paint path without bypassing conflict logic.
+- [ ] Preserve arrow lock semantics for overlapping edges.
+- [ ] Keep single-cell glyph invariant enforced at validation time.
+
+Acceptance criteria:
+
+- Rule-selected edge glyphs appear consistently on all routed segments.
+- Overlap and bidirectional behavior remain stable.
+
+#### D. Legacy convergence path
+
+- [ ] Add mapper: `NodeStyle`/`custom_decorators` -> implicit node rules (internal only, no user-visible rule emission yet).
+- [ ] Add mapper: global arrow/decorator fields -> implicit edge defaults.
+- [ ] Define precedence implementation exactly as specified:
+  1. defaults
+  2. explicit `LayoutOptions`
+  3. legacy compatibility mappings
+  4. style rules
+- [ ] Add debug/trace hook (optional) to inspect effective style source for a node/edge.
+
+Acceptance criteria:
+
+- Legacy scripts render unchanged.
+- Equivalent style-rules configuration can reproduce legacy outcomes.
+
+#### E. CLI / UX surface
+
+- [ ] Keep `--style-rule` and `--style-rules-file` unchanged.
+- [ ] Document new allowed `set` keys and target restrictions in `README.md` and `docs/index.md`.
+- [ ] Add at least one end-to-end CLI example each for:
+  - node decorators via rules
+  - edge arrow/glyph override via rules
+- [ ] Improve CLI error text for unsupported fields and multi-character glyph attempts.
+
+Acceptance criteria:
+
+- Users can discover field support from `--help` and docs without reading code.
+
+#### F. Test plan (required before merge)
+
+- [ ] Parser/validator tests:
+  - unknown keys
+  - wrong target/key combinations
+  - multi-char glyph rejection
+- [ ] Renderer tests:
+  - per-node decorator/prefix/suffix application
+  - per-edge glyph key application
+  - arrow lock/overlap correctness under rule changes
+- [ ] Compatibility tests:
+  - `NodeStyle` + `custom_decorators` parity vs pre-Phase-3 output
+  - legacy edge glyph options parity
+- [ ] CLI tests:
+  - valid/invalid `--style-rule` with new keys
+  - style-rules-file examples for node + edge keys
+
+Acceptance criteria:
+
+- New coverage includes both behavior and compatibility assertions.
+- No regressions in existing edge routing and bbox suites.
+
+#### G. Rollout sequencing
+
+1. Validation + schema enforcement (safe, no render change).
+2. Node rule fields (`prefix/suffix/node_style`) integration.
+3. Edge glyph fields integration.
+4. Legacy mapping layer enabled by default.
+5. Docs/examples finalized; optional deprecation notices discussed (not required in v1).
+
 ## 14. Test Matrix (Minimum)
 
 - Parser:
