@@ -420,25 +420,17 @@ To install all `extra` requirements (e.g., `fonttools` for svg rendering support
 ## The CLI
 
 ```bash
-usage: phart [-h] [--output OUTPUT] [--version] [--output-format {ditaa,ditaa-puml,html,latex-markdown,mmd,svg,text}]
-             [--style {minimal,square,round,diamond,custom,bbox}] [--node-spacing NODE_SPACING]
-             [--layer-spacing LAYER_SPACING] [--charset {ascii,ansi,unicode}] [--ascii] [--function FUNCTION]
+$ phart --help
+usage: phart [-h] [--output OUTPUT] [--version] [--output-format {ditaa,ditaa-puml,html,latex-markdown,mmd,svg,text}] [--style {minimal,square,round,diamond,custom,bbox}] [--node-spacing NODE_SPACING]
+             [--layer-spacing LAYER_SPACING] [--charset {ascii,ansi,unicode}] [--ascii] [--function FUNCTION] [--binary-tree]
              [--layout {arf,auto,bfs,bipartite,circular,hierarchical,kamada-kawai,layered,multipartite,planar,random,shell,spiral,spring,vertical}]
-             [--binary-tree]
-             [--node-order {layout-default,preserve,alpha,natural,numeric}] [--node-order-attr NODE_ORDER_ATTR] [--node-order-reverse]
-             [--flow-direction {down,up,left,right}] [--bboxes] [--hpad HPAD] [--vpad VPAD] [--uniform]
-             [--edge-anchors {auto,center,ports}] [--shared-ports {any,minimize,none}]
-             [--bidirectional-mode {coalesce,separate}] [--labels] [--node-label-lines SPEC]
-             [--node-label-sep NODE_LABEL_SEP] [--node-label-max-lines NODE_LABEL_MAX_LINES] [--bbox-multiline-labels]
-             [--colors {attr,none,path,source,target}]
-             [--no-color-nodes] [--edge-glyph-preset {default,thick,double}] [--edge-arrow-style {ascii,unicode}]
-             [--edge-color-rule RULE] [--style-rule RULE] [--style-rules-file FILE]
-             [--svg-cell-size SVG_CELL_SIZE]
-             [--svg-font-family SVG_FONT_FAMILY] [--svg-text-mode {text,path}] [--svg-font-path SVG_FONT_PATH]
-             [--svg-fg SVG_FG] [--svg-bg SVG_BG] [--whitespace {auto,ascii-space,nbsp}]
-             [--paginate-output-width [WIDTH|auto]] [--paginate-output-height [HEIGHT|auto]]
-             [--paginate-overlap COLUMNS] [--select-output-page-x PAGE_X] [--select-output-page-y PAGE_Y]
-             [--list-pages] [--write-pages DIR]
+             [--node-order {layout-default,preserve,alpha,natural,numeric}] [--node-order-attr NODE_ORDER_ATTR] [--node-order-reverse] [--flow-direction {down,up,left,right}] [--bboxes] [--hpad HPAD]
+             [--vpad VPAD] [--uniform] [--edge-anchors {auto,center,ports}] [--shared-ports {any,minimize,none}] [--bidirectional-mode {coalesce,separate}] [--labels] [--node-label-lines SPEC]
+             [--node-label-sep NODE_LABEL_SEP] [--node-label-max-lines NODE_LABEL_MAX_LINES] [--bbox-multiline-labels] [--colors {attr,none,path,source,target}] [--no-color-nodes]
+             [--edge-glyph-preset {default,thick,double}] [--edge-arrow-style {ascii,unicode}] [--edge-color-rule RULE] [--style-rule RULE] [--style-rules-file FILE] [--svg-cell-size SVG_CELL_SIZE]
+             [--svg-font-family SVG_FONT_FAMILY] [--svg-text-mode {text,path}] [--svg-font-path SVG_FONT_PATH] [--svg-fg SVG_FG] [--svg-bg SVG_BG] [--whitespace {auto,ascii-space,nbsp}]
+             [--paginate-output-width [WIDTH|auto]] [--paginate-output-height [HEIGHT|auto]] [--paginate-overlap COLUMNS] [--select-output-page-x PAGE_X] [--select-output-page-y PAGE_Y] [--list-pages]
+             [--write-pages DIR]
              input
 
 PHART: Python Hierarchical ASCII Rendering Tool
@@ -463,23 +455,17 @@ options:
   --ascii               Force ASCII output (deprecated, use --charset ascii instead)
   --function, -f FUNCTION
                         Function to call in Python file (default: main)
-  --binary-tree
-                        Enable binary tree layout (respects edge 'side' attributes)
-                        Equivalent to setting node-order to 'natural', but having the sort
-                        key be an edge attribute ('side'), or if none exists, the sort will
-                        be applied to the nodes directly using the node ordering policy specified.
+  --binary-tree         Enable binary tree layout (respects edge 'side' attributes)
   --layout, --layout-strategy {arf,auto,bfs,bipartite,circular,hierarchical,kamada-kawai,layered,multipartite,planar,random,shell,spiral,spring,vertical}
                         Node positioning strategy (default: auto)
   --node-order {layout-default,preserve,alpha,natural,numeric}
                         Node ordering policy: layout-default (default), preserve, alpha, natural, or numeric
   --node-order-attr NODE_ORDER_ATTR
                         Optional node attribute name to use as the ordering key
-  --node-order-reverse
-                        The result of the sorting method used by the layout strategy will be reversed
+  --node-order-reverse  The result of the sorting method used by the layout strategy will be reversed
   --flow-direction, --flow {down,up,left,right}
-                        Layout flow direction: down (default, root at top), up (root at bottom), left (root at right),
-                        right (root at left)
-  --bboxes              Draw line-art boxes around nodes
+                        Layout flow direction: down (default, root at top), up (root at bottom), left (root at right), right (root at left)
+  --bboxes, --bbox      Draw line-art boxes around nodes
   --hpad HPAD           Horizontal padding inside node boxes (default: 1)
   --vpad VPAD           Vertical padding inside node boxes (default: 0)
   --uniform, --size-to-widest
@@ -487,17 +473,12 @@ options:
   --edge-anchors {auto,center,ports}
                         Edge anchor strategy: auto (default), center, or ports (distributed on box edges)
   --shared-ports {any,minimize,none}
-                        Terminal port sharing policy: any (default), minimize (prefer unused points on the same face),
-                        or none (avoid sharing until the node has no free terminal slots)
+                        Terminal port sharing policy: any (default), minimize (prefer unused points on the same face), or none (avoid sharing until the node has no free terminal slots)
   --bidirectional-mode {coalesce,separate}
-                        How to render reciprocal directed edges: coalesce (default) draws one shared route with arrows
-                        at both ends; separate draws each direction independently
-  --labels              Use node labels for displayed node text. If 'label' is missing,
-                        synthesize text from node attributes.
+                        How to render reciprocal directed edges: coalesce (default) draws one shared route with arrows at both ends; separate draws each direction independently
+  --labels              Use node labels for displayed node text. If 'label' is missing, synthesize text from node attributes.
   --node-label-lines SPEC
-                        Comma-separated ordered label line specs used when --labels is enabled and
-                        node 'label' is absent. Supports dotted paths (e.g. name,birt.date)
-                        and special token 'lifespan'.
+                        Comma-separated ordered label line specs used when --labels is enabled and node 'label' is absent. Supports dotted paths (e.g. name,birt.date) and special token 'lifespan'.
   --node-label-sep NODE_LABEL_SEP
                         Separator for joining multi-value parts within one synthesized label line
   --node-label-max-lines NODE_LABEL_MAX_LINES
@@ -508,16 +489,14 @@ options:
                         ANSI edge coloring mode: none (default), source, target, path, or attr
   --no-color-nodes      Color edges only, not nodes
   --edge-glyph-preset {default,thick,double}
-                        Global edge line-art preset: default (thin), thick, or double
+                        Global edge line-art preset: default (thin), thick, or double (Unicode mode only for thick/double; ASCII falls back to standard glyphs)
   --edge-arrow-style {ascii,unicode}
-                        Global arrowhead style: ascii (default) or unicode
+                        Global arrowhead style for edges: ascii (default) or unicode. Unicode arrows are disabled automatically in ASCII charset mode.
   --edge-color-rule RULE
-                        Attribute-driven edge color rule for --colors attr. Format:
-                        <attribute>:<value>=<color>[,<value>=<color>...] (repeatable)
-  --style-rule RULE     Advanced style rule expression:
-                        '<target>: <predicate> -> color=<color>' (repeatable)
+                        Attribute-driven edge color rule for --colors attr. Format: <attribute>:<value>=<color>[,<value>=<color>...] (repeatable)
+  --style-rule RULE     Advanced style rule expression. Format: '<target>: <predicate> -> color=<color>' where target is edge|node. Repeat to add multiple rules.
   --style-rules-file FILE
-                        JSON or YAML file containing {'rules': [...]} canonical style rules
+                        JSON or YAML file containing {'rules': [...]} canonical style rules. YAML requires PyYAML.
   --svg-cell-size SVG_CELL_SIZE
                         Cell size in pixels for SVG output (default: 12)
   --svg-font-family SVG_FONT_FAMILY
@@ -529,18 +508,17 @@ options:
   --svg-fg SVG_FG       Foreground color for SVG/HTML/LaTeX output
   --svg-bg SVG_BG       Background color for SVG/HTML output
   --whitespace {auto,ascii-space,nbsp}
-                        Text output whitespace mode: auto (default), ascii-space, or nbsp.
+                        Text output whitespace mode: auto (default), ascii-space, or nbsp. In auto mode, .md/.markdown outputs use nbsp for padding.
   --paginate-output-width [WIDTH|auto]
-                        Paginate text output horizontally by terminal width (auto) or WIDTH columns
+                        Paginate text output horizontally by terminal width (auto) or WIDTH columns. With no value, defaults to auto.
   --paginate-output-height [HEIGHT|auto]
-                        Paginate text output vertically by terminal height (auto) or HEIGHT rows.
-                        If omitted, row pagination is disabled and all rows remain in one page.
+                        Paginate text output vertically by terminal height (auto) or HEIGHT rows. If omitted, row pagination is disabled and all rows remain in one page.
   --paginate-overlap COLUMNS
                         Overlap columns between neighboring output pages (default: 8)
-  --select-output-page-x PAGE_X, --page-x PAGE_X, -x PAGE_X
+  --select-output-page-x, --page-x, -x PAGE_X
                         Select horizontal page index (default: 0)
-  --select-output-page-y PAGE_Y, --page-y PAGE_Y, -y PAGE_Y
-                        Select vertical page index (default: 0)
+  --select-output-page-y, --page-y, -y PAGE_Y
+                        Select vertical page index (currently must be 0)
   --list-pages          Print page index metadata when pagination is enabled
   --write-pages DIR     Write all paginated pages to DIR as page_xNN_yNN.txt files
 ```
