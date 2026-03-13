@@ -207,7 +207,60 @@ Phase 2:
 
 Phase 3:
 
-- Consider extending `set` with non-color fields (e.g. glyph, line style) if justified.
+- Extend `set` beyond color with explicit support for legacy decoration intent.
+- Resolve legacy `NodeStyle.CUSTOM`, per-node decorators, and edge arrow/decorator customization through one unified rule path.
+
+### 13.1 Phase 3 Expansion: Legacy Feature Convergence
+
+#### Background
+
+PHART has two historical styling tracks:
+
+- Global/static style config (`NodeStyle`, box options, arrow glyph fields).
+- Incomplete legacy intent for richer per-node/per-edge decorators.
+
+The style-rule system should become the canonical per-element styling mechanism, while preserving backward compatibility for existing global options.
+
+#### Proposed rule-settable fields (v3 target)
+
+Node-target fields:
+
+- `color`
+- `prefix`
+- `suffix`
+- `node_style` (`minimal|square|round|diamond|custom`)
+- `hpad`, `vpad` (optional overrides where safe)
+
+Edge-target fields:
+
+- `color`
+- `arrow_up`, `arrow_down`, `arrow_left`, `arrow_right`
+- `line_horizontal`, `line_vertical`
+- `corner_ul`, `corner_ur`, `corner_ll`, `corner_lr`
+- `tee_up`, `tee_down`, `tee_left`, `tee_right`
+
+#### Precedence model for legacy + rules
+
+1. Engine defaults
+2. `LayoutOptions` explicit global values
+3. Legacy compatibility mappings (if any)
+4. Style rules (priority + declaration order)
+
+Style rules are last-write authority for the fields they set.
+
+#### Compatibility strategy
+
+- Keep `NodeStyle` and existing decorator fields valid.
+- Keep `custom_decorators` valid for programmatic users.
+- Add migration path:
+  - legacy custom decorators can be normalized into implicit node rules at initialization.
+  - no immediate removal/deprecation until rule parity exists and is documented.
+
+#### Constraints
+
+- Multi-character glyphs are out of scope in the first Phase 3 increment; single-cell glyphs only.
+- Rule-driven style changes must not violate routing assumptions (cell widths, arrow locking).
+- If a rule sets an unsupported field for a target, fail fast with precise diagnostics.
 
 ## 14. Test Matrix (Minimum)
 

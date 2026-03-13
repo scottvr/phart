@@ -24,6 +24,7 @@
 Design/spec references:
 
 - [Style Rules Specification (Draft)](./architecture/style-rules-spec.md)
+- [Constrained Layout Partitioning Spec (Draft)](./architecture/layout-partitioning-spec.md)
 - [mermaid `flowchart TD` is now a supported output](./architecture/mermaid-flowchart-syntax.md")
 
 ## NEW mermaid output support
