@@ -2028,6 +2028,84 @@ class TestASCIIRenderer(unittest.TestCase):
 
         self.assertEqual(counts[frozenset(("Alice", "Bob"))], 2)
 
+    def test_constrained_render_outputs_multi_panel_text_with_connectors(self):
+        graph = nx.DiGraph()
+        graph.add_edge("R", "A1")
+        graph.add_edge("R", "A2")
+        graph.add_edge("R", "A3")
+        graph.add_edge("R", "A4")
+        graph.add_edge("A1", "B1")
+        graph.add_edge("A2", "B2")
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="layered",
+                constrained=True,
+                target_canvas_width=12,
+                panel_header_mode="basic",
+                use_ascii=True,
+            ),
+        )
+        output = renderer.render()
+
+        self.assertIn("=== Panel P1/3", output)
+        self.assertIn("=== Panel P2/3", output)
+        self.assertIn("=== Panel P3/3", output)
+        self.assertIn("Connectors:", output)
+        self.assertIn("-> [P2] R->A1", output)
+        self.assertIn("from [P1] -> A1 (R->A1)", output)
+
+    def test_constrained_render_respects_connector_style_none(self):
+        graph = nx.DiGraph()
+        graph.add_edge("R", "A1")
+        graph.add_edge("R", "A2")
+        graph.add_edge("R", "A3")
+        graph.add_edge("R", "A4")
+        graph.add_edge("A1", "B1")
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="layered",
+                constrained=True,
+                target_canvas_width=12,
+                cross_partition_edge_style="none",
+                use_ascii=True,
+            ),
+        )
+        output = renderer.render()
+
+        self.assertNotIn("Connectors:", output)
+        self.assertNotIn("-> [P", output)
+
+    def test_constrained_render_lineage_headers_include_roots_and_rank_ranges(self):
+        graph = nx.DiGraph()
+        graph.add_edge("R", "A1")
+        graph.add_edge("R", "A2")
+        graph.add_edge("R", "A3")
+        graph.add_edge("R", "A4")
+        graph.add_edge("A1", "B1")
+        graph.add_edge("A2", "B2")
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="layered",
+                constrained=True,
+                target_canvas_width=12,
+                panel_header_mode="lineage",
+                use_ascii=True,
+            ),
+        )
+        output = renderer.render()
+
+        self.assertIn("ranks=", output)
+        self.assertIn("roots=", output)
+
     def test_file_writing(self):
         """Test writing to file with proper encoding."""
 
@@ -2165,6 +2243,14 @@ class TestLayoutOptions(unittest.TestCase):
     def test_partition_overlap_must_be_non_negative(self):
         with self.assertRaises(ValueError):
             LayoutOptions(partition_overlap=-1)
+
+    def test_panel_header_mode_defaults_to_basic(self):
+        options = LayoutOptions()
+        self.assertEqual(options.panel_header_mode, "basic")
+
+    def test_invalid_panel_header_mode_raises(self):
+        with self.assertRaises(ValueError):
+            LayoutOptions(panel_header_mode="invalid")
 
     def test_invalid_edge_color_mode(self):
         with self.assertRaises(ValueError):

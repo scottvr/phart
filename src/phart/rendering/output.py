@@ -27,7 +27,7 @@ def normalized_canvas_rows(renderer: ASCIIRenderer) -> List[str]:
 
 
 def render_ditaa(renderer: ASCIIRenderer, *, wrap_plantuml: bool = False) -> str:
-    renderer.render()
+    renderer._render_single_canvas()
     rows = normalized_canvas_rows(renderer)
     text = "\n".join(rows)
     text = ANSI_ESCAPE_RE.sub("", text)
@@ -51,7 +51,7 @@ def render_svg(
     fg_color: str = "#111111",
     bg_color: str = "#ffffff",
 ) -> str:
-    renderer.render()
+    renderer._render_single_canvas()
     rows = normalized_canvas_rows(renderer)
     height = len(rows)
     width = max((len(row) for row in rows), default=0)
@@ -116,7 +116,7 @@ def render_html(
     bg_color: str = "#ffffff",
     font_family: str = "monospace",
 ) -> str:
-    renderer.render()
+    renderer._render_single_canvas()
     rows = normalized_canvas_rows(renderer)
     html_lines: List[str] = []
     html_lines.append("<!DOCTYPE html>")
@@ -201,7 +201,7 @@ def render_as_mmd(
     type: str = "flowchart",
     direction: str = "TD",
 ) -> str:
-    renderer.render()
+    renderer._render_single_canvas()
     type = "flowchart"
     direction = "TD"
     return "\n".join([type, direction])
@@ -212,7 +212,7 @@ def render_latex_markdown(
     *,
     fg_color: str = "#111111",
 ) -> str:
-    renderer.render()
+    renderer._render_single_canvas()
     rows = normalized_canvas_rows(renderer)
     latex_lines: List[str] = []
     for y, row in enumerate(rows):

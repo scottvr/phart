@@ -42,11 +42,13 @@ New options:
 - `--partition-overlap N` (default `0`; duplicate context columns/rows)
 - `--cross-partition-edge-style {stub,none}` (default `stub`)
 - `--partition-order {natural,size}` (default `natural`)
+- `--panel-headers {none,basic,lineage}` (default `basic`)
 
 Notes:
 
 - `auto` width/height uses terminal dimensions only when writing to terminal.
 - Existing `--paginate-output-width/height` remains a post-render viewport feature.
+- In constrained mode, text output is emitted as multi-panel output by default.
 
 ## 6. Conceptual Model
 
@@ -189,8 +191,8 @@ Phase A:
 - [x] Down/up flow support in constrained mode
 - [x] Deterministic partition assignment and ordering (`partition_order`)
 - [x] `PartitionPlan` metadata with cross-partition edge metadata
-- [ ] Connector stub rendering in output panels
-- [ ] Dedicated multi-panel output UX
+- [x] Connector stub rendering in output panels
+- [x] Dedicated multi-panel output UX
 
 Phase B:
 
@@ -207,7 +209,7 @@ Phase C:
 Suggested PR checklist:
 
 - [x] PR1: constrained mode core + partition metadata
-- [ ] PR2: panelized output mode + connector stubs
+- [x] PR2: panelized output mode + connector stubs
 - [ ] PR3: style-rule targeting for connectors + panel headers
 - [ ] PR4: height/left-right support + overlap rendering
 - [ ] PR5: affinity tuning + connector compaction + metadata export finalization

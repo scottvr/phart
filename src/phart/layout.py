@@ -28,6 +28,7 @@ class CrossPartitionEdge:
 @dataclass(frozen=True)
 class PartitionPlan:
     partitions: List[List[Any]]
+    partition_layer_ranges: List[Tuple[int, int]]
     node_to_partition: Dict[Any, int]
     cross_partition_edges: List[CrossPartitionEdge]
 
@@ -54,9 +55,7 @@ class LayoutManager:
                             self.options.get_text_display_width(line)
                             for line in nodes_mod.resolved_node_label_lines(
                                 self.options,
-                                self.graph.nodes[node]
-                                if node in self.graph
-                                else {},
+                                self.graph.nodes[node] if node in self.graph else {},
                                 node,
                             )
                         ),
@@ -1398,25 +1397,33 @@ class LayoutManager:
         if not ordered_layers:
             self.partition_plan = PartitionPlan(
                 partitions=[],
+                partition_layer_ranges=[],
                 node_to_partition={},
                 cross_partition_edges=[],
             )
             return {}
 
-        layer_widths = [self._layer_row_width(layer, spacing) for layer in ordered_layers]
+        layer_widths = [
+            self._layer_row_width(layer, spacing) for layer in ordered_layers
+        ]
         base_ranges = self._partition_layer_ranges(layer_widths, target_width)
 
         ordered_indices = list(range(len(base_ranges)))
         if self.options.partition_order == "size":
             ordered_indices.sort(
                 key=lambda idx: (
-                    -sum(len(ordered_layers[layer_idx]) for layer_idx in range(*base_ranges[idx])),
+                    -sum(
+                        len(ordered_layers[layer_idx])
+                        for layer_idx in range(*base_ranges[idx])
+                    ),
                     idx,
                 )
             )
 
         rendered_ranges = [base_ranges[idx] for idx in ordered_indices]
-        width_by_range = [max(layer_widths[start:end], default=0) for start, end in rendered_ranges]
+        width_by_range = [
+            max(layer_widths[start:end], default=0) for start, end in rendered_ranges
+        ]
 
         positions: Dict[Any, Tuple[int, int]] = {}
         node_to_partition: Dict[Any, int] = {}
@@ -1472,6 +1479,7 @@ class LayoutManager:
 
         self.partition_plan = PartitionPlan(
             partitions=plan_partitions,
+            partition_layer_ranges=rendered_ranges,
             node_to_partition=node_to_partition,
             cross_partition_edges=cross_partition_edges,
         )

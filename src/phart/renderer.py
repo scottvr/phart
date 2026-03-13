@@ -4,6 +4,7 @@ import io
 import os
 import sys
 
+from dataclasses import fields
 from typing import Any, ClassVar, Dict, List, Optional, Set, TextIO, Tuple, cast
 
 import networkx as nx  # type: ignore
@@ -583,11 +584,163 @@ class ASCIIRenderer:
             start_anchor[1] - end_anchor[1]
         )
 
-    def render(
-        self, print_config: Optional[bool] = False, *, markdown_safe: bool = False
+    def _render_panel_options(self) -> LayoutOptions:
+        option_kwargs: Dict[str, Any] = {}
+        for field in fields(LayoutOptions):
+            if not field.init:
+                continue
+            option_kwargs[field.name] = getattr(self.options, field.name)
+        option_kwargs["constrained"] = False
+        return LayoutOptions(**option_kwargs)
+
+    def _panel_header_line(
+        self,
+        *,
+        partition_idx: int,
+        total_partitions: int,
+        panel_nodes: List[Any],
+        primary_nodes: List[Any],
     ) -> str:
-        """Render the graph as ASCII art."""
-        positions, width, height = self.layout_manager.calculate_layout()
+        mode = self.options.panel_header_mode
+        if mode == "none":
+            return ""
+
+        label = f"P{partition_idx + 1}/{total_partitions}"
+        if mode == "basic":
+            return f"=== Panel {label} (nodes={len(panel_nodes)}) ==="
+
+        rank_text = ""
+        plan = self.layout_manager.partition_plan
+        if plan is not None and partition_idx < len(plan.partition_layer_ranges):
+            start_rank, end_rank = plan.partition_layer_ranges[partition_idx]
+            rank_text = f"ranks={start_rank}-{max(start_rank, end_rank - 1)}"
+
+        roots: List[Any] = []
+        if self.graph.is_directed() and plan is not None:
+            for node in primary_nodes:
+                preds = list(self.graph.predecessors(node))
+                if not preds or any(
+                    plan.node_to_partition.get(pred) != partition_idx for pred in preds
+                ):
+                    roots.append(node)
+        else:
+            roots = list(primary_nodes)
+
+        roots_sorted = sorted(roots, key=lambda node: str(node))
+        if len(roots_sorted) > 3:
+            root_text = ", ".join(str(node) for node in roots_sorted[:3]) + ", ..."
+        elif roots_sorted:
+            root_text = ", ".join(str(node) for node in roots_sorted)
+        else:
+            root_text = "-"
+
+        parts = [f"=== Panel {label}"]
+        if rank_text:
+            parts.append(rank_text)
+        parts.append(f"roots={root_text}")
+        return " | ".join(parts) + " ==="
+
+    def _panel_connector_lines(self, partition_idx: int) -> List[str]:
+        plan = self.layout_manager.partition_plan
+        if plan is None:
+            return []
+        if self.options.cross_partition_edge_style == "none":
+            return []
+
+        incoming = [
+            edge
+            for edge in plan.cross_partition_edges
+            if edge.dest_partition == partition_idx
+        ]
+        outgoing = [
+            edge
+            for edge in plan.cross_partition_edges
+            if edge.source_partition == partition_idx
+        ]
+        if not incoming and not outgoing:
+            return []
+
+        lines = ["Connectors:"]
+        for edge in sorted(
+            incoming,
+            key=lambda item: (item.source_partition, str(item.u), str(item.v)),
+        ):
+            lines.append(
+                f"  from [P{edge.source_partition + 1}] -> {edge.v} ({edge.edge_id})"
+            )
+        for edge in sorted(
+            outgoing,
+            key=lambda item: (item.dest_partition, str(item.u), str(item.v)),
+        ):
+            lines.append(f"  -> [P{edge.dest_partition + 1}] {edge.edge_id}")
+        return lines
+
+    def _render_constrained_panels(self, *, markdown_safe: bool = False) -> str:
+        plan = self.layout_manager.partition_plan
+        if plan is None:
+            return self._render_single_canvas(markdown_safe=markdown_safe)
+
+        panel_count = len(plan.partitions)
+        panel_blocks: List[str] = []
+        for partition_idx, panel_nodes in enumerate(plan.partitions):
+            panel_node_set = {node for node in panel_nodes if node in self.graph}
+            primary_nodes = [
+                node
+                for node in panel_nodes
+                if plan.node_to_partition.get(node) == partition_idx
+            ]
+
+            panel_graph: nx.DiGraph = nx.DiGraph()
+            for node in panel_nodes:
+                if node not in self.graph:
+                    continue
+                panel_graph.add_node(node, **dict(self.graph.nodes[node]))
+
+            for u, v, data in self.graph.edges(data=True):
+                if u not in panel_node_set or v not in panel_node_set:
+                    continue
+                if plan.node_to_partition.get(u) != partition_idx:
+                    continue
+                if plan.node_to_partition.get(v) != partition_idx:
+                    continue
+                panel_graph.add_edge(u, v, **dict(data))
+
+            panel_renderer = ASCIIRenderer(
+                panel_graph, options=self._render_panel_options()
+            )
+            panel_text = panel_renderer._render_single_canvas(
+                markdown_safe=markdown_safe
+            )
+
+            block_lines: List[str] = []
+            header = self._panel_header_line(
+                partition_idx=partition_idx,
+                total_partitions=panel_count,
+                panel_nodes=panel_nodes,
+                primary_nodes=primary_nodes,
+            )
+            if header:
+                block_lines.append(header)
+            if panel_text:
+                block_lines.append(panel_text)
+            block_lines.extend(self._panel_connector_lines(partition_idx))
+            panel_blocks.append("\n".join(block_lines).rstrip())
+
+        return "\n\n".join(block for block in panel_blocks if block)
+
+    def _render_single_canvas(
+        self,
+        print_config: Optional[bool] = False,
+        *,
+        markdown_safe: bool = False,
+        precomputed_layout: Optional[
+            Tuple[Dict[str, Tuple[int, int]], int, int]
+        ] = None,
+    ) -> str:
+        if precomputed_layout is None:
+            positions, width, height = self.layout_manager.calculate_layout()
+        else:
+            positions, width, height = precomputed_layout
         if not positions:
             return ""
 
@@ -642,6 +795,25 @@ class ASCIIRenderer:
 
             text = apply_padding_char(text, padding_char=padding_char)
         return text
+
+    def render(
+        self, print_config: Optional[bool] = False, *, markdown_safe: bool = False
+    ) -> str:
+        """Render the graph as ASCII art."""
+        layout = self.layout_manager.calculate_layout()
+        positions, _width, _height = layout
+        if not positions:
+            return ""
+
+        plan = self.layout_manager.partition_plan
+        if self.options.constrained and plan is not None and len(plan.partitions) > 1:
+            return self._render_constrained_panels(markdown_safe=markdown_safe)
+
+        return self._render_single_canvas(
+            print_config=print_config,
+            markdown_safe=markdown_safe,
+            precomputed_layout=layout,
+        )
 
     def draw(self, file: Optional[TextIO] = None) -> None:
         """
@@ -824,7 +996,9 @@ class ASCIIRenderer:
         if edge_label_attr:
             for _start, _end, edge_data in self.graph.edges(data=True):
                 label = (
-                    edge_data.get(edge_label_attr) if isinstance(edge_data, dict) else None
+                    edge_data.get(edge_label_attr)
+                    if isinstance(edge_data, dict)
+                    else None
                 )
                 if label is None:
                     continue
@@ -969,6 +1143,7 @@ def merge_layout_options(
         "partition_overlap",
         "cross_partition_edge_style",
         "partition_order",
+        "panel_header_mode",
         "node_order_mode",
         "node_order_attr",
         "node_order_reverse",

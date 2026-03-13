@@ -1130,6 +1130,8 @@ def main():
             "stub",
             "--partition-order",
             "size",
+            "--panel-headers",
+            "lineage",
             str(self.test_text_file),
         ]
         args, _unknown, explicit_layout_fields, _module_argv = parse_args()
@@ -1142,6 +1144,7 @@ def main():
         self.assertEqual(options.partition_overlap, 2)
         self.assertEqual(options.cross_partition_edge_style, "stub")
         self.assertEqual(options.partition_order, "size")
+        self.assertEqual(options.panel_header_mode, "lineage")
 
     def test_constrained_requires_target_canvas_width(self):
         sys.argv = [

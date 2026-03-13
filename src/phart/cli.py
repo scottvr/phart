@@ -56,6 +56,7 @@ CLI_LAYOUT_FIELD_MAP = {
     "--partition-overlap": {"partition_overlap"},
     "--cross-partition-edge-style": {"cross_partition_edge_style"},
     "--partition-order": {"partition_order"},
+    "--panel-headers": {"panel_header_mode"},
     "--bboxes": {"bboxes"},
     "--bbox": {"bboxes"},
     "--hpad": {"hpad"},
@@ -429,6 +430,12 @@ def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
         choices=["natural", "size"],
         default="natural",
         help="Constrained partition ordering: natural rank order or size (default: natural)",
+    )
+    parser.add_argument(
+        "--panel-headers",
+        choices=["none", "basic", "lineage"],
+        default="basic",
+        help="Constrained panel header mode: none, basic (default), or lineage",
     )
     parser.add_argument(
         "--bboxes",
@@ -913,7 +920,9 @@ def create_layout_options(
         target_canvas_width is not None
         and args.partition_overlap >= target_canvas_width
     ):
-        raise ValueError("--partition-overlap must be smaller than --target-canvas-width")
+        raise ValueError(
+            "--partition-overlap must be smaller than --target-canvas-width"
+        )
     if (
         target_canvas_height is not None
         and args.partition_overlap >= target_canvas_height
@@ -946,6 +955,7 @@ def create_layout_options(
         partition_overlap=args.partition_overlap,
         cross_partition_edge_style=args.cross_partition_edge_style,
         partition_order=args.partition_order,
+        panel_header_mode=args.panel_headers,
         bboxes=args.bboxes,
         hpad=args.hpad,
         vpad=args.vpad,

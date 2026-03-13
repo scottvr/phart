@@ -126,6 +126,7 @@ class LayoutOptions:
     partition_overlap: int = field(default=0)
     cross_partition_edge_style: str = field(default="stub")  # stub or none
     partition_order: str = field(default="natural")  # natural or size
+    panel_header_mode: str = field(default="basic")  # none, basic, or lineage
     node_order_mode: str = field(
         default="layout_default"
     )  # layout_default, preserve, alpha, natural, numeric
@@ -342,6 +343,10 @@ class LayoutOptions:
             self.partition_order = self.partition_order.strip().lower()
         if self.partition_order not in {"natural", "size"}:
             raise ValueError("partition_order must be one of: natural, size")
+        if isinstance(self.panel_header_mode, str):
+            self.panel_header_mode = self.panel_header_mode.strip().lower()
+        if self.panel_header_mode not in {"none", "basic", "lineage"}:
+            raise ValueError("panel_header_mode must be one of: none, basic, lineage")
         if self.constrained and self.target_canvas_width is None:
             raise ValueError("constrained layout requires target_canvas_width")
 
