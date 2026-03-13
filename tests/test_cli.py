@@ -478,20 +478,20 @@ def main():
         self.assertIn("C", content)
         self.assertNotIn("Error", self.stderr.getvalue())
 
-    def test_markdown_output_auto_uses_nbsp_padding(self):
+    def test_markdown_extension_does_not_trigger_nbsp_in_auto_mode(self):
         output_file = Path(self.temp_dir) / "diagram.md"
         sys.argv = ["phart", str(self.py_main_file), "--output", str(output_file)]
         exit_code = main()
         self.assertEqual(exit_code, 0)
         content = output_file.read_text(encoding="utf-8")
-        self.assertIn("\u00a0", content)
+        self.assertNotIn("\u00a0", content)
 
-    def test_markdown_output_whitespace_override_ascii_space(self):
-        output_file = Path(self.temp_dir) / "diagram.md"
+    def test_text_output_whitespace_nbsp_override(self):
+        output_file = Path(self.temp_dir) / "diagram.txt"
         sys.argv = [
             "phart",
             "--whitespace",
-            "ascii-space",
+            "nbsp",
             str(self.py_main_file),
             "--output",
             str(output_file),
@@ -499,7 +499,7 @@ def main():
         exit_code = main()
         self.assertEqual(exit_code, 0)
         content = output_file.read_text(encoding="utf-8")
-        self.assertNotIn("\u00a0", content)
+        self.assertIn("\u00a0", content)
 
     def test_python_with_main_block(self):
         """Test executing Python file with __main__ block."""

@@ -508,7 +508,7 @@ options:
   --svg-fg SVG_FG       Foreground color for SVG/HTML/LaTeX output
   --svg-bg SVG_BG       Background color for SVG/HTML output
   --whitespace {auto,ascii-space,nbsp}
-                        Text output whitespace mode: auto (default), ascii-space, or nbsp. In auto mode, .md/.markdown outputs use nbsp for padding.
+                        Text output whitespace mode: auto (default), ascii-space, or nbsp. In auto mode, output-format defaults are used.
   --paginate-output-width [WIDTH|auto]
                         Paginate text output horizontally by terminal width (auto) or WIDTH columns. With no value, defaults to auto.
   --paginate-output-height [HEIGHT|auto]

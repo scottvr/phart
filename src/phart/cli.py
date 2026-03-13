@@ -74,8 +74,6 @@ CLI_LAYOUT_FIELD_MAP = {
     "--whitespace": {"whitespace_mode"},
 }
 
-MARKDOWN_EXTENSIONS = {".md", ".markdown", ".mdown", ".mkd", ".mdx"}
-
 
 def _normalize_color_args(argv: list[str]) -> list[str]:
     """Normalize bare --colors usage to avoid optional-value positional ambiguity.
@@ -151,6 +149,20 @@ def _collect_explicit_layout_fields(
         explicit_fields.update(_fields_for_option_token(opt_name))
 
     return explicit_fields
+
+
+def _resolve_markdown_safe_text(*, output_format: str, whitespace_mode: str) -> bool:
+    """Resolve whether text rendering should replace ASCII spaces with NBSP."""
+    normalized_mode = str(whitespace_mode).strip().lower().replace("-", "_")
+    if output_format != "text":
+        return False
+    if normalized_mode == "nbsp":
+        return True
+    if normalized_mode in {"auto", "ascii_space"}:
+        return False
+    raise ValueError(
+        "whitespace mode must be one of: auto, ascii-space, or nbsp"
+    )
 
 
 def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
@@ -470,7 +482,7 @@ def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
         default="auto",
         help=(
             "Text output whitespace mode: auto (default), ascii-space, or nbsp. "
-            "In auto mode, .md/.markdown outputs use nbsp for padding."
+            "In auto mode, output-format defaults are used."
         ),
     )
     parser.add_argument(
@@ -758,11 +770,9 @@ def create_layout_options(
 def main() -> Optional[int]:
     """CLI entry point for PHART."""
     args, unknown, explicit_layout_fields, module_argv = parse_args()
-    markdown_target = (
-        args.output is not None and args.output.suffix.lower() in MARKDOWN_EXTENSIONS
-    )
-    markdown_safe_text = args.whitespace == "nbsp" or (
-        args.whitespace == "auto" and markdown_target
+    markdown_safe_text = _resolve_markdown_safe_text(
+        output_format=args.output_format,
+        whitespace_mode=args.whitespace,
     )
 
     try:
