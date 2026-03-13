@@ -169,8 +169,11 @@ Phase C:
 ## 14. Open Questions
 
 - Do we want a dedicated output mode for multi-panel files by default?
+  YES. in PR2.
 - Should connector stubs be style-rule targetable (e.g., `target=connector`)?
+  Yes, once stubs are rendered.
 - Should panel headers include lineage summary (root ids, rank range)?
+  Yes. ( none|basic|lineage ), default to basic.
 
 ## 15. Implementation Tracker (As of March 13, 2026)
 
