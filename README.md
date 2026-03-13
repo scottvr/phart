@@ -425,7 +425,8 @@ usage: phart [-h] [--output OUTPUT] [--version] [--output-format {ditaa,ditaa-pu
              [--layer-spacing LAYER_SPACING] [--charset {ascii,ansi,unicode}] [--ascii] [--function FUNCTION] [--binary-tree]
              [--layout {arf,auto,bfs,bipartite,circular,hierarchical,kamada-kawai,layered,multipartite,planar,random,shell,spiral,spring,vertical}]
              [--node-order {layout-default,preserve,alpha,natural,numeric}] [--node-order-attr NODE_ORDER_ATTR] [--node-order-reverse] [--flow-direction {down,up,left,right}] [--bboxes] [--hpad HPAD]
-             [--vpad VPAD] [--uniform] [--edge-anchors {auto,center,ports}] [--shared-ports {any,minimize,none}] [--bidirectional-mode {coalesce,separate}] [--labels] [--node-label-lines SPEC]
+             [--vpad VPAD] [--uniform] [--edge-anchors {auto,center,ports}] [--shared-ports {any,minimize,none}] [--bidirectional-mode {coalesce,separate}] [--labels] [--node-labels [ATTR]]
+             [--edge-labels [ATTR]] [--node-label-lines SPEC]
              [--node-label-sep NODE_LABEL_SEP] [--node-label-max-lines NODE_LABEL_MAX_LINES] [--bbox-multiline-labels] [--colors {attr,none,path,source,target}] [--no-color-nodes]
              [--edge-glyph-preset {default,thick,double}] [--edge-arrow-style {ascii,unicode}] [--edge-color-rule RULE] [--style-rule RULE] [--style-rules-file FILE] [--svg-cell-size SVG_CELL_SIZE]
              [--svg-font-family SVG_FONT_FAMILY] [--svg-text-mode {text,path}] [--svg-font-path SVG_FONT_PATH] [--svg-fg SVG_FG] [--svg-bg SVG_BG] [--whitespace {auto,ascii-space,nbsp}]
@@ -476,9 +477,11 @@ options:
                         Terminal port sharing policy: any (default), minimize (prefer unused points on the same face), or none (avoid sharing until the node has no free terminal slots)
   --bidirectional-mode {coalesce,separate}
                         How to render reciprocal directed edges: coalesce (default) draws one shared route with arrows at both ends; separate draws each direction independently
-  --labels              Use node labels for displayed node text. If 'label' is missing, synthesize text from node attributes.
+  --labels              Enable both node and edge labels using each element's 'label' attribute. Equivalent to --node-labels --edge-labels.
+  --node-labels [ATTR]  Enable node labels. Optionally provide the node attribute name to display (default: label). Use 'none' to disable node labels explicitly.
+  --edge-labels [ATTR]  Enable edge labels. Optionally provide the edge attribute name to display (default: label). Use 'none' to disable edge labels explicitly.
   --node-label-lines SPEC
-                        Comma-separated ordered label line specs used when --labels is enabled and node 'label' is absent. Supports dotted paths (e.g. name,birt.date) and special token 'lifespan'.
+                        Comma-separated ordered label line specs used when node labels are enabled and node 'label' is absent. Supports dotted paths (e.g. name,birt.date) and special token 'lifespan'.
   --node-label-sep NODE_LABEL_SEP
                         Separator for joining multi-value parts within one synthesized label line
   --node-label-max-lines NODE_LABEL_MAX_LINES
@@ -525,7 +528,7 @@ options:
 
 ### Label Synthesis and Multiline BBoxes
 
-When `--labels` is enabled and a node does not define `label`, PHART can synthesize label text from ordered attribute paths:
+When node labels are enabled with `--labels` (or `--node-labels`), and a node does not define `label`, PHART can synthesize label text from ordered attribute paths:
 
 ```bash
 phart --labels --bboxes --bbox-multiline-labels \

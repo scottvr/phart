@@ -39,6 +39,15 @@ class TestCLI(unittest.TestCase):
         }
         """
         self.labeled_dot_file.write_text(labeled_dot, encoding="utf-8")
+        self.labels_and_edge_dot_file = Path(self.temp_dir) / "labels_and_edge.dot"
+        labels_and_edge_dot = """
+        digraph {
+            n1 [label="Alpha Node", display_name="Alpha Name"];
+            n2 [label="Beta Node", display_name="Beta Name"];
+            n1 -> n2 [label="REL_LABEL", rel="friend"];
+        }
+        """
+        self.labels_and_edge_dot_file.write_text(labels_and_edge_dot, encoding="utf-8")
         self.edge_attr_dot_file = Path(self.temp_dir) / "edge_attr.dot"
         edge_attr_dot = """
         digraph {
@@ -798,6 +807,54 @@ def main():
         self.assertIn("Beta Node", output)
         self.assertNotIn("n1", output)
 
+    def test_labels_absent_disables_node_and_edge_labels(self):
+        sys.argv = ["phart", str(self.labels_and_edge_dot_file)]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertIn("n1", output)
+        self.assertIn("n2", output)
+        self.assertNotIn("Alpha Node", output)
+        self.assertNotIn("REL_LABEL", output)
+
+    def test_labels_flag_enables_edge_labels(self):
+        sys.argv = ["phart", "--labels", str(self.labels_and_edge_dot_file)]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertIn("Alpha Node", output)
+        self.assertIn("Beta Node", output)
+        self.assertIn("REL_LABEL", output)
+
+    def test_node_labels_flag_supports_custom_attribute(self):
+        sys.argv = [
+            "phart",
+            "--node-labels",
+            "display_name",
+            str(self.labels_and_edge_dot_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertIn("Alpha Name", output)
+        self.assertIn("Beta Name", output)
+        self.assertNotIn("REL_LABEL", output)
+
+    def test_edge_labels_flag_supports_custom_attribute(self):
+        sys.argv = ["phart", "--edge-labels", "rel", str(self.labels_and_edge_dot_file)]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertIn("friend", output)
+        self.assertNotIn("Alpha Node", output)
+
+    def test_node_labels_bare_flag_does_not_consume_input_path(self):
+        sys.argv = ["phart", "--node-labels", str(self.labeled_dot_file)]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertIn("Alpha Node", output)
+
     def test_colors_flag_emits_ansi_in_unicode_mode(self):
         sys.argv = ["phart", "--colors", str(self.test_text_file)]
         exit_code = main()
@@ -1100,7 +1157,25 @@ def main():
         options = create_layout_options(args, explicit_layout_fields)
 
         self.assertTrue(options.use_labels)
+        self.assertEqual(options.node_label_attr, "label")
+        self.assertEqual(options.edge_label_attr, "label")
         self.assertEqual(options.node_label_lines, ("name", "lifespan", "birt.date"))
         self.assertEqual(options.node_label_sep, " | ")
         self.assertEqual(options.node_label_max_lines, 2)
         self.assertTrue(options.bbox_multiline_labels)
+
+    def test_node_and_edge_label_flags_populate_layout_options(self):
+        sys.argv = [
+            "phart",
+            "--node-labels",
+            "display_name",
+            "--edge-labels",
+            "rel",
+            str(self.test_text_file),
+        ]
+        args, _unknown, explicit_layout_fields, _module_argv = parse_args()
+        options = create_layout_options(args, explicit_layout_fields)
+
+        self.assertTrue(options.use_labels)
+        self.assertEqual(options.node_label_attr, "display_name")
+        self.assertEqual(options.edge_label_attr, "rel")

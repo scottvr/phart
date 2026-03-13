@@ -388,11 +388,12 @@ class ASCIIRenderer:
             # and depending on the disparity, maybe we make them longer here. Or, we  couldl expose a flag
             for u, v in self.graph.edges():
                 ulabel = vlabel = ""
-                if self.options.use_labels:
-                    if "label" in self.graph.nodes[u]:
-                        ulabel = self.graph.nodes[u]["label"]
-                    if "label" in self.graph.nodes[v]:
-                        vlabel = self.graph.nodes[v]["label"]
+                node_label_attr = self.options.node_label_attr
+                if node_label_attr:
+                    if node_label_attr in self.graph.nodes[u]:
+                        ulabel = self.graph.nodes[u][node_label_attr]
+                    if node_label_attr in self.graph.nodes[v]:
+                        vlabel = self.graph.nodes[v][node_label_attr]
                 if ulabel == "":
                     ulabel = u
                 if vlabel == "":
@@ -819,16 +820,21 @@ class ASCIIRenderer:
         min_width = max_right + 1
         min_height = max_bottom + 2
         max_edge_label_width = 0
-        for _start, _end, edge_data in self.graph.edges(data=True):
-            label = edge_data.get("label") if isinstance(edge_data, dict) else None
-            if label is None:
-                continue
-            normalized = self._normalize_label_value(label)
-            if not normalized:
-                continue
-            max_edge_label_width = max(
-                max_edge_label_width, self.options.get_text_display_width(normalized)
-            )
+        edge_label_attr = self.options.edge_label_attr
+        if edge_label_attr:
+            for _start, _end, edge_data in self.graph.edges(data=True):
+                label = (
+                    edge_data.get(edge_label_attr) if isinstance(edge_data, dict) else None
+                )
+                if label is None:
+                    continue
+                normalized = self._normalize_label_value(label)
+                if not normalized:
+                    continue
+                max_edge_label_width = max(
+                    max_edge_label_width,
+                    self.options.get_text_display_width(normalized),
+                )
         if max_edge_label_width > 0:
             min_width += max_edge_label_width + 2
 
@@ -972,6 +978,8 @@ def merge_layout_options(
         "shared_ports_mode",
         "bidirectional_mode",
         "use_labels",
+        "node_label_attr",
+        "edge_label_attr",
         "node_label_lines",
         "node_label_sep",
         "node_label_max_lines",

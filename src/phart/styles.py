@@ -133,7 +133,13 @@ class LayoutOptions:
     edge_anchor_mode: str = field(default="auto")  # auto, center, or ports
     shared_ports_mode: str = field(default="any")  # any, minimize, or none
     bidirectional_mode: str = field(default="coalesce")  # coalesce or separate
-    use_labels: bool = field(default=False)  # Prefer node labels for display text
+    use_labels: bool = field(default=False)  # Legacy alias: enable node+edge labels
+    node_label_attr: Optional[str] = field(
+        default=None
+    )  # Node attribute name for display labels; None disables node labels
+    edge_label_attr: Optional[str] = field(
+        default=None
+    )  # Edge attribute name for display labels; None disables edge labels
     node_label_lines: tuple[str, ...] = field(
         default_factory=tuple
     )  # Ordered attribute-path specs for synthesized labels
@@ -358,6 +364,15 @@ class LayoutOptions:
         if self.whitespace_mode not in {"auto", "ascii_space", "nbsp"}:
             raise ValueError("whitespace_mode must be one of: auto, ascii_space, nbsp")
 
+        self.node_label_attr = self._normalize_label_attr_name(self.node_label_attr)
+        self.edge_label_attr = self._normalize_label_attr_name(self.edge_label_attr)
+        if self.use_labels:
+            if self.node_label_attr is None:
+                self.node_label_attr = "label"
+            if self.edge_label_attr is None:
+                self.edge_label_attr = "label"
+        self.use_labels = bool(self.node_label_attr or self.edge_label_attr)
+
         if self.node_label_max_lines is not None and self.node_label_max_lines < 1:
             raise ValueError("node_label_max_lines must be >= 1 when provided")
 
@@ -410,6 +425,17 @@ class LayoutOptions:
         if len(text) >= 2 and text[0] == text[-1] and text[0] in {"'", '"'}:
             text = text[1:-1]
         return text.strip().lower()
+
+    @staticmethod
+    def _normalize_label_attr_name(value: Optional[Any]) -> Optional[str]:
+        if value is None:
+            return None
+        text = str(value).strip()
+        if not text:
+            return None
+        if text.lower() == "none":
+            return None
+        return text
 
     def get_effective_node_spacing(self, has_edges: bool = True) -> int:
         """Calculate effective node spacing considering edge requirements.

@@ -59,7 +59,9 @@ CLI_LAYOUT_FIELD_MAP = {
     "--edge-anchors": {"edge_anchor_mode"},
     "--shared-ports": {"shared_ports_mode"},
     "--bidirectional-mode": {"bidirectional_mode"},
-    "--labels": {"use_labels"},
+    "--labels": {"use_labels", "node_label_attr", "edge_label_attr"},
+    "--node-labels": {"node_label_attr"},
+    "--edge-labels": {"edge_label_attr"},
     "--node-label-lines": {"node_label_lines"},
     "--node-label-sep": {"node_label_sep"},
     "--node-label-max-lines": {"node_label_max_lines"},
@@ -109,6 +111,66 @@ def _normalize_color_args(argv: list[str]) -> list[str]:
         i += 1
 
     return normalized
+
+
+def _normalize_label_args(argv: list[str]) -> list[str]:
+    """Normalize bare --node-labels/--edge-labels usage.
+
+    Converts:
+      --node-labels                 -> --node-labels label
+      --node-labels <input>         -> --node-labels label <input>
+      --edge-labels                 -> --edge-labels label
+      --edge-labels <input>         -> --edge-labels label <input>
+
+    Ambiguous non-option tokens are treated as the positional input when there is no
+    other positional token later in argv.
+    """
+    normalized: list[str] = []
+    i = 0
+    label_flags = {"--node-labels", "--edge-labels"}
+    while i < len(argv):
+        token = argv[i]
+
+        if token == "--":
+            normalized.extend(argv[i:])
+            break
+
+        if token in label_flags:
+            next_token = argv[i + 1] if i + 1 < len(argv) else None
+            if next_token is None or next_token.startswith("-"):
+                normalized.extend([token, "label"])
+                i += 1
+                continue
+
+            remaining_cli_tokens: list[str] = []
+            for value in argv[i + 2 :]:
+                if value == "--":
+                    break
+                remaining_cli_tokens.append(value)
+            has_later_positional = any(
+                not value.startswith("-") for value in remaining_cli_tokens
+            )
+            if not has_later_positional:
+                normalized.extend([token, "label"])
+                i += 1
+                continue
+
+        normalized.append(token)
+        i += 1
+
+    return normalized
+
+
+def _normalize_label_attr(value: Optional[Any]) -> Optional[str]:
+    """Normalize label attribute text; 'none' disables labels."""
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    if text.lower() == "none":
+        return None
+    return text
 
 
 def _fields_for_option_token(opt_name: str) -> set[str]:
@@ -176,7 +238,7 @@ def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
         cli_raw_argv = raw_argv
         module_argv = []
 
-    argv = _normalize_color_args(cli_raw_argv)
+    argv = _normalize_label_args(_normalize_color_args(cli_raw_argv))
 
     parser = argparse.ArgumentParser(
         description="PHART: Python Hierarchical ASCII Rendering Tool"
@@ -349,8 +411,30 @@ def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
         "--labels",
         action="store_true",
         help=(
-            "Use node labels for displayed node text. "
-            "If 'label' is missing, synthesize text from node attributes."
+            "Enable both node and edge labels using each element's 'label' attribute. "
+            "Equivalent to --node-labels --edge-labels."
+        ),
+    )
+    parser.add_argument(
+        "--node-labels",
+        nargs="?",
+        const="label",
+        default=None,
+        metavar="ATTR",
+        help=(
+            "Enable node labels. Optionally provide the node attribute name to display "
+            "(default: label). Use 'none' to disable node labels explicitly."
+        ),
+    )
+    parser.add_argument(
+        "--edge-labels",
+        nargs="?",
+        const="label",
+        default=None,
+        metavar="ATTR",
+        help=(
+            "Enable edge labels. Optionally provide the edge attribute name to display "
+            "(default: label). Use 'none' to disable edge labels explicitly."
         ),
     )
     parser.add_argument(
@@ -730,6 +814,14 @@ def create_layout_options(
         )
     use_ascii = args.charset in {CharSet.ASCII, CharSet.ANSI} or args.use_legacy_ascii
     allow_ansi_in_ascii = args.charset == CharSet.ANSI and not args.use_legacy_ascii
+    node_label_attr = _normalize_label_attr(args.node_labels)
+    edge_label_attr = _normalize_label_attr(args.edge_labels)
+    if args.labels:
+        if node_label_attr is None:
+            node_label_attr = "label"
+        if edge_label_attr is None:
+            edge_label_attr = "label"
+
     options = LayoutOptions(
         node_style=node_style,
         node_spacing=args.node_spacing,
@@ -749,6 +841,8 @@ def create_layout_options(
         shared_ports_mode=args.shared_ports,
         bidirectional_mode=args.bidirectional_mode,
         use_labels=args.labels,
+        node_label_attr=node_label_attr,
+        edge_label_attr=edge_label_attr,
         node_label_lines=node_label_lines,
         node_label_sep=args.node_label_sep,
         node_label_max_lines=args.node_label_max_lines,

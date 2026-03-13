@@ -329,6 +329,7 @@ class TestASCIIRenderer(unittest.TestCase):
                 node_style=NodeStyle.MINIMAL,
                 use_ascii=True,
                 flow_direction=FlowDirection.RIGHT,
+                edge_label_attr="label",
             ),
         )
         result = renderer.render()
@@ -344,10 +345,26 @@ class TestASCIIRenderer(unittest.TestCase):
                 node_style=NodeStyle.MINIMAL,
                 use_ascii=True,
                 flow_direction=FlowDirection.DOWN,
+                edge_label_attr="label",
             ),
         )
         result = renderer.render()
         self.assertIn("E_V", result)
+
+    def test_edge_labels_are_disabled_by_default(self):
+        graph = nx.DiGraph()
+        graph.add_edge("A", "B", label="E_H")
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=True,
+                flow_direction=FlowDirection.RIGHT,
+            ),
+        )
+        result = renderer.render()
+        self.assertNotIn("E_H", result)
 
     def test_cjk_label_box_width_respects_display_columns(self):
         graph = nx.DiGraph()

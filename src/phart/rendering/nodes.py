@@ -34,21 +34,23 @@ def resolve_display_node_text(
     options: LayoutOptions, attrs: Dict[Any, Any], fallback_node: Any
 ) -> str:
     multiline = _allow_multiline_labels_for_options(options)
-    if options.use_labels:
-        label = attrs.get("label")
+    node_label_attr = options.node_label_attr
+    if node_label_attr:
+        label = attrs.get(node_label_attr)
         if label is not None:
             normalized = normalize_label_value(label, keep_newlines=multiline)
             if normalized:
                 return normalized
-        if options.node_label_lines:
-            synthesized = _synthesize_label_from_line_specs(options, attrs)
+        if node_label_attr == "label":
+            if options.node_label_lines:
+                synthesized = _synthesize_label_from_line_specs(options, attrs)
+                if synthesized:
+                    return synthesized
+            synthesized = _synthesize_label_from_node_attrs(attrs)
             if synthesized:
-                return synthesized
-        synthesized = _synthesize_label_from_node_attrs(attrs)
-        if synthesized:
-            normalized = normalize_label_value(synthesized, keep_newlines=multiline)
-            if normalized:
-                return normalized
+                normalized = normalize_label_value(synthesized, keep_newlines=multiline)
+                if normalized:
+                    return normalized
     return str(fallback_node)
 
 

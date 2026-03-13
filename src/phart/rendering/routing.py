@@ -245,8 +245,19 @@ def get_jog_row(
 
 
 def _edge_label_text(renderer: ASCIIRenderer, start: Any, end: Any) -> Optional[str]:
+    edge_label_attr = renderer.options.edge_label_attr
+    if not edge_label_attr:
+        return None
     edge_data = renderer.graph.get_edge_data(start, end) or {}
-    label = edge_data.get("label")
+    label: Any = None
+    if isinstance(edge_data, dict):
+        if edge_label_attr in edge_data:
+            label = edge_data.get(edge_label_attr)
+        else:
+            for candidate in edge_data.values():
+                if isinstance(candidate, dict) and edge_label_attr in candidate:
+                    label = candidate.get(edge_label_attr)
+                    break
     if label is None:
         return None
     text = renderer._normalize_label_value(label)
