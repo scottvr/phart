@@ -1619,6 +1619,73 @@ class TestASCIIRenderer(unittest.TestCase):
         self.assertIn(("Alice", "Bob"), renderer._edge_color_map)  # noqa: SLF001
         self.assertIsNotNone(renderer._edge_color_map[("Alice", "Bob")])  # noqa: SLF001
 
+    def test_edge_color_mode_attr_supports_style_rule_with_endpoint_attrs(self):
+        graph = nx.DiGraph()
+        graph.add_node("A", sex="M")
+        graph.add_node("B", sex="F")
+        graph.add_node("C", sex="M")
+        graph.add_edge("A", "B", role="spouse")
+        graph.add_edge("A", "C", role="spouse")
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=False,
+                ansi_colors=True,
+                edge_color_mode="attr",
+                style_rules=[
+                    {
+                        "target": "edge",
+                        "when": 'role == "spouse" and v.sex == "F"',
+                        "set": {"color": "green"},
+                    },
+                    {
+                        "target": "edge",
+                        "when": 'role == "spouse" and v.sex == "M"',
+                        "set": {"color": "blue"},
+                    },
+                ],
+                bboxes=True,
+                layer_spacing=4,
+            ),
+        )
+        renderer.render()
+        self.assertEqual(renderer._edge_color_map[("A", "B")], "\x1b[32m")  # noqa: SLF001
+        self.assertEqual(renderer._edge_color_map[("A", "C")], "\x1b[34m")  # noqa: SLF001
+
+    def test_edge_style_rule_priority_orders_matches(self):
+        graph = nx.DiGraph()
+        graph.add_node("A", sex="M")
+        graph.add_node("B", sex="F")
+        graph.add_edge("A", "B", role="spouse")
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=False,
+                ansi_colors=True,
+                edge_color_mode="attr",
+                style_rules=[
+                    {
+                        "target": "edge",
+                        "priority": 1,
+                        "when": 'role == "spouse"',
+                        "set": {"color": "red"},
+                    },
+                    {
+                        "target": "edge",
+                        "priority": 10,
+                        "when": 'role == "spouse" and v.sex == "F"',
+                        "set": {"color": "green"},
+                    },
+                ],
+                bboxes=True,
+                layer_spacing=4,
+            ),
+        )
+        renderer.render()
+        self.assertEqual(renderer._edge_color_map[("A", "B")], "\x1b[32m")  # noqa: SLF001
+
     def test_attr_mode_bidirectional_requires_rule_attribute_agreement(self):
         graph = nx.DiGraph()
         graph.add_edge("Alice", "Bob", relationship="friend")
@@ -1919,6 +1986,26 @@ class TestLayoutOptions(unittest.TestCase):
         self.assertEqual(
             options.edge_color_rules["relationship"]["friend"], "bright_green"
         )
+
+    def test_style_rules_are_compiled(self):
+        options = LayoutOptions(
+            style_rules=[
+                {
+                    "target": "edge",
+                    "when": 'role == "spouse"',
+                    "set": {"color": "blue"},
+                }
+            ]
+        )
+        self.assertEqual(len(options._compiled_style_rules), 1)  # noqa: SLF001
+
+    def test_style_rule_invalid_target_raises(self):
+        with self.assertRaises(ValueError):
+            LayoutOptions(
+                style_rules=[
+                    {"target": "bogus", "when": "true", "set": {"color": "blue"}}
+                ]
+            )
 
     def test_default_edge_color_mode_is_source(self):
         options = LayoutOptions()

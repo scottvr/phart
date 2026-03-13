@@ -2,9 +2,10 @@
 
 import sys
 import argparse
+import json
 import shutil
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Any
 
 from phart import __version__ as version
 from phart.renderer import ASCIIRenderer
@@ -66,6 +67,8 @@ CLI_LAYOUT_FIELD_MAP = {
     "--colors": {"ansi_colors", "edge_color_mode"},
     "--no-color-nodes": {"color_nodes"},
     "--edge-color-rule": {"edge_color_rules"},
+    "--style-rule": {"style_rules"},
+    "--style-rules-file": {"style_rules"},
     "--whitespace": {"whitespace_mode"},
 }
 
@@ -385,6 +388,27 @@ def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
         ),
     )
     parser.add_argument(
+        "--style-rule",
+        action="append",
+        default=[],
+        metavar="RULE",
+        help=(
+            "Advanced style rule expression. Format: "
+            "'<target>: <predicate> -> color=<color>' where target is edge|node. "
+            "Repeat to add multiple rules."
+        ),
+    )
+    parser.add_argument(
+        "--style-rules-file",
+        type=Path,
+        default=None,
+        metavar="FILE",
+        help=(
+            "JSON or YAML file containing {'rules': [...]} canonical style rules. "
+            "YAML requires PyYAML."
+        ),
+    )
+    parser.add_argument(
         "--svg-cell-size",
         type=int,
         default=12,
@@ -553,6 +577,98 @@ def _parse_edge_color_rules(rule_specs: list[str]) -> dict[str, dict[str, str]]:
     return parsed
 
 
+def _parse_style_rule_string(rule: str) -> dict[str, object]:
+    text = str(rule).strip()
+    if not text:
+        raise ValueError("Invalid --style-rule: rule cannot be empty")
+    if ":" not in text or "->" not in text:
+        raise ValueError(
+            f"Invalid --style-rule '{rule}'. Expected "
+            "<target>: <predicate> -> color=<color>[,<key>=<value>...]"
+        )
+    head, set_text = text.split("->", 1)
+    target_text, when_text = head.split(":", 1)
+    target = target_text.strip().lower()
+    if target not in {"edge", "node"}:
+        raise ValueError(
+            f"Invalid --style-rule '{rule}': target must be 'edge' or 'node'"
+        )
+    when = when_text.strip()
+    set_values: dict[str, str] = {}
+    for pair in str(set_text).split(","):
+        token = pair.strip()
+        if not token:
+            continue
+        if "=" not in token:
+            raise ValueError(
+                f"Invalid --style-rule '{rule}': expected <key>=<value> assignments"
+            )
+        key, value = token.split("=", 1)
+        key_text = key.strip().lower()
+        value_text = value.strip()
+        if not key_text or not value_text:
+            raise ValueError(
+                f"Invalid --style-rule '{rule}': assignment key/value cannot be empty"
+            )
+        set_values[key_text] = value_text
+    if not set_values:
+        raise ValueError(
+            f"Invalid --style-rule '{rule}': no assignments found after '->'"
+        )
+    return {
+        "target": target,
+        "when": when,
+        "set": set_values,
+    }
+
+
+def _load_style_rules_file(path: Path) -> list[dict[str, object]]:
+    if not path.exists():
+        raise ValueError(f"--style-rules-file not found: {path}")
+    raw_text = path.read_text(encoding="utf-8")
+    suffix = path.suffix.lower()
+    loaded: object
+    if suffix == ".json":
+        loaded = json.loads(raw_text)
+    else:
+        try:
+            import yaml
+        except Exception as exc:
+            raise ValueError(
+                "--style-rules-file YAML parsing requires PyYAML; "
+                "use JSON or install PyYAML"
+            ) from exc
+        loaded = yaml.safe_load(raw_text)
+
+    if not isinstance(loaded, dict):
+        raise ValueError("--style-rules-file must contain an object with key 'rules'")
+    rules = loaded.get("rules")
+    if not isinstance(rules, list):
+        raise ValueError("--style-rules-file must define 'rules' as a list")
+    parsed: list[dict[str, object]] = []
+    for idx, item in enumerate(rules):
+        if not isinstance(item, dict):
+            raise ValueError(f"--style-rules-file rules[{idx}] must be an object")
+        parsed.append(dict(item))
+    return parsed
+
+
+def _legacy_edge_rules_to_style_rules(
+    edge_color_rules: dict[str, dict[str, str]],
+) -> list[dict[str, object]]:
+    normalized: list[dict[str, object]] = []
+    for attr_name, mapping in edge_color_rules.items():
+        for attr_value, color in mapping.items():
+            normalized.append(
+                {
+                    "target": "edge",
+                    "when": f'edge.{attr_name} == "{attr_value}"',
+                    "set": {"color": color},
+                }
+            )
+    return normalized
+
+
 def create_layout_options(
     args: argparse.Namespace, explicit_layout_fields: Optional[set[str]] = None
 ) -> LayoutOptions:
@@ -562,6 +678,12 @@ def create_layout_options(
     layout_strategy = args.layout_strategy.replace("-", "_")
     binary_tree_layout = args.binary_tree
     edge_color_rules = _parse_edge_color_rules(args.edge_color_rule)
+    style_rules: list[dict[str, object]] = []
+    for rule in args.style_rule:
+        style_rules.append(_parse_style_rule_string(rule))
+    if args.style_rules_file is not None:
+        style_rules.extend(_load_style_rules_file(args.style_rules_file))
+    style_rules.extend(_legacy_edge_rules_to_style_rules(edge_color_rules))
     node_label_lines: tuple[str, ...] = tuple()
     if args.node_label_lines:
         node_label_lines = tuple(
@@ -570,8 +692,10 @@ def create_layout_options(
             if token.strip()
         )
     color_nodes = not args.no_color_nodes
-    if color_mode == "attr" and not edge_color_rules:
-        raise ValueError("--colors attr requires --edge-color-rule")
+    if color_mode == "attr" and not style_rules:
+        raise ValueError(
+            "--colors attr requires --edge-color-rule or --style-rule/--style-rules-file"
+        )
     use_ascii = args.charset in {CharSet.ASCII, CharSet.ANSI} or args.use_legacy_ascii
     allow_ansi_in_ascii = args.charset == CharSet.ANSI and not args.use_legacy_ascii
     options = LayoutOptions(
@@ -601,6 +725,7 @@ def create_layout_options(
         allow_ansi_in_ascii=allow_ansi_in_ascii,
         edge_color_mode="source" if color_mode == "none" else color_mode,
         edge_color_rules=edge_color_rules,
+        style_rules=style_rules,
         color_nodes=color_nodes,
         whitespace_mode=args.whitespace,
     )

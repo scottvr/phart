@@ -358,7 +358,7 @@ To install all `extra` requirements (e.g., `fonttools` for svg rendering support
 
 ## The CLI
 
-````bash
+```bash
 usage: phart [-h] [--output OUTPUT] [--style {minimal,square,round,diamond,custom,bbox}]
              [--node-spacing NODE_SPACING] [--layer-spacing LAYER_SPACING]
              [--charset {ascii,ansi,unicode}] [--ascii] [--function FUNCTION] [--binary-tree]
@@ -366,6 +366,7 @@ usage: phart [-h] [--output OUTPUT] [--style {minimal,square,round,diamond,custo
              [--flow-direction {down,up,left,right}] [--bboxes] [--hpad HPAD] [--vpad VPAD]
              [--uniform] [--edge-anchors {auto,center,ports}] [--labels]
              [--colors {attr,none,path,source,target}] [--edge-color-rule RULE]
+             [--style-rule RULE] [--style-rules-file FILE]
              input
 
 PHART: Python Hierarchical ASCII Rendering Tool
@@ -406,8 +407,12 @@ options:
                         ANSI edge coloring mode: none (default), source, target, path, or attr
   --edge-color-rule RULE
                         Attribute-driven edge color rule for --colors attr. Format:
-                        <attribute>:<value>=<color>[,<value>=<color>...] (repeatable)```
-````
+                        <attribute>:<value>=<color>[,<value>=<color>...] (repeatable)
+  --style-rule RULE     Advanced style rule expression:
+                        '<target>: <predicate> -> color=<color>' (repeatable)
+  --style-rules-file FILE
+                        JSON or YAML file containing {'rules': [...]} canonical style rules
+```
 
 ## Quick Start
 

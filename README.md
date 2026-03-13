@@ -423,7 +423,8 @@ usage: phart [-h] [--output OUTPUT] [--version] [--output-format {ditaa,ditaa-pu
              [--bidirectional-mode {coalesce,separate}] [--labels] [--node-label-lines SPEC]
              [--node-label-sep NODE_LABEL_SEP] [--node-label-max-lines NODE_LABEL_MAX_LINES] [--bbox-multiline-labels]
              [--colors {attr,none,path,source,target}]
-             [--no-color-nodes] [--edge-color-rule RULE] [--svg-cell-size SVG_CELL_SIZE]
+             [--no-color-nodes] [--edge-color-rule RULE] [--style-rule RULE] [--style-rules-file FILE]
+             [--svg-cell-size SVG_CELL_SIZE]
              [--svg-font-family SVG_FONT_FAMILY] [--svg-text-mode {text,path}] [--svg-font-path SVG_FONT_PATH]
              [--svg-fg SVG_FG] [--svg-bg SVG_BG] [--whitespace {auto,ascii-space,nbsp}]
              [--paginate-output-width [WIDTH|auto]] [--paginate-output-height [HEIGHT|auto]]
@@ -500,6 +501,10 @@ options:
   --edge-color-rule RULE
                         Attribute-driven edge color rule for --colors attr. Format:
                         <attribute>:<value>=<color>[,<value>=<color>...] (repeatable)
+  --style-rule RULE     Advanced style rule expression:
+                        '<target>: <predicate> -> color=<color>' (repeatable)
+  --style-rules-file FILE
+                        JSON or YAML file containing {'rules': [...]} canonical style rules
   --svg-cell-size SVG_CELL_SIZE
                         Cell size in pixels for SVG output (default: 12)
   --svg-font-family SVG_FONT_FAMILY

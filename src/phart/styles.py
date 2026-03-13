@@ -2,7 +2,9 @@
 from dataclasses import dataclass, field, fields
 from enum import Enum
 import unicodedata
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
+
+from .style_rules import CompiledStyleRule, compile_style_rules
 
 
 class NodeStyle(Enum):
@@ -163,6 +165,7 @@ class LayoutOptions:
     edge_color_rules: Dict[str, Dict[str, str]] = field(
         default_factory=dict
     )  # attr mode rules: {"attr_name": {"attr_value": "color_spec"}}
+    style_rules: List[Dict[str, Any]] = field(default_factory=list)
     color_nodes: bool = field(default=True)
     whitespace_mode: str = field(
         default="auto"
@@ -381,6 +384,11 @@ class LayoutOptions:
             if normalized_value_map:
                 normalized_rules[attr_key] = normalized_value_map
         self.edge_color_rules = normalized_rules
+        if not isinstance(self.style_rules, list):
+            raise ValueError("style_rules must be a list of dicts")
+        self._compiled_style_rules: List[CompiledStyleRule] = compile_style_rules(
+            self.style_rules
+        )
 
     @staticmethod
     def _normalize_edge_color_rule_value(value: Any) -> str:

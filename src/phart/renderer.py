@@ -25,6 +25,7 @@ from .rendering.ansi import resolve_color_spec as _resolve_color_spec_impl
 from .rendering.ansi import xterm_index_to_hex as _xterm_index_to_hex_impl
 
 from .styles import LayoutOptions, NodeStyle
+from .style_rules import evaluate_style_rule_color
 
 
 class ASCIIRenderer:
@@ -230,12 +231,31 @@ class ASCIIRenderer:
             for key, value in edge_data.items()
         }
 
+    def _resolve_edge_style_color_spec(self, start: Any, end: Any) -> Optional[str]:
+        edge_data = self.graph.get_edge_data(start, end) or {}
+        context = {
+            "self": edge_data,
+            "edge": edge_data,
+            "u": self.graph.nodes.get(start, {}),
+            "v": self.graph.nodes.get(end, {}),
+        }
+        return evaluate_style_rule_color(
+            getattr(self.options, "_compiled_style_rules", []),
+            "edge",
+            context,
+        )
+
     def _attr_rules_match_for_reverse_edge(self, start: Any, end: Any) -> bool:
         """Return True when attr-color rule attributes agree in both directions."""
         if self.options.edge_color_mode != "attr":
             return True
-        if not self.options.edge_color_rules:
+        has_style_rules = bool(getattr(self.options, "_compiled_style_rules", []))
+        if not self.options.edge_color_rules and not has_style_rules:
             return True
+        if has_style_rules:
+            return self._resolve_edge_style_color_spec(
+                start, end
+            ) == self._resolve_edge_style_color_spec(end, start)
 
         forward_attrs = self._normalized_edge_attrs(start, end)
         reverse_attrs = self._normalized_edge_attrs(end, start)
@@ -875,6 +895,7 @@ def merge_layout_options(
         "allow_ansi_in_ascii",
         "edge_color_mode",
         "edge_color_rules",
+        "style_rules",
         "color_nodes",
     }
 

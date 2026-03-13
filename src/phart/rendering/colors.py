@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Dict, Optional, Set, Tuple
 
+from phart.style_rules import evaluate_style_rule_color
+
 from .ansi import ANSI_SUBWAY_PALETTE
 
 if TYPE_CHECKING:
@@ -29,7 +31,23 @@ def resolve_attr_edge_color(
         str(key).strip().lower(): renderer._normalize_edge_attr_value(value)
         for key, value in edge_data.items()
     }
+    edge_context = {
+        "self": edge_data,
+        "edge": edge_data,
+        "u": renderer.graph.nodes.get(edge[0], {}),
+        "v": renderer.graph.nodes.get(edge[1], {}),
+    }
+    style_color = evaluate_style_rule_color(
+        getattr(renderer.options, "_compiled_style_rules", []),
+        "edge",
+        edge_context,
+    )
+    if style_color:
+        resolved_style_color = renderer._resolve_color_spec(style_color)
+        if resolved_style_color is not None:
+            return resolved_style_color
 
+    # Legacy compatibility path.
     for attr_name, mapping in renderer.options.edge_color_rules.items():
         attr_value = normalized_data.get(attr_name)
         if attr_value is None:

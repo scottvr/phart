@@ -6,6 +6,7 @@ import unittest
 import tempfile
 import shutil
 import re
+import json
 from pathlib import Path
 import sys
 from io import StringIO
@@ -870,6 +871,65 @@ def main():
         exit_code = main()
         self.assertEqual(exit_code, 0)
         self.assertNotIn("Error", self.stderr.getvalue())
+
+    def test_create_layout_options_with_style_rule(self):
+        sys.argv = [
+            "phart",
+            "--colors",
+            "attr",
+            "--style-rule",
+            'edge: role=="spouse" and v.sex=="F" -> color=green',
+            "--style-rule",
+            'edge: role=="spouse" and v.sex=="M" -> color=blue',
+            str(self.test_text_file),
+        ]
+        args, _, explicit_fields, _ = parse_args()
+        options = create_layout_options(args, explicit_fields)
+        self.assertEqual(options.edge_color_mode, "attr")
+        self.assertEqual(len(options.style_rules), 2)
+        self.assertEqual(len(options._compiled_style_rules), 2)  # noqa: SLF001
+
+    def test_create_layout_options_with_style_rules_file_json(self):
+        style_rules_file = Path(self.temp_dir) / "style_rules.json"
+        style_rules_file.write_text(
+            json.dumps(
+                {
+                    "rules": [
+                        {
+                            "target": "edge",
+                            "when": 'role == "spouse" and v.sex == "F"',
+                            "set": {"color": "green"},
+                        }
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+        sys.argv = [
+            "phart",
+            "--colors",
+            "attr",
+            "--style-rules-file",
+            str(style_rules_file),
+            str(self.test_text_file),
+        ]
+        args, _, explicit_fields, _ = parse_args()
+        options = create_layout_options(args, explicit_fields)
+        self.assertEqual(len(options.style_rules), 1)
+        self.assertEqual(len(options._compiled_style_rules), 1)  # noqa: SLF001
+
+    def test_invalid_style_rule_format(self):
+        with self.assertRaises(ValueError):
+            sys.argv = [
+                "phart",
+                "--colors",
+                "attr",
+                "--style-rule",
+                "edge role=spouse",
+                str(self.test_text_file),
+            ]
+            args, _, explicit_fields, _ = parse_args()
+            create_layout_options(args, explicit_fields)
 
     def test_invalid_edge_color_rule_format(self):
         sys.argv = [

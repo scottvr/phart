@@ -28,9 +28,10 @@ default = [
 ]
 developer = [
     'pre-commit>=3.2',
-    'mypy>=1.1',
+    'mypy',
     'isort',
     'ruff',
+    'PyYAML',
 ]
 doc = [
 ]
@@ -52,6 +53,8 @@ test = [
     'pytest-cov>=4.0',
     "phart[svg]",
     "phart[examples]",
+    'types-networkx',
+    'types-PyYAML',
 ]
 all = [
     "phart[developer]",

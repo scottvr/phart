@@ -39,6 +39,7 @@ repos:
     hooks:
       - id: mypy
         name: "mypy 1.19.1"
+        entry: ./.venv/bin/mypy
         files: ^src/phart/
         exclude: ^examples/
         pass_filenames: true
