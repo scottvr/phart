@@ -1,6 +1,6 @@
-# Constrained Layout Partitioning Spec (Draft)
+# Constrained Layout Partitioning Spec (v1.5, Implemented in phart v1.5.0)
 
-Status: Draft (architecture/design)
+Status: Final (v1.5.0)
 Audience: maintainers and advanced users
 
 ## 1. Problem
@@ -39,9 +39,10 @@ New options:
 
 - `--target-canvas-width N|auto` (required when `--constrained` is enabled)
 - `--target-canvas-height N|auto` (optional; disabled when omitted)
-- `--partition-overlap N` (default `0`; duplicate context columns/rows)
+- `--partition-overlap N` (default `0`)
 - `--partition-affinity-strength N` (default `1`; `0` disables affinity heuristics)
 - `--cross-partition-edge-style {stub,none}` (default `stub`)
+- `--connector-ref {auto,id,label,both}` (default `auto`)
 - `--connector-compaction {none,partition}` (default `none`)
 - `--partition-order {natural,size}` (default `natural`)
 - `--panel-headers {none,basic,lineage}` (default `basic`)
@@ -163,7 +164,7 @@ Phase B:
 
 - Height constraint support.
 - Left/right flow support parity.
-- Overlap context rows/columns.
+- Overlap context layers (rank bands), not text rows.
 
 Phase C:
 
@@ -178,6 +179,13 @@ Phase C:
   Yes, once stubs are rendered.
 - Should panel headers include lineage summary (root ids, rank range)?
   Yes. ( none|basic|lineage ), default to basic.
+
+### 14.1. Additional details
+
+- partition-overlap is analogous to --paginate-overlap except that it refers to layers (rank bands) and nodes, not text rows and columns.
+- In constrained mode, we should never split node boxes for panel fit.
+- If overlap is 0, still render boundary entry/exit cues at panel boundaries (not just bottom “Connectors:” block).
+- Connector endpoints should prefer readable refs (label and/or id), not only raw internal ids.
 
 ## 15. Implementation Tracker (As of March 13, 2026)
 
@@ -215,19 +223,3 @@ Suggested PR checklist:
 - [x] PR3: style-rule targeting for connectors + panel headers
 - [x] PR4: height/left-right support + overlap rendering
 - [x] PR5: affinity tuning + connector compaction + metadata export finalization
-
-### 15.1 Additional Implementation Notes
-
-**PR3/4 revised proposal notes:**
-
-- partition-overlap means layers (not rows).
-- Constrained panels must be node-atomic (no half-node clipping).
-- If overlap = 0, render boundary connector cues at top/bottom of each panel.
-- If overlap > 0, include full overlap layers (entire nodes, not partial rows).
-
-**PR4 Implementation suggestion:**
-
-- Enforce hard panel fit: split oversized single layers into subgroups (not just between layers).
-- Make pagination panel-aware in constrained mode (paginate each panel separately, not whole concatenated text).
-- Add boundary connector cues at panel edges.
-- Add connector reference mode (auto|id|label|both) for readable connector text.

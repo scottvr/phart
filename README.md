@@ -423,15 +423,16 @@ To install all `extra` requirements (e.g., `fonttools` for svg rendering support
 $ phart --help
 usage: phart [-h] [--output OUTPUT] [--version] [--output-format {ditaa,ditaa-puml,html,latex-markdown,mmd,svg,text}] [--style {minimal,square,round,diamond,custom,bbox}] [--node-spacing NODE_SPACING]
              [--layer-spacing LAYER_SPACING] [--charset {ascii,ansi,unicode}] [--ascii] [--function FUNCTION] [--binary-tree]
-             [--layout {arf,auto,bfs,bipartite,circular,hierarchical,kamada-kawai,layered,multipartite,planar,random,shell,spiral,spring,vertical}]
-             [--node-order {layout-default,preserve,alpha,natural,numeric}] [--node-order-attr NODE_ORDER_ATTR] [--node-order-reverse] [--flow-direction {down,up,left,right}] [--bboxes] [--hpad HPAD]
-             [--vpad VPAD] [--uniform] [--edge-anchors {auto,center,ports}] [--shared-ports {any,minimize,none}] [--bidirectional-mode {coalesce,separate}] [--labels] [--node-labels [ATTR]]
-             [--edge-labels [ATTR]] [--node-label-lines SPEC]
-             [--node-label-sep NODE_LABEL_SEP] [--node-label-max-lines NODE_LABEL_MAX_LINES] [--bbox-multiline-labels] [--colors {attr,none,path,source,target}] [--no-color-nodes]
-             [--edge-glyph-preset {default,thick,double}] [--edge-arrow-style {ascii,unicode}] [--edge-color-rule RULE] [--style-rule RULE] [--style-rules-file FILE] [--svg-cell-size SVG_CELL_SIZE]
-             [--svg-font-family SVG_FONT_FAMILY] [--svg-text-mode {text,path}] [--svg-font-path SVG_FONT_PATH] [--svg-fg SVG_FG] [--svg-bg SVG_BG] [--whitespace {auto,ascii-space,nbsp}]
-             [--paginate-output-width [WIDTH|auto]] [--paginate-output-height [HEIGHT|auto]] [--paginate-overlap COLUMNS] [--select-output-page-x PAGE_X] [--select-output-page-y PAGE_Y] [--list-pages]
-             [--write-pages DIR]
+             [--layout {arf,auto,bfs,bipartite,circular,hierarchical,kamada-kawai,layered,multipartite,planar,random,shell,spiral,spring,vertical}] [--constrained]
+             [--node-order {layout-default,preserve,alpha,natural,numeric}] [--node-order-attr NODE_ORDER_ATTR] [--node-order-reverse] [--flow-direction {down,up,left,right}]
+             [--target-canvas-width [WIDTH|auto]] [--target-canvas-height [HEIGHT|auto]] [--partition-overlap PARTITION_OVERLAP] [--partition-affinity-strength PARTITION_AFFINITY_STRENGTH]
+             [--cross-partition-edge-style {stub,none}] [--connector-compaction {none,partition}] [--partition-order {natural,size}] [--panel-headers {none,basic,lineage}]
+             [--connector-ref {auto,id,label,both}] [--bboxes] [--hpad HPAD] [--vpad VPAD] [--uniform] [--edge-anchors {auto,center,ports}] [--shared-ports {any,minimize,none}]
+             [--bidirectional-mode {coalesce,separate}] [--labels] [--node-labels [ATTR]] [--edge-labels [ATTR]] [--node-label-lines SPEC] [--node-label-sep NODE_LABEL_SEP]
+             [--node-label-max-lines NODE_LABEL_MAX_LINES] [--bbox-multiline-labels] [--colors {attr,none,path,source,target}] [--no-color-nodes] [--edge-glyph-preset {default,thick,double}]
+             [--edge-arrow-style {ascii,unicode}] [--edge-color-rule RULE] [--style-rule RULE] [--style-rules-file FILE] [--svg-cell-size SVG_CELL_SIZE] [--svg-font-family SVG_FONT_FAMILY]
+             [--svg-text-mode {text,path}] [--svg-font-path SVG_FONT_PATH] [--svg-fg SVG_FG] [--svg-bg SVG_BG] [--whitespace {auto,ascii-space,nbsp}] [--paginate-output-width [WIDTH|auto]]
+             [--paginate-output-height [HEIGHT|auto]] [--paginate-overlap COLUMNS] [--select-output-page-x PAGE_X] [--select-output-page-y PAGE_Y] [--list-pages] [--write-pages DIR]
              input
 
 PHART: Python Hierarchical ASCII Rendering Tool
@@ -459,6 +460,7 @@ options:
   --binary-tree         Enable binary tree layout (respects edge 'side' attributes)
   --layout, --layout-strategy {arf,auto,bfs,bipartite,circular,hierarchical,kamada-kawai,layered,multipartite,planar,random,shell,spiral,spring,vertical}
                         Node positioning strategy (default: auto)
+  --constrained         Enable constrained partitioning mode for compatible layout strategies
   --node-order {layout-default,preserve,alpha,natural,numeric}
                         Node ordering policy: layout-default (default), preserve, alpha, natural, or numeric
   --node-order-attr NODE_ORDER_ATTR
@@ -466,6 +468,24 @@ options:
   --node-order-reverse  The result of the sorting method used by the layout strategy will be reversed
   --flow-direction, --flow {down,up,left,right}
                         Layout flow direction: down (default, root at top), up (root at bottom), left (root at right), right (root at left)
+  --target-canvas-width [WIDTH|auto]
+                        Target width for constrained mode. Accepts WIDTH columns or 'auto' (terminal width on terminal stdout).
+  --target-canvas-height [HEIGHT|auto]
+                        Optional target height for constrained partitioning. Accepts HEIGHT rows or 'auto' (terminal height on terminal stdout).
+  --partition-overlap PARTITION_OVERLAP
+                        Context overlap between neighboring constrained partitions (default: 0)
+  --partition-affinity-strength PARTITION_AFFINITY_STRENGTH
+                        Affinity weight used to keep closely related nodes together while splitting constrained partitions (0 disables)
+  --cross-partition-edge-style {stub,none}
+                        Cross-partition edge rendering style for constrained layout (default: stub)
+  --connector-compaction {none,partition}
+                        Connector listing compaction mode for constrained panels: none (default) or partition
+  --partition-order {natural,size}
+                        Constrained partition ordering: natural rank order or size (default: natural)
+  --panel-headers {none,basic,lineage}
+                        Constrained panel header mode: none, basic (default), or lineage
+  --connector-ref {auto,id,label,both}
+                        Connector endpoint reference mode: auto (default), id, label, or both
   --bboxes, --bbox      Draw line-art boxes around nodes
   --hpad HPAD           Horizontal padding inside node boxes (default: 1)
   --vpad VPAD           Vertical padding inside node boxes (default: 0)
@@ -481,7 +501,7 @@ options:
   --node-labels [ATTR]  Enable node labels. Optionally provide the node attribute name to display (default: label). Use 'none' to disable node labels explicitly.
   --edge-labels [ATTR]  Enable edge labels. Optionally provide the edge attribute name to display (default: label). Use 'none' to disable edge labels explicitly.
   --node-label-lines SPEC
-                        Comma-separated ordered label line specs used when node labels are enabled and node 'label' is absent. Supports dotted paths (e.g. name,birt.date,deat.date).
+                        Comma-separated ordered label line specs used when --labels is enabled and node 'label' is absent. Supports dotted paths (e.g. name,birt.date,deat.date).
   --node-label-sep NODE_LABEL_SEP
                         Separator for joining multi-value parts within one synthesized label line
   --node-label-max-lines NODE_LABEL_MAX_LINES
@@ -497,7 +517,7 @@ options:
                         Global arrowhead style for edges: ascii (default) or unicode. Unicode arrows are disabled automatically in ASCII charset mode.
   --edge-color-rule RULE
                         Attribute-driven edge color rule for --colors attr. Format: <attribute>:<value>=<color>[,<value>=<color>...] (repeatable)
-  --style-rule RULE     Advanced style rule expression. Format: '<target>: <predicate> -> color=<color>' where target is edge|node. Repeat to add multiple rules.
+  --style-rule RULE     Advanced style rule expression. Format: '<target>: <predicate> -> color=<color>' where target is edge|node|connector|panel_header. Repeat to add multiple rules.
   --style-rules-file FILE
                         JSON or YAML file containing {'rules': [...]} canonical style rules. YAML requires PyYAML.
   --svg-cell-size SVG_CELL_SIZE
