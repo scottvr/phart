@@ -1,6 +1,6 @@
-# Style Rules Specification (Draft)
+# Style Rules Specification (v1.5)
 
-Status: Draft (design-only, not fully implemented)
+Status: ~~Draft (design-only, not fully implemented)~~ Spec v1.3 implemented in phart v1.5.0. Bumping spec version to true them up.
 Audience: CLI users, library users, and maintainers
 
 ## 1. Problem Statement
@@ -24,8 +24,7 @@ The design goal is a unified rule model that can style both nodes and edges with
 ## 3. Non-Goals
 
 - General-purpose scripting language.
-- Arbitrary graph traversal in predicates (no multi-hop lookups in v1).
-- Automatic GEDCOM semantic inference in PHART core.
+- Arbitrary graph traversal in predicates (no multi-hop lookups in spec-v1.1).
 
 ## 4. Terminology
 
@@ -48,7 +47,7 @@ priority: 100 # optional integer; higher runs first
 target: edge # edge | node
 when: role == "spouse" and v.sex == "M"
 set:
-  color: blue # v1 required for color behavior
+  color: blue # spec-v1 required for color behavior
 ```
 
 Notes:
@@ -57,7 +56,7 @@ Notes:
 - Ties are resolved by declaration order (stable).
 - First matching rule wins for each style field in `set`.
 
-## 6. Expression Language (v1)
+## 6. Expression Language (spec-v1)
 
 ### 6.1 Operators
 
@@ -83,11 +82,11 @@ Resolution rules:
 
 - Missing path resolves to `null`.
 - Dot-path lookup supports nested dict traversal (`a.b.c`).
-- Non-scalar values can only be used with `in`/`not in` in v1.
+- Non-scalar values can only be used with `in`/`not in` in spec-v1.
 
 ### 6.4 String comparison semantics
 
-Default string comparisons are case-insensitive in v1 for compatibility with existing edge color rule normalization.
+Default string comparisons are case-insensitive in spec-v1 for compatibility with existing edge color rule normalization.
 
 ## 7. Rule Sources
 
@@ -142,7 +141,7 @@ style_rules=[
 4. On match, apply keys in `set` not yet assigned.
 5. Continue until all rules checked (or short-circuit if all requested fields set).
 
-v1 color behavior:
+spec-v1 color behavior:
 
 - For edge rendering, `set.color` affects edge color map.
 - For node rendering, `set.color` affects node color map.
@@ -221,7 +220,7 @@ PHART has two historical styling tracks:
 
 The style-rule system should become the canonical per-element styling mechanism, while preserving backward compatibility for existing global options.
 
-#### Proposed rule-settable fields (v3 target)
+#### Proposed rule-settable fields (spec v1.3 target)
 
 Node-target fields:
 

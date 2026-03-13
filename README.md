@@ -1,6 +1,14 @@
-# phart
+# phart v1.5.0
 
 **PHART:** The Python Hierarchical ASCII Representation Tool - A Pure Python tool for graph visualization via charts and diagrams rendered in ASCII.
+
+## IMPORTANT CHANGES to v1.5.0
+
+In versions prior to v1.5.0, phart had limited, function-specific support for node and edge attributes. For example, there was attribute-driven edge coloring via `--edge-color-rule`, but it was limited to direct edge-attribute equality matches.
+
+Users have asked for simple labelling options, and needed richer conditions, including rules that combine edge attributes with endpoint node attributes (e.g. spouse edge color based on destination sex), while keeping simple cases ergonomic.
+
+Phart now supports a unified Rule Model for nodes and edges, and a minimal but powerful expression syntax. As before, rules can be added via call(s) on the CLI, or with a ruleset file - yaml or json in the CLI, or a Python Dict in LayoutOptions when using phart programmatically.
 
 ## Features
 
