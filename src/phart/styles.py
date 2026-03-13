@@ -166,6 +166,8 @@ class LayoutOptions:
         default_factory=dict
     )  # attr mode rules: {"attr_name": {"attr_value": "color_spec"}}
     style_rules: List[Dict[str, Any]] = field(default_factory=list)
+    edge_glyph_preset: str = field(default="default")  # default, thick, or double
+    edge_arrow_style: str = field(default="ascii")  # ascii or unicode
     color_nodes: bool = field(default=True)
     whitespace_mode: str = field(
         default="auto"
@@ -337,6 +339,17 @@ class LayoutOptions:
             raise ValueError(
                 "edge_color_mode must be one of: target, source, path, attr"
             )
+        if isinstance(self.edge_glyph_preset, str):
+            self.edge_glyph_preset = self.edge_glyph_preset.strip().lower()
+        if self.edge_glyph_preset not in {"default", "thick", "double"}:
+            raise ValueError("edge_glyph_preset must be one of: default, thick, double")
+        if isinstance(self.edge_arrow_style, str):
+            self.edge_arrow_style = self.edge_arrow_style.strip().lower()
+        if self.edge_arrow_style not in {"ascii", "unicode"}:
+            raise ValueError("edge_arrow_style must be one of: ascii, unicode")
+        if self.use_ascii and self.edge_arrow_style == "unicode":
+            # Unicode arrows are not guaranteed visible in ASCII mode.
+            self.edge_arrow_style = "ascii"
 
         if isinstance(self.whitespace_mode, str):
             self.whitespace_mode = (
@@ -428,10 +441,10 @@ class LayoutOptions:
         arrow orientation.
         """
         arrow_map = {
-            "up": self.edge_arrow_up,
-            "down": self.edge_arrow_down,
-            "left": self.edge_arrow_l,
-            "right": self.edge_arrow_r,
+            "up": self.get_edge_glyph("arrow_up", self.edge_arrow_up),
+            "down": self.get_edge_glyph("arrow_down", self.edge_arrow_down),
+            "left": self.get_edge_glyph("arrow_left", self.edge_arrow_l),
+            "right": self.get_edge_glyph("arrow_right", self.edge_arrow_r),
         }
         try:
             return arrow_map[base_direction]
@@ -440,6 +453,62 @@ class LayoutOptions:
             raise ValueError(
                 f"Invalid arrow direction '{base_direction}'. Valid: {valid}"
             ) from e
+
+    def get_edge_glyph_defaults(self) -> Dict[str, str]:
+        """Return global edge glyph defaults after preset + arrow style."""
+        defaults: Dict[str, str] = {}
+        if not self.use_ascii:
+            if self.edge_glyph_preset == "thick":
+                defaults.update(
+                    {
+                        "line_horizontal": "━",
+                        "line_vertical": "┃",
+                        "corner_ul": "┏",
+                        "corner_ur": "┓",
+                        "corner_ll": "┗",
+                        "corner_lr": "┛",
+                        "tee_up": "┻",
+                        "tee_down": "┳",
+                        "tee_left": "┫",
+                        "tee_right": "┣",
+                        "cross": "╋",
+                    }
+                )
+            elif self.edge_glyph_preset == "double":
+                defaults.update(
+                    {
+                        "line_horizontal": "═",
+                        "line_vertical": "║",
+                        "corner_ul": "╔",
+                        "corner_ur": "╗",
+                        "corner_ll": "╚",
+                        "corner_lr": "╝",
+                        "tee_up": "╩",
+                        "tee_down": "╦",
+                        "tee_left": "╣",
+                        "tee_right": "╠",
+                        "cross": "╬",
+                    }
+                )
+        if self.edge_arrow_style == "unicode" and not self.use_ascii:
+            defaults.update(
+                {
+                    "arrow_up": "↑",
+                    "arrow_down": "↓",
+                    "arrow_left": "←",
+                    "arrow_right": "→",
+                }
+            )
+        return defaults
+
+    def get_edge_glyph(self, key: str, fallback: Optional[str] = None) -> str:
+        """Resolve a global edge glyph by key with optional fallback."""
+        defaults = self.get_edge_glyph_defaults()
+        if key in defaults:
+            return defaults[key]
+        if fallback is not None:
+            return fallback
+        raise ValueError(f"Unknown edge glyph key '{key}'")
 
     def __str__(self) -> str:
         # Get all dataclass fields and their current values from this instance

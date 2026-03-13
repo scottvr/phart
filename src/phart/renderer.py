@@ -173,22 +173,43 @@ class ASCIIRenderer:
             "cross": {"up", "down", "left", "right"},
         }
         line_map: Dict[str, Set[str]] = {}
+        for key, preset_dirs in key_to_dirs.items():
+            fallback_map = {
+                "arrow_up": self.options.edge_arrow_up,
+                "arrow_down": self.options.edge_arrow_down,
+                "arrow_left": self.options.edge_arrow_l,
+                "arrow_right": self.options.edge_arrow_r,
+                "line_horizontal": self.options.edge_horizontal,
+                "line_vertical": self.options.edge_vertical,
+                "corner_ul": self.options.edge_corner_ul,
+                "corner_ur": self.options.edge_corner_ur,
+                "corner_ll": self.options.edge_corner_ll,
+                "corner_lr": self.options.edge_corner_lr,
+                "tee_up": self.options.edge_tee_up,
+                "tee_down": self.options.edge_tee_down,
+                "tee_left": self.options.edge_tee_left,
+                "tee_right": self.options.edge_tee_right,
+                "cross": self.options.edge_cross,
+            }
+            glyph = self.options.get_edge_glyph(key, fallback_map[key])
+            line_map.setdefault(glyph, set()).update(preset_dirs)
         for rule in getattr(self.options, "_compiled_style_rules", []):
             if rule.target != "edge":
                 continue
             for key, glyph in rule.set_values.items():
-                dirs = key_to_dirs.get(key)
-                if dirs is None:
+                rule_dirs = key_to_dirs.get(key)
+                if rule_dirs is None:
                     continue
-                line_map.setdefault(glyph, set()).update(dirs)
+                resolved_dirs: Set[str] = set(rule_dirs)
+                line_map.setdefault(glyph, set()).update(resolved_dirs)
         return line_map
 
     def _build_all_edge_arrow_glyphs(self) -> Set[str]:
         arrows = {
-            self.options.edge_arrow_up,
-            self.options.edge_arrow_down,
-            self.options.edge_arrow_l,
-            self.options.edge_arrow_r,
+            self.options.get_edge_glyph("arrow_up", self.options.edge_arrow_up),
+            self.options.get_edge_glyph("arrow_down", self.options.edge_arrow_down),
+            self.options.get_edge_glyph("arrow_left", self.options.edge_arrow_l),
+            self.options.get_edge_glyph("arrow_right", self.options.edge_arrow_r),
         }
         for rule in getattr(self.options, "_compiled_style_rules", []):
             if rule.target != "edge":
@@ -301,7 +322,7 @@ class ASCIIRenderer:
         value = self._active_edge_style_set.get(key)
         if value:
             return value
-        return fallback
+        return self.options.get_edge_glyph(key, fallback)
 
     def _edge_arrow_for_direction(self, direction: str) -> str:
         key_map = {
@@ -960,6 +981,8 @@ def merge_layout_options(
         "edge_color_mode",
         "edge_color_rules",
         "style_rules",
+        "edge_glyph_preset",
+        "edge_arrow_style",
         "color_nodes",
     }
 

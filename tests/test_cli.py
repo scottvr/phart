@@ -931,6 +931,63 @@ def main():
             args, _, explicit_fields, _ = parse_args()
             create_layout_options(args, explicit_fields)
 
+    def test_invalid_style_rule_set_key_raises(self):
+        with self.assertRaises(ValueError):
+            sys.argv = [
+                "phart",
+                "--style-rule",
+                'edge: role=="x" -> prefix=[',
+                str(self.test_text_file),
+            ]
+            args, _, explicit_fields, _ = parse_args()
+            create_layout_options(args, explicit_fields)
+
+    def test_create_layout_options_with_style_rules_file_node_and_edge_keys(self):
+        style_rules_file = Path(self.temp_dir) / "style_rules_keys.json"
+        style_rules_file.write_text(
+            json.dumps(
+                {
+                    "rules": [
+                        {
+                            "target": "node",
+                            "when": 'sex == "F"',
+                            "set": {"prefix": "(", "suffix": ")"},
+                        },
+                        {
+                            "target": "edge",
+                            "when": 'role == "link"',
+                            "set": {"line_vertical": "!"},
+                        },
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+        sys.argv = [
+            "phart",
+            "--style-rules-file",
+            str(style_rules_file),
+            str(self.test_text_file),
+        ]
+        args, _, explicit_fields, _ = parse_args()
+        options = create_layout_options(args, explicit_fields)
+        self.assertEqual(len(options.style_rules), 2)
+        self.assertEqual(len(options._compiled_style_rules), 2)  # noqa: SLF001
+
+    def test_create_layout_options_with_edge_glyph_preset_and_arrow_style(self):
+        sys.argv = [
+            "phart",
+            "--edge-glyph-preset",
+            "thick",
+            "--edge-arrow-style",
+            "unicode",
+            str(self.test_text_file),
+        ]
+        args, _, explicit_fields, _ = parse_args()
+        options = create_layout_options(args, explicit_fields)
+        self.assertEqual(options.edge_glyph_preset, "thick")
+        self.assertEqual(options.edge_arrow_style, "unicode")
+
     def test_invalid_edge_color_rule_format(self):
         sys.argv = [
             "phart",

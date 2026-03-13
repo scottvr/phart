@@ -1793,6 +1793,59 @@ class TestASCIIRenderer(unittest.TestCase):
         self.assertIn("!", output)
         self.assertIn("x", output)
 
+    def test_edge_glyph_preset_thick_applies_unicode_line_art(self):
+        graph = nx.DiGraph([("A", "B")])
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=False,
+                bboxes=True,
+                layer_spacing=5,
+                edge_glyph_preset="thick",
+            ),
+        )
+        output = renderer.render()
+        self.assertIn("┃", output)
+
+    def test_edge_arrow_style_unicode_applies_unicode_arrowheads(self):
+        graph = nx.DiGraph([("A", "B")])
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=False,
+                bboxes=True,
+                layer_spacing=5,
+                edge_arrow_style="unicode",
+            ),
+        )
+        output = renderer.render()
+        self.assertIn("↓", output)
+
+    def test_edge_style_rule_glyph_overrides_global_preset(self):
+        graph = nx.DiGraph()
+        graph.add_edge("A", "B", role="link")
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=False,
+                bboxes=True,
+                layer_spacing=5,
+                edge_glyph_preset="thick",
+                style_rules=[
+                    {
+                        "target": "edge",
+                        "when": 'role == "link"',
+                        "set": {"line_vertical": "!"},
+                    }
+                ],
+            ),
+        )
+        output = renderer.render()
+        self.assertIn("!", output)
+
     def test_attr_mode_bidirectional_requires_rule_attribute_agreement(self):
         graph = nx.DiGraph()
         graph.add_edge("Alice", "Bob", relationship="friend")
@@ -2161,6 +2214,18 @@ class TestLayoutOptions(unittest.TestCase):
                     }
                 ]
             )
+
+    def test_edge_arrow_style_unicode_coerces_to_ascii_in_ascii_mode(self):
+        options = LayoutOptions(use_ascii=True, edge_arrow_style="unicode")
+        self.assertEqual(options.edge_arrow_style, "ascii")
+
+    def test_invalid_edge_glyph_preset_raises(self):
+        with self.assertRaises(ValueError):
+            LayoutOptions(edge_glyph_preset="unknown")
+
+    def test_invalid_edge_arrow_style_raises(self):
+        with self.assertRaises(ValueError):
+            LayoutOptions(edge_arrow_style="unknown")
 
     def test_default_edge_color_mode_is_source(self):
         options = LayoutOptions()

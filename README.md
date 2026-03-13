@@ -423,7 +423,8 @@ usage: phart [-h] [--output OUTPUT] [--version] [--output-format {ditaa,ditaa-pu
              [--bidirectional-mode {coalesce,separate}] [--labels] [--node-label-lines SPEC]
              [--node-label-sep NODE_LABEL_SEP] [--node-label-max-lines NODE_LABEL_MAX_LINES] [--bbox-multiline-labels]
              [--colors {attr,none,path,source,target}]
-             [--no-color-nodes] [--edge-color-rule RULE] [--style-rule RULE] [--style-rules-file FILE]
+             [--no-color-nodes] [--edge-glyph-preset {default,thick,double}] [--edge-arrow-style {ascii,unicode}]
+             [--edge-color-rule RULE] [--style-rule RULE] [--style-rules-file FILE]
              [--svg-cell-size SVG_CELL_SIZE]
              [--svg-font-family SVG_FONT_FAMILY] [--svg-text-mode {text,path}] [--svg-font-path SVG_FONT_PATH]
              [--svg-fg SVG_FG] [--svg-bg SVG_BG] [--whitespace {auto,ascii-space,nbsp}]
@@ -498,6 +499,10 @@ options:
   --colors {attr,none,path,source,target}
                         ANSI edge coloring mode: none (default), source, target, path, or attr
   --no-color-nodes      Color edges only, not nodes
+  --edge-glyph-preset {default,thick,double}
+                        Global edge line-art preset: default (thin), thick, or double
+  --edge-arrow-style {ascii,unicode}
+                        Global arrowhead style: ascii (default) or unicode
   --edge-color-rule RULE
                         Attribute-driven edge color rule for --colors attr. Format:
                         <attribute>:<value>=<color>[,<value>=<color>...] (repeatable)
@@ -565,6 +570,42 @@ Notes:
 
 - `--paginate-output-width auto` and `--paginate-output-height auto` require terminal stdout.
 - Pagination is ANSI-aware: escape sequences are not counted toward visible width, and page slices preserve complete ANSI sequences.
+
+### Edge Glyph Presets and Arrow Styles
+
+You can set global edge line-art and arrowhead style without per-glyph mapping:
+
+```bash
+phart --edge-glyph-preset thick --edge-arrow-style unicode your_graph.py
+```
+
+Node decorators can also be driven by style rules:
+
+```bash
+phart --labels \
+  --style-rule 'node: sex=="F" -> prefix=(,suffix=)' \
+  --style-rule 'node: sex=="M" -> prefix=[,suffix=]' \
+  examples/gedcom.py
+```
+
+Style rules still win for keys they set:
+
+```bash
+phart --edge-glyph-preset thick \
+  --style-rule 'edge: role=="link" -> line_vertical=!,arrow_down=x' \
+  your_graph.py
+```
+
+Legacy note:
+
+- Legacy global style fields continue to work.
+- Style rules are the preferred per-node/per-edge customization path and take precedence for overlapping keys.
+
+Compatibility / breaking-notes:
+
+- Style-rule validation is strict: unknown `set` keys and wrong target/key combinations now fail fast with explicit errors.
+- Edge glyph rule values must be single-cell glyphs (multi-character and wide glyphs are rejected).
+- `--edge-arrow-style unicode` is automatically coerced to ASCII when using ASCII charset mode.
 
 ## Quick Start
 

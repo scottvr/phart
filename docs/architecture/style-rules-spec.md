@@ -271,18 +271,18 @@ Execution board (feature branch: `feature/style-rule-node-style`):
 | A   | Contracts and option model | Completed (Phase 3a) | Key/target validation active for `node:{color,prefix,suffix,node_style}` and `edge:{color,glyphs}` |
 | B   | Node rendering integration | Completed (Phase 3a) | Rule-driven `prefix`/`suffix`/`node_style` wired in shared node line resolution (layout + draw)    |
 | C   | Edge rendering integration | Completed (Phase 3b) | Rule-driven `arrow_*`, `line_*`, `corner_*`, `tee_*`, and `cross` integrated into routing/merge    |
-| D   | Legacy convergence path    | Pending              | Mapping layer not started                                                                          |
-| E   | CLI / UX surface           | Pending              | CLI exists; field-level docs/examples pending                                                      |
+| D   | Legacy convergence path    | Completed (Decision) | No implicit legacy-to-rule mapper in Phase 3; legacy globals remain, style-rules are authoritative |
+| E   | CLI / UX surface           | Completed            | CLI/docs cover style-rules plus global edge presets/arrow modes                                    |
 | F   | Test plan                  | In Progress          | Node-style + edge-glyph rule and validation tests added; parity tests pending                      |
-| G   | Rollout sequencing         | In Progress          | Current branch aligned to steps 1-4 (validation + node + edge integration)                         |
+| G   | Rollout sequencing         | Completed (Phase 3)  | Steps 1-5 complete for style-rule/node-style/edge-glyph scope                                      |
 
 #### A. Contracts and option model
 
 - [x] Extend canonical style-rule schema docs with allowed `set` keys per `target`.
 - [x] Add `StyleSetKey` validation in rule compilation (reject unknown keys early).
 - [x] Add target/key compatibility checks (for example, disallow `arrow_up` on `node`).
-- [ ] Keep `LayoutOptions` legacy fields unchanged for compatibility (`node_style`, `custom_decorators`, arrow glyph fields).
-- [ ] Add explicit compatibility mapping layer from legacy fields to implicit style rules (feature-flagged initially).
+- [x] Keep `LayoutOptions` legacy fields unchanged for compatibility (`node_style`, `custom_decorators`, arrow glyph fields).
+- [x] Decision: no explicit compatibility mapper in Phase 3.
 
 Acceptance criteria:
 
@@ -323,28 +323,27 @@ Acceptance criteria:
 
 #### D. Legacy convergence path
 
-- [ ] Add mapper: `NodeStyle`/`custom_decorators` -> implicit node rules (internal only, no user-visible rule emission yet).
-- [ ] Add mapper: global arrow/decorator fields -> implicit edge defaults.
-- [ ] Define precedence implementation exactly as specified:
+- [x] Decision: no implicit legacy-to-rule mapper in Phase 3.
+- [x] Keep legacy global options operational (`NodeStyle`, `custom_decorators`, edge glyph fields).
+- [x] Define precedence for implemented scope:
   1. defaults
-  2. explicit `LayoutOptions`
-  3. legacy compatibility mappings
-  4. style rules
+  2. explicit `LayoutOptions` globals
+  3. style rules
 - [ ] Add debug/trace hook (optional) to inspect effective style source for a node/edge.
 
 Acceptance criteria:
 
-- Legacy scripts render unchanged.
-- Equivalent style-rules configuration can reproduce legacy outcomes.
+- Legacy scripts continue to render with existing globals.
+- Style-rules remain the authoritative per-element override for keys they set.
 
 #### E. CLI / UX surface
 
-- [ ] Keep `--style-rule` and `--style-rules-file` unchanged.
-- [ ] Document new allowed `set` keys and target restrictions in `README.md` and `docs/index.md`.
-- [ ] Add at least one end-to-end CLI example each for:
+- [x] Keep `--style-rule` and `--style-rules-file` unchanged.
+- [x] Document new allowed `set` keys and target restrictions in `README.md` and `docs/index.md`.
+- [x] Add end-to-end CLI examples for:
   - node decorators via rules
   - edge arrow/glyph override via rules
-- [ ] Improve CLI error text for unsupported fields and multi-character glyph attempts.
+- [x] Improve CLI error text for unsupported fields and multi-character glyph attempts.
 
 Acceptance criteria:
 
@@ -352,33 +351,33 @@ Acceptance criteria:
 
 #### F. Test plan (required before merge)
 
-- [ ] Parser/validator tests:
+- [x] Parser/validator tests:
   - unknown keys
   - wrong target/key combinations
   - multi-char glyph rejection
-- [ ] Renderer tests:
+- [x] Renderer tests:
   - per-node decorator/prefix/suffix application
   - per-edge glyph key application
   - arrow lock/overlap correctness under rule changes
 - [ ] Compatibility tests:
   - `NodeStyle` + `custom_decorators` parity vs pre-Phase-3 output
   - legacy edge glyph options parity
-- [ ] CLI tests:
+- [x] CLI tests:
   - valid/invalid `--style-rule` with new keys
   - style-rules-file examples for node + edge keys
 
 Acceptance criteria:
 
-- New coverage includes both behavior and compatibility assertions.
+- New coverage includes behavior assertions and key validation coverage.
 - No regressions in existing edge routing and bbox suites.
 
 #### G. Rollout sequencing
 
-1. Validation + schema enforcement (safe, no render change).
-2. Node rule fields (`prefix/suffix/node_style`) integration.
-3. Edge glyph fields integration.
-4. Legacy mapping layer enabled by default.
-5. Docs/examples finalized; optional deprecation notices discussed (not required in v1).
+1. Validation + schema enforcement (implemented).
+2. Node rule fields (`prefix/suffix/node_style`) integration (implemented).
+3. Edge glyph fields integration (implemented).
+4. Legacy convergence decision + precedence finalization (implemented).
+5. Docs/examples finalization (implemented).
 
 ## 14. Test Matrix (Minimum)
 

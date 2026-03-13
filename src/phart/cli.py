@@ -66,6 +66,8 @@ CLI_LAYOUT_FIELD_MAP = {
     "--bbox-multiline-labels": {"bbox_multiline_labels"},
     "--colors": {"ansi_colors", "edge_color_mode"},
     "--no-color-nodes": {"color_nodes"},
+    "--edge-glyph-preset": {"edge_glyph_preset"},
+    "--edge-arrow-style": {"edge_arrow_style"},
     "--edge-color-rule": {"edge_color_rules"},
     "--style-rule": {"style_rules"},
     "--style-rules-file": {"style_rules"},
@@ -375,6 +377,24 @@ def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
     )
     parser.add_argument(
         "--no-color-nodes", action="store_true", help="Color edges only, not nodes"
+    )
+    parser.add_argument(
+        "--edge-glyph-preset",
+        choices=["default", "thick", "double"],
+        default="default",
+        help=(
+            "Global edge line-art preset: default (thin), thick, or double "
+            "(Unicode mode only for thick/double; ASCII falls back to standard glyphs)"
+        ),
+    )
+    parser.add_argument(
+        "--edge-arrow-style",
+        choices=["ascii", "unicode"],
+        default="ascii",
+        help=(
+            "Global arrowhead style for edges: ascii (default) or unicode. "
+            "Unicode arrows are disabled automatically in ASCII charset mode."
+        ),
     )
     parser.add_argument(
         "--edge-color-rule",
@@ -726,6 +746,8 @@ def create_layout_options(
         edge_color_mode="source" if color_mode == "none" else color_mode,
         edge_color_rules=edge_color_rules,
         style_rules=style_rules,
+        edge_glyph_preset=args.edge_glyph_preset,
+        edge_arrow_style=args.edge_arrow_style,
         color_nodes=color_nodes,
         whitespace_mode=args.whitespace,
     )

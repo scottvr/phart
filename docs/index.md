@@ -366,7 +366,8 @@ usage: phart [-h] [--output OUTPUT] [--style {minimal,square,round,diamond,custo
              [--layout {arf,auto,bfs,bipartite,circular,hierarchical,kamada-kawai,layered,multipartite,planar,random,shell,spiral,spring,vertical}]
              [--flow-direction {down,up,left,right}] [--bboxes] [--hpad HPAD] [--vpad VPAD]
              [--uniform] [--edge-anchors {auto,center,ports}] [--labels]
-             [--colors {attr,none,path,source,target}] [--edge-color-rule RULE]
+             [--colors {attr,none,path,source,target}] [--edge-glyph-preset {default,thick,double}]
+             [--edge-arrow-style {ascii,unicode}] [--edge-color-rule RULE]
              [--style-rule RULE] [--style-rules-file FILE]
              input
 
@@ -406,6 +407,10 @@ options:
   --labels              Use node labels (if present) for displayed node text
   --colors {attr,none,path,source,target}
                         ANSI edge coloring mode: none (default), source, target, path, or attr
+  --edge-glyph-preset {default,thick,double}
+                        Global edge line-art preset: default (thin), thick, or double
+  --edge-arrow-style {ascii,unicode}
+                        Global edge arrowhead style: ascii (default) or unicode
   --edge-color-rule RULE
                         Attribute-driven edge color rule for --colors attr. Format:
                         <attribute>:<value>=<color>[,<value>=<color>...] (repeatable)
