@@ -2,13 +2,161 @@
 
 **PHART:** The Python Hierarchical ASCII Representation Tool - A Pure Python tool for graph visualization via charts and diagrams rendered in ASCII.
 
-## IMPORTANT CHANGES to v1.5.0
+# New for v1.5.0!
 
-In versions prior to v1.5.0, phart had limited, function-specific support for node and edge attributes. For example, there was attribute-driven edge coloring via `--edge-color-rule`, but it was limited to direct edge-attribute equality matches.
+This 1.5.0 release is bigger than any single update in the two years phart has been in development.
+Node and Edge attribute support had sorta emerged piecemeal - first, I wanted `label` properties to be displayed if requested instead of the node's id within NetworkX, then a user asked for 'side' edge attributes for a binary tre he wanted to render. While adding `side` support, I added support for a `color` attribute on edges so that paths could take on colors according to the `color` attribute on an edge.
 
-Users have asked for simple labelling options, and needed richer conditions, including rules that combine edge attributes with endpoint node attributes (e.g. spouse edge color based on destination sex), while keeping simple cases ergonomic.
+The syntax for the cli args for setting colors on edges by property seemed a shame to use only for colors, and a user has been asking for edge label display support, so I took this opportunity to implement edge labels. First partial implementation showed that width was going to be an issue, for renders where the user wants to display vertical or horizontal edge labels.
 
-Phart now supports a unified Rule Model for nodes and edges, and a minimal but powerful expression syntax. As before, rules can be added via call(s) on the CLI, or with a ruleset file - yaml or json in the CLI, or a Python Dict in LayoutOptions when using phart programmatically.
+I wanted to test with something I hadn't done before, so I downloaded some test .ged files from another project, and wrote a script to read the GED files into a NX DiGraph. I thought this was going to be simpler than it turned out to be, and making this ged import work so I could render it as a graph lead to adding horizontal and vertical pagination, then when bboxes and colors and 100 or so ancestors in the fictional test family lead to, tooling around the paginated text output is a bit cumbersome, akin to a comand-line microfiche reader. It works though, and is probably a reasonable trade-off for someone doing genealogy research where they are accustomed to wide hierarchical layouts of their data.
+
+So I thought about how one might constrain a layered graph diagram to a specific width (such as the terminal width, but it can be specified by the user) and break the nodes into groups where they can be arracnged vertically, and the edge routing work around the new layout. So we have text pagination, where the layout is not altered, only the display of or file-writing of is modified to span multiple pages AND/OR we now have a concept of "constrained partitioning" where the canvas size on which your nodes will be layout out is of a pre-determined size, probably matching the row/column width of the intended display, and vertically scrolling to fit the data.
+
+So this was a perfect opportunity tpo make node and edge attributes fully supported with a generic, not-color-specific rule syntax, and now that we'll have pagination and partition header information most likely, might as well style them while we're at it. Oh and, finish the 2-year-old partial ciustom node-styling and custom-edge styling that was half-implemented. Scope kept creepin'.
+
+### Shiny Object diverts my Attention
+
+In the middle of writing this documentation, I discovered just how awful my git hygiene is. I'm not entirely alone in this, lots of folks are guilty of commit messages of the sort "fix bug" or "correct typo", and many of us have experienced scope creep of the sort where a file you had no intention of changing needs to be changed (say some ancillary infrastructure support file, like maybe a pyproject.toml, or a `.pre-commit-hook.yaml` has to be ad hoc edited in order that you might do the work you planned on.) These out-of-scsope small edits - and sometimes much larger, just unexpected files find their way into my commits, but I'll overlook them in my commit message, sometimes missing concerns under an overly-specific (or completely generic) commit message. It often seems less important than the _real work_ I'm trying to accomplish and I dismiss the bad habit with something like "well, anyone can look at the commit and see what files were included if it becomes of interest", knowing that's not a great justificaation.
+
+Anyway, when I thought I could just create a changelog/release notes from the commits, and barring that, at least the diffs at each stage of the commit, just how awful my commit messagess and grouping of files has been, became more evident. `git log` and such were all but useless for reconstructing what I had added/changed/removed in terms of functionality. Additionally, there were tons of duplicate commits of the sort "Update README", whre I'd find a typo when looking at a repo in the browser on my phone and couldn't resist correcting it in the in-place editor of the github webui. Like a dozen within a few minutes at times; and because it commits directly to main, there's no staging files until you're completely done before pushing to the origin.
+
+Anyway, I am happy to report I have a solution for this.
+
+### Label Synthesis and Multiline BBoxes
+
+When node labels are enabled with `--labels` (or `--node-labels`), and a node does not define `label`, PHART can synthesize label text from ordered attribute paths:
+
+```bash
+phart --labels --bboxes --bbox-multiline-labels \
+  --node-label-lines name,birt.date,deat.date \
+  examples/gedcom.py
+```
+
+Notes:
+
+- `name,birt.date,deat.date` renders those three values in order (multiline in bboxes when enabled).
+- You can also use dotted paths directly, such as `name,birt.date,deat.date`.
+
+### Text Pagination
+
+Pagination is available for `--output-format text` and is useful for wide/tall renders:
+
+```bash
+phart --labels --bboxes \
+  --paginate-output-width 100 \
+  --paginate-output-height 30 \
+  --page-x 1 --page-y 0 \
+  --list-pages \
+  examples/gedcom.py
+```
+
+Notes:
+
+- `--paginate-output-width auto` and `--paginate-output-height auto` require terminal stdout.
+- Pagination is ANSI-aware: escape sequences are not counted toward visible width, and page slices preserve complete ANSI sequences.
+
+### Constrained Layout Panels and Partition Metadata
+
+Constrained layout is different from output pagination: it partitions during layout/routing, then renders panelized output with connector cues between panels.
+
+```bash
+phart --layout layered --constrained \
+  --target-canvas-width 80 \
+  --target-canvas-height 24 \
+  --partition-overlap 1 \
+  --partition-affinity-strength 1 \
+  --panel-headers lineage \
+  --connector-ref label \
+  --connector-compaction partition \
+  examples/gedcom.py
+```
+
+Notes:
+
+- Constrained mode currently supports `--layout auto|bfs|hierarchical|layered`.
+- `--partition-affinity-strength 0` disables split-affinity heuristics. Values greater than zero bias boundaries to keep close family/group relationships together.
+- Constrained splitting uses affinity-aware boundary selection; if no valid optimized split is found, it falls back to deterministic greedy splitting.
+- If a single node cannot fit inside the target canvas width, that node is kept intact and the panel can overflow.
+- `--target-canvas-width auto` and `--target-canvas-height auto` require terminal stdout.
+
+Programmatic export of partition metadata:
+
+```python
+import networkx as nx
+from phart import ASCIIRenderer, LayoutOptions, NodeStyle
+
+G = nx.DiGraph()
+G.add_edges_from(
+    [("R", "A1"), ("R", "A2"), ("R", "A3"), ("A1", "B1"), ("A2", "B2")]
+)
+
+renderer = ASCIIRenderer(
+    G,
+    options=LayoutOptions(
+        node_style=NodeStyle.MINIMAL,
+        layout_strategy="layered",
+        constrained=True,
+        target_canvas_width=12,
+        partition_affinity_strength=1,
+        connector_compaction="partition",
+        connector_ref_mode="label",
+    ),
+)
+
+print(renderer.render())
+
+plan = renderer.get_partition_plan()  # PartitionPlan | None
+metadata = renderer.export_partition_metadata()  # dict (schema_version=1.0)
+print(metadata["partition_count"])
+print(metadata["cross_partition_edges"][:2])
+```
+
+Why export metadata:
+
+- Build your own panel index/navigation around constrained output.
+- Assert deterministic partitioning in tests/CI.
+- Compare effects of `partition_affinity_strength`, `partition_order`, and overlap settings during tuning.
+
+### Edge Glyph Presets and Arrow Styles
+
+You can set global edge line-art and arrowhead style without per-glyph mapping:
+
+```bash
+phart --edge-glyph-preset thick --edge-arrow-style unicode your_graph.py
+```
+
+Full style-rule semantics and field reference: [docs/architecture/style-rules-spec.md](./docs/architecture/style-rules-spec.md)
+
+Node decorators can also be driven by style rules:
+
+```bash
+phart --labels \
+  --style-rule 'node: sex=="F" -> prefix=(,suffix=)' \
+  --style-rule 'node: sex=="M" -> prefix=[,suffix=]' \
+  examples/gedcom.py
+```
+
+Style rules still win for keys they set:
+
+```bash
+phart --edge-glyph-preset thick \
+  --style-rule 'edge: role=="link" -> line_vertical=!,arrow_down=x' \
+  your_graph.py
+```
+
+Legacy note:
+
+- Legacy global style fields continue to work.
+- Style rules are the preferred per-node/per-edge customization path and take precedence for overlapping keys.
+
+Compatibility / breaking-notes:
+
+- Style-rule validation is strict: unknown `set` keys and wrong target/key combinations now fail fast with explicit errors.
+- Edge glyph rule values must be single-cell glyphs (multi-character and wide glyphs are rejected).
+- `--edge-arrow-style unicode` is automatically coerced to ASCII when using ASCII charset mode.
+
+  ***
 
 ## Features
 
@@ -545,139 +693,6 @@ options:
   --list-pages          Print page index metadata when pagination is enabled
   --write-pages DIR     Write all paginated pages to DIR as page_xNN_yNN.txt files
 ```
-
-### Label Synthesis and Multiline BBoxes
-
-When node labels are enabled with `--labels` (or `--node-labels`), and a node does not define `label`, PHART can synthesize label text from ordered attribute paths:
-
-```bash
-phart --labels --bboxes --bbox-multiline-labels \
-  --node-label-lines name,birt.date,deat.date \
-  examples/gedcom.py
-```
-
-Notes:
-
-- `name,birt.date,deat.date` renders those three values in order (multiline in bboxes when enabled).
-- You can also use dotted paths directly, such as `name,birt.date,deat.date`.
-
-### Text Pagination
-
-Pagination is available for `--output-format text` and is useful for wide/tall renders:
-
-```bash
-phart --labels --bboxes \
-  --paginate-output-width 100 \
-  --paginate-output-height 30 \
-  --page-x 1 --page-y 0 \
-  --list-pages \
-  examples/gedcom.py
-```
-
-Notes:
-
-- `--paginate-output-width auto` and `--paginate-output-height auto` require terminal stdout.
-- Pagination is ANSI-aware: escape sequences are not counted toward visible width, and page slices preserve complete ANSI sequences.
-
-### Constrained Layout Panels and Partition Metadata
-
-Constrained layout is different from output pagination: it partitions during layout/routing, then renders panelized output with connector cues between panels.
-
-```bash
-phart --layout layered --constrained \
-  --target-canvas-width 80 \
-  --target-canvas-height 24 \
-  --partition-overlap 1 \
-  --partition-affinity-strength 1 \
-  --panel-headers lineage \
-  --connector-ref label \
-  --connector-compaction partition \
-  examples/gedcom.py
-```
-
-Notes:
-
-- Constrained mode currently supports `--layout auto|bfs|hierarchical|layered`.
-- `--partition-affinity-strength 0` disables split-affinity heuristics. Values greater than zero bias boundaries to keep close family/group relationships together.
-- Constrained splitting uses affinity-aware boundary selection; if no valid optimized split is found, it falls back to deterministic greedy splitting.
-- If a single node cannot fit inside the target canvas width, that node is kept intact and the panel can overflow.
-- `--target-canvas-width auto` and `--target-canvas-height auto` require terminal stdout.
-
-Programmatic export of partition metadata:
-
-```python
-import networkx as nx
-from phart import ASCIIRenderer, LayoutOptions, NodeStyle
-
-G = nx.DiGraph()
-G.add_edges_from(
-    [("R", "A1"), ("R", "A2"), ("R", "A3"), ("A1", "B1"), ("A2", "B2")]
-)
-
-renderer = ASCIIRenderer(
-    G,
-    options=LayoutOptions(
-        node_style=NodeStyle.MINIMAL,
-        layout_strategy="layered",
-        constrained=True,
-        target_canvas_width=12,
-        partition_affinity_strength=1,
-        connector_compaction="partition",
-        connector_ref_mode="label",
-    ),
-)
-
-print(renderer.render())
-
-plan = renderer.get_partition_plan()  # PartitionPlan | None
-metadata = renderer.export_partition_metadata()  # dict (schema_version=1.0)
-print(metadata["partition_count"])
-print(metadata["cross_partition_edges"][:2])
-```
-
-Why export metadata:
-
-- Build your own panel index/navigation around constrained output.
-- Assert deterministic partitioning in tests/CI.
-- Compare effects of `partition_affinity_strength`, `partition_order`, and overlap settings during tuning.
-
-### Edge Glyph Presets and Arrow Styles
-
-You can set global edge line-art and arrowhead style without per-glyph mapping:
-
-```bash
-phart --edge-glyph-preset thick --edge-arrow-style unicode your_graph.py
-```
-
-Full style-rule semantics and field reference: [docs/architecture/style-rules-spec.md](./docs/architecture/style-rules-spec.md)
-
-Node decorators can also be driven by style rules:
-
-```bash
-phart --labels \
-  --style-rule 'node: sex=="F" -> prefix=(,suffix=)' \
-  --style-rule 'node: sex=="M" -> prefix=[,suffix=]' \
-  examples/gedcom.py
-```
-
-Style rules still win for keys they set:
-
-```bash
-phart --edge-glyph-preset thick \
-  --style-rule 'edge: role=="link" -> line_vertical=!,arrow_down=x' \
-  your_graph.py
-```
-
-Legacy note:
-
-- Legacy global style fields continue to work.
-- Style rules are the preferred per-node/per-edge customization path and take precedence for overlapping keys.
-
-Compatibility / breaking-notes:
-
-- Style-rule validation is strict: unknown `set` keys and wrong target/key combinations now fail fast with explicit errors.
-- Edge glyph rule values must be single-cell glyphs (multi-character and wide glyphs are rejected).
-- `--edge-arrow-style unicode` is automatically coerced to ASCII when using ASCII charset mode.
 
 ## Quick Start
 
