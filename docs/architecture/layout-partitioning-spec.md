@@ -87,6 +87,12 @@ Determinism:
 
 - Given same graph/options, partition assignment must be stable.
 
+Implementation notes (v1.5.0):
+
+- Layer segment splitting is affinity-aware: optimize for fewer segments first, then lower split-penalty cost.
+- Partition boundary selection prefers lower affinity-cut penalties; ties favor a later cut.
+- If affinity optimization cannot produce a valid split plan, constrained layout falls back to deterministic greedy splitting.
+
 ## 8. Cross-Partition Edges
 
 When an edge crosses partitions:
@@ -100,23 +106,41 @@ Connector metadata:
 
 `cross-partition-edge-style=none` suppresses markers.
 
-## 9. Data Model Additions
+## 9. Data Model and Export Surface (v1.5.0)
 
-`LayoutOptions` additions (proposed):
+`LayoutOptions` constrained-mode fields (implemented):
 
 - `constrained: bool = False`
 - `target_canvas_width: Optional[int] = None`
 - `target_canvas_height: Optional[int] = None`
 - `partition_overlap: int = 0`
+- `partition_affinity_strength: int = 1`
 - `cross_partition_edge_style: str = "stub"`
+- `connector_ref_mode: str = "auto"` (`--connector-ref`)
+- `connector_compaction: str = "none"`
 - `partition_order: str = "natural"`
+- `panel_header_mode: str = "basic"` (`--panel-headers`)
 
-Renderer/runtime additions:
+`PartitionPlan` (runtime object):
 
-- `PartitionPlan` with:
-  - list of partitions
-  - node-to-partition mapping
-  - cross-partition edge list
+- `partitions: List[List[Any]]`
+- `partition_layer_ranges: List[Tuple[int, int]]`
+- `node_to_partition: Dict[Any, int]`
+- `cross_partition_edges: List[CrossPartitionEdge]`
+
+Programmatic API:
+
+- `ASCIIRenderer.get_partition_plan() -> Optional[PartitionPlan]`
+- `ASCIIRenderer.export_partition_metadata() -> Dict[str, Any]`
+
+`export_partition_metadata()` output includes:
+
+- `schema_version`
+- `constrained`
+- `partition_count`
+- `partitions` entries with partition indices/numbers, node ids, primary node ids, counts, and rank ranges
+- `node_to_partition` mapping
+- `cross_partition_edges` entries with `source_partition`, `dest_partition`, partition numbers, `edge_id`, `u`, `v`
 
 ## 10. Rendering Semantics
 
@@ -135,7 +159,8 @@ Interaction with existing output pagination:
 - Node wider than target width:
   - keep node intact and allow controlled overflow for that panel.
 - Dense cyclic graph where partitioning explodes connectors:
-  - emit warning and suggest fallback to regular layout + output pagination.
+  - connector listings can become noisy; consider `--connector-compaction partition`,
+    `--cross-partition-edge-style none`, or fallback to regular layout + output pagination.
 - `auto` width/height without terminal stdout:
   - error with explicit guidance to provide numeric dimensions.
 
@@ -171,20 +196,20 @@ Phase C:
 - Affinity penalty tuning and optional connector compaction.
 - Programmatic export of partition metadata.
 
-## 14. Open Questions
+## 14. Resolved Design Questions
 
 - Do we want a dedicated output mode for multi-panel files by default?
-  YES. in PR2.
+  Yes. Implemented in PR2.
 - Should connector stubs be style-rule targetable (e.g., `target=connector`)?
-  Yes, once stubs are rendered.
+  Yes. Implemented in PR3.
 - Should panel headers include lineage summary (root ids, rank range)?
-  Yes. ( none|basic|lineage ), default to basic.
+  Yes. Implemented as `none|basic|lineage` with default `basic`.
 
-### 14.1. Additional details
+### 14.1 Additional Details
 
-- partition-overlap is analogous to --paginate-overlap except that it refers to layers (rank bands) and nodes, not text rows and columns.
+- `partition-overlap` is analogous to `--paginate-overlap`, except it refers to layers (rank bands) and nodes, not text rows/columns.
 - In constrained mode, we should never split node boxes for panel fit.
-- If overlap is 0, still render boundary entry/exit cues at panel boundaries (not just bottom “Connectors:” block).
+- If overlap is 0, still render boundary entry/exit cues at panel boundaries (not just bottom "Connectors:" block).
 - Connector endpoints should prefer readable refs (label and/or id), not only raw internal ids.
 
 ## 15. Implementation Tracker (As of March 13, 2026)

@@ -579,6 +579,68 @@ Notes:
 - `--paginate-output-width auto` and `--paginate-output-height auto` require terminal stdout.
 - Pagination is ANSI-aware: escape sequences are not counted toward visible width, and page slices preserve complete ANSI sequences.
 
+### Constrained Layout Panels and Partition Metadata
+
+Constrained layout is different from output pagination: it partitions during layout/routing, then renders panelized output with connector cues between panels.
+
+```bash
+phart --layout layered --constrained \
+  --target-canvas-width 80 \
+  --target-canvas-height 24 \
+  --partition-overlap 1 \
+  --partition-affinity-strength 1 \
+  --panel-headers lineage \
+  --connector-ref label \
+  --connector-compaction partition \
+  examples/gedcom.py
+```
+
+Notes:
+
+- Constrained mode currently supports `--layout auto|bfs|hierarchical|layered`.
+- `--partition-affinity-strength 0` disables split-affinity heuristics. Values greater than zero bias boundaries to keep close family/group relationships together.
+- Constrained splitting uses affinity-aware boundary selection; if no valid optimized split is found, it falls back to deterministic greedy splitting.
+- If a single node cannot fit inside the target canvas width, that node is kept intact and the panel can overflow.
+- `--target-canvas-width auto` and `--target-canvas-height auto` require terminal stdout.
+
+Programmatic export of partition metadata:
+
+```python
+import networkx as nx
+from phart import ASCIIRenderer, LayoutOptions, NodeStyle
+
+G = nx.DiGraph()
+G.add_edges_from(
+    [("R", "A1"), ("R", "A2"), ("R", "A3"), ("A1", "B1"), ("A2", "B2")]
+)
+
+renderer = ASCIIRenderer(
+    G,
+    options=LayoutOptions(
+        node_style=NodeStyle.MINIMAL,
+        layout_strategy="layered",
+        constrained=True,
+        target_canvas_width=12,
+        partition_affinity_strength=1,
+        connector_compaction="partition",
+        connector_ref_mode="label",
+    ),
+)
+
+print(renderer.render())
+
+plan = renderer.get_partition_plan()  # PartitionPlan | None
+metadata = renderer.export_partition_metadata()  # dict (schema_version=1.0)
+print(metadata["partition_count"])
+print(metadata["cross_partition_edges"][:2])
+```
+
+Why export metadata:
+
+- Build your own panel index/navigation around constrained output.
+- Assert deterministic partitioning in tests/CI.
+- Compare effects of `partition_affinity_strength`, `partition_order`, and overlap settings during tuning.
+
 ### Edge Glyph Presets and Arrow Styles
 
 You can set global edge line-art and arrowhead style without per-glyph mapping:

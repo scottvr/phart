@@ -28,7 +28,7 @@ The design goal is a unified rule model that can style both nodes and edges with
 
 ## 4. Terminology
 
-- Target element: the element currently being styled (`node`, `edge`, `connector`, or `panel_header` targets).
+- Target element: the element currently being styled (`node`, `edge`, `connector`, or `panel_header`).
 - Context object:
   - `self`: current target's attributes
   - `edge`: alias of `self` when target is `edge`
