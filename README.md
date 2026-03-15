@@ -8,7 +8,35 @@ This 1.5.0 release is bigger than any single update in the two years phart has b
 
 I'll try to document all of the new features, but alas, I tend to get too wordy so I've trashed and reverted back the old README several times already. For deep dives into new topics, I'm creating separate docs in the docs directory in the repo.
 
-nodes, edges, and
+## Features (some pre-date v1.5.0 but hadnt been documentewd yet.)
+
+- Render using ASCII (7-bit) or Unicode characters
+- Optional ANSI color for either charset
+- Multiple node styles (square, round, diamond, custom)
+- Customizable edge characters
+- Support for directed and undirected graphs
+- Handles cycles and complex layouts
+- Bidirectional edge support
+- Edge attribute support (and attribute-based coloring of edges)
+- Edge label rendering from edge `label` attributes
+- Over ten layout strategies
+- Orthogonal edge paths (all 90 degree turns, "Manhattan" style)
+- **Node labels using multi-column character sets (such as CJK)**
+- **Optional width/height pagination for text output**
+- **Optional multiline node labels in bounding boxes**
+- **mermaid flowchart, svg, and html source output**
+- **pagination (horizontal and vertical) witth CLI page-selector support**
+- **partitioning (horizontal and vertical - set the screen canvas size as a contraint, and adjust the layers (rank aands ) to fit within canvas constraints**
+- **nodes and edges support arbitrary attribiutes now, not just label, color, etc)**
+- **those attributes can be displayed as lbels on nodes and edges**
+- **styling, coloring, etc based on attributes is now done with a single unified, simple, and flexible syntax.**
+- **not that you asked for it, but connectors and panel headers can now be styled too**
+- **and the phart 0.1.4 original node styling and edge styling is now fully realized.**
+- **what's a panel header? Check out the new docs in the docs/ directory for deep dives architecturally**
+- **the rest I'll try to touch on in this README**
+- [docs/architecture/style-rules-spec.md](https://github.com/scottvr/phart/blob/main/docs/architecture/style-rules-spec.md)
+- [docs/architecture/layout-partitioning-spec.md](https://github.com/scottvr/phart/blob/main/docs/architecture/layout-partitioning-spec.md)
+
 
 ### Label Synthesis and Multiline BBoxes
 
@@ -105,6 +133,8 @@ print(metadata["cross_partition_edges"][:2])
 - Assert deterministic partitioning in tests/CI.
 - Compare effects of `partition_affinity_strength`, `partition_order`, and overlap settings during tuning.
 
+Of course, this is supported via the CLI as well.
+
 ### Edge Glyph Presets and Arrow Styles
 
 You can set global edge line-art and arrowhead style without per-glyph mapping:
@@ -143,34 +173,6 @@ phart --edge-glyph-preset thick \
 - Edge glyph rule values must be single-cell glyphs (multi-character and wide glyphs are rejected).
 - `--edge-arrow-style unicode` is automatically coerced to ASCII when using ASCII charset mode.
 
-## Features (some pre-date v1.5.0 but hadnt been documentewd yet.)
-
-- Render using ASCII (7-bit) or Unicode characters
-- Optional ANSI color for either charset
-- Multiple node styles (square, round, diamond, custom)
-- Customizable edge characters
-- Support for directed and undirected graphs
-- Handles cycles and complex layouts
-- Bidirectional edge support
-- Edge attribute support (and attribute-based coloring of edges)
-- Edge label rendering from edge `label` attributes
-- Over ten layout strategies
-- Orthogonal edge paths (all 90 degree turns, "Manhattan" style)
-- **Node labels using multi-column character sets (such as CJK)**
-- **Optional width/height pagination for text output**
-- **Optional multiline node labels in bounding boxes**
-- **mermaid flowchart, svg, and html source output**
-- **pagination (horizontal and vertical) witth CLI page-selector support**
-- **partitioning (horizontal and vertical - set the screen canvas size as a contraint, and adjust the layers (rank aands ) to fit within canvas constraints**
-- **nodes and edges support arbitrary attribiutes now, not just label, color, etc)**
-- **those attributes can be displayed as lbels on nodes and edges**
-- **styling, coloring, etc based on attributes is now done with a single unified, simple, and flexible syntax.**
-- **not that you asked for it, but connectors and panel headers can now be styled too**
-- **and the phart 0.1.4 original node styling and edge styling is now fully realized.**
-- **what's a panel header? Check out the new docs in the docs/ directory for deep dives architecturally**
-- **the rest I'll try to touch on in this README**
-- [docs/architecture/style-rules-spec.md](https://github.com/scottvr/phart/blob/main/docs/architecture/style-rules-spec.md)
-- [docs/architecture/layout-partitioning-spec.md](https://github.com/scottvr/phart/blob/main/docs/architecture/layout-partitioning-spec.md)
 
 ---
 
