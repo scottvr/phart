@@ -166,7 +166,9 @@ def glyph_for_line_dirs(renderer: ASCIIRenderer, dirs: Set[str]) -> str:
         return glyph_map[key]
 
     if "left" in dirs or "right" in dirs:
-        return renderer._edge_style_glyph("line_horizontal", renderer.options.edge_horizontal)
+        return renderer._edge_style_glyph(
+            "line_horizontal", renderer.options.edge_horizontal
+        )
     return renderer._edge_style_glyph("line_vertical", renderer.options.edge_vertical)
 
 
