@@ -451,7 +451,7 @@ $ phart balanced_tree.py --bboxes --hpad 0 --style round --layer-spacing 4 --edg
 └───┘    └───┘    └───┘    └───┘
 ```
 
-Let's look a slightly more interesting graph, courtesy of phart user @deostroll, in the [Discussions](https://github.com/scottvr/phart/discussions/15).
+Let's look a slightly more interesting graph, courtesy of a user in the [Discussions](https://github.com/scottvr/phart/discussions/15).
 
 His script generates a Collatz Tree, and takes an argument for the depth for which you wish to calculate terms. As you will see, we can pass arguments for the **phart cli** to use as
 arguments for the script you've given it as an input file. We will just separate the
@@ -513,10 +513,6 @@ There are more examples scripts in the repo, along with a README in the examples
 
 Now, explicitly exposed and selectable by the user, phart's layout_strategy is now configurable.
 See [LAYOUT-STRATEGIES.md](https://github.com/scottvr/phart/blob/main/LAYOUT-STRATEGIES.md) in the repo for demos.
-
-### NEWER! - Accidental Features
-
-So, I inadvertently merged some code into main that was not intended to be released yet, because it's - while not _not_ working, per se - still a little half-baked, so it's not documented well. Nevertheless, some might notice the command-line options when runnning `phart --help`, for example and try to use some of the features, so I figured I may as well explain one of the goofier ones. I've written about it here in [GHM-LAtEX.md](https://github.com/scottvr/phart/blob/main/docs/GHM-LATEX.md)
 
 ## Why "PHART"?
 
@@ -883,9 +879,7 @@ phart graph.py --charset ascii --style round
 This means you can set specific options in your code while still using command-line
 options to adjust general rendering settings.
 
-#### I hope you enjoy it, and include many surprising plain-text diagrams in your next paper/book/website/video. Let me know if you
-
-do something cool with it, or if it breaks on your graph.
+#### I hope you enjoy it, and include many surprising plain-text diagrams in your next paper/book/website/video. Let me know if you do something cool with it, or if it breaks on your graph.
 
 ## License
 

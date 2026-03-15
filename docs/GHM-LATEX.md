@@ -114,7 +114,7 @@ Yeah. Its just the ratio describing the width of the whitespace for each tilde c
 
 The obvious finishing move is going to be to make one of those "SPACE_RATIO"s for all characters, and  not just the `-` or whatever I measured, I don't remember now but I do recall there was an even larger discrepency between the displayed letter 'M' and the width of the space and the `-`both, so I'll want to generate a map of all the characters in phart's character set and put each character * 80, one per row, measure that against what's actually displayed on the screen, and auto-generate a mapping, so all images will be square and true instead of slightly disheveled like in this first attempt.
 
-Curious if anyone thinks up any other tricks similar to abusing bullet points to get a better vertical resolution out of **GFM*. Honestly, that was the first thing other than newlines, `<BR />`, div and span that I tried, so there may be a better way than I have found, but, also honestly, this hacky display technique is well-aligned with phart's aesthetica - "part's principles", if you will... so I'm ok with it.
+Curious if anyone thinks up any other tricks similar to abusing bullet points to get a better vertical resolution out of **GFM*. Honestly, that was the first thing other than newlines, `<BR />`, div and span that I tried, so there may be a better way than I have found, but, also honestly, this hacky display technique is well-aligned with phart's aesthetic - "phart's principles", if you will... so I'm ok with it.
 
 
 ### I AM _IRONIC_ MAN

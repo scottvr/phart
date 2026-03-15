@@ -17,7 +17,7 @@ body:
     attributes:
       label: Prerequisites
       options:
-        - label: I am using pure Python (plus NetworkX, our one true dependency)
+        - label: I am using Python and NetworkX, or the phart cli (or perhaps one of the supported [extras] is ok too.)
           required: true
 
   - type: textarea
