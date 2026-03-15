@@ -1,6 +1,6 @@
-<html>
-  <body>
-    <h1>Evidence</h1>
+# Evidence
+
+<h1>Evidence</h1>
     <h2 id="note-1">
       1. PR5: affinity tuning + connector compaction + metadata export
       finalization. implement affinity penalty heuristics, boundary scoring,
@@ -1591,5 +1591,3 @@
         >nxatl,py</a
       >
     </p>
-  </body>
-</html>
