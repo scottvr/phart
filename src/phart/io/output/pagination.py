@@ -75,7 +75,9 @@ def paginate_text(
         row_slice = rows[y_start:y_end]
         for x_idx, x_start in enumerate(x_starts):
             x_end = min(canvas_width, x_start + page_width)
-            page_rows = [_slice_ansi_line(row, x_start, x_end).rstrip() for row in row_slice]
+            page_rows = [
+                _slice_ansi_line(row, x_start, x_end).rstrip() for row in row_slice
+            ]
             page_text = "\n".join(page_rows)
             pages.append(
                 TextPage(
