@@ -9,6 +9,7 @@ import networkx as nx  # type: ignore
 
 from phart import ASCIIRenderer
 from phart.layout import LayoutOptions
+from phart.rendering import nodes as nodes_mod
 from phart.rendering import ports as ports_mod
 from phart.styles import FlowDirection, NodeStyle
 from phart.renderer import merge_layout_options
@@ -185,6 +186,187 @@ class TestASCIIRenderer(unittest.TestCase):
         result = renderer.render()
         self.assertIn("Alpha Beta", result)
 
+    def test_use_labels_synthesizes_node_text_from_attributes(self):
+        graph = nx.DiGraph()
+        graph.add_node("n1", name="Alpha", birt={"date": "Y"}, deat={"date": "Y"})
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_labels=True,
+                use_ascii=True,
+            ),
+        )
+        result = renderer.render()
+        self.assertIn("Alpha", result)
+        self.assertNotIn("Y-Y", result)
+        self.assertNotIn("n1", result)
+
+    def test_node_label_lines_synthesizes_multiline_in_bboxes(self):
+        graph = nx.DiGraph()
+        graph.add_node("n1", name="Alpha", birt={"date": "Y"}, deat={"date": "Y"})
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                bboxes=True,
+                use_labels=True,
+                bbox_multiline_labels=True,
+                node_label_lines=("name", "birt.date"),
+                use_ascii=True,
+            ),
+        )
+        result = renderer.render()
+        self.assertIn("Alpha", result)
+        self.assertIn("Y", result)
+        self.assertIn("+-------+", result)
+
+    def test_node_label_lines_name_only_is_distinct_from_name_and_birth_date(self):
+        graph = nx.DiGraph()
+        graph.add_node("n1", name="Alpha", birt={"date": "Y"}, deat={"date": "Y"})
+
+        name_only = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                bboxes=True,
+                use_labels=True,
+                bbox_multiline_labels=True,
+                node_label_lines=("name",),
+                use_ascii=True,
+            ),
+        ).render()
+        name_birth_date = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                bboxes=True,
+                use_labels=True,
+                bbox_multiline_labels=True,
+                node_label_lines=("name", "birt.date"),
+                use_ascii=True,
+            ),
+        ).render()
+
+        self.assertIn("Alpha", name_only)
+        self.assertNotIn("Y", name_only)
+        self.assertIn("Y", name_birth_date)
+
+    def test_node_label_lines_wildcard_includes_remaining_attributes(self):
+        graph = nx.DiGraph()
+        graph.add_node(
+            "n1",
+            name="Alpha",
+            birt={"date": "Y"},
+            deat={"date": "Y"},
+            sex="F",
+            note="N",
+        )
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                bboxes=True,
+                use_labels=True,
+                bbox_multiline_labels=True,
+                node_label_lines=("name", "*"),
+                use_ascii=True,
+            ),
+        )
+        result = renderer.render()
+        self.assertIn("Alpha", result)
+        self.assertIn("sex=F", result)
+        self.assertIn("birt.date=Y", result)
+
+    def test_multiline_bbox_layout_respects_node_spacing_without_overlap(self):
+        graph = nx.DiGraph()
+        graph.add_node("root", name="Root")
+        graph.add_node("left", name="L", note="x")
+        graph.add_node("right", name="Right Node", note="very long line")
+        graph.add_edge("root", "left")
+        graph.add_edge("root", "right")
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                bboxes=True,
+                use_labels=True,
+                bbox_multiline_labels=True,
+                node_label_lines=("name", "*"),
+                node_spacing=1,
+                layer_spacing=3,
+                use_ascii=True,
+            ),
+        )
+        positions, _width, _height = renderer.layout_manager.calculate_layout()
+        left_bounds = renderer._get_node_bounds("left", positions)
+        right_bounds = renderer._get_node_bounds("right", positions)
+        if left_bounds["top"] == right_bounds["top"]:
+            self.assertLess(left_bounds["right"], right_bounds["left"])
+
+    def test_multiline_label_uses_single_line_when_bbox_multiline_disabled(self):
+        graph = nx.DiGraph()
+        graph.add_node("n1", label="Alpha\nBeta")
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                bboxes=True,
+                use_labels=True,
+                bbox_multiline_labels=False,
+                use_ascii=True,
+            ),
+        )
+        result = renderer.render()
+        self.assertIn("Alpha Beta", result)
+        self.assertNotIn("Alpha\nBeta", result)
+
+    def test_edge_label_renders_on_horizontal_edges(self):
+        graph = nx.DiGraph()
+        graph.add_edge("A", "B", label="E_H")
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=True,
+                flow_direction=FlowDirection.RIGHT,
+                edge_label_attr="label",
+            ),
+        )
+        result = renderer.render()
+        self.assertIn("E_H", result)
+
+    def test_edge_label_renders_on_vertical_edges(self):
+        graph = nx.DiGraph()
+        graph.add_edge("A", "B", label="E_V")
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=True,
+                flow_direction=FlowDirection.DOWN,
+                edge_label_attr="label",
+            ),
+        )
+        result = renderer.render()
+        self.assertIn("E_V", result)
+
+    def test_edge_labels_are_disabled_by_default(self):
+        graph = nx.DiGraph()
+        graph.add_edge("A", "B", label="E_H")
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=True,
+                flow_direction=FlowDirection.RIGHT,
+            ),
+        )
+        result = renderer.render()
+        self.assertNotIn("E_H", result)
+
     def test_cjk_label_box_width_respects_display_columns(self):
         graph = nx.DiGraph()
         graph.add_node("n1", label="中文")
@@ -265,6 +447,44 @@ class TestASCIIRenderer(unittest.TestCase):
         renderer = ASCIIRenderer(single)
         result = renderer.render()
         self.assertEqual(result.strip(), "[A]")
+
+    def test_render_markdown_safe_uses_nbsp_in_auto_mode(self):
+        graph = nx.DiGraph()
+        graph.add_node("A B")
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(node_style=NodeStyle.MINIMAL, use_ascii=True),
+        )
+        result = renderer.render(markdown_safe=True)
+        self.assertIn("\u00a0", result)
+        self.assertNotIn("A B", result)
+
+    def test_render_markdown_safe_respects_explicit_whitespace_mode(self):
+        graph = nx.DiGraph()
+        graph.add_node("A B")
+        ascii_renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=True,
+                whitespace_mode="ascii_space",
+            ),
+        )
+        nbsp_renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=True,
+                whitespace_mode="nbsp",
+            ),
+        )
+
+        ascii_result = ascii_renderer.render(markdown_safe=True)
+        nbsp_result = nbsp_renderer.render(markdown_safe=False)
+
+        self.assertIn("A B", ascii_result)
+        self.assertNotIn("\u00a0", ascii_result)
+        self.assertIn("\u00a0", nbsp_result)
 
     def test_from_dot(self):
         """Test creation from DOT format."""
@@ -1418,6 +1638,232 @@ class TestASCIIRenderer(unittest.TestCase):
         self.assertIn(("Alice", "Bob"), renderer._edge_color_map)  # noqa: SLF001
         self.assertIsNotNone(renderer._edge_color_map[("Alice", "Bob")])  # noqa: SLF001
 
+    def test_edge_color_mode_attr_supports_style_rule_with_endpoint_attrs(self):
+        graph = nx.DiGraph()
+        graph.add_node("A", sex="M")
+        graph.add_node("B", sex="F")
+        graph.add_node("C", sex="M")
+        graph.add_edge("A", "B", role="spouse")
+        graph.add_edge("A", "C", role="spouse")
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=False,
+                ansi_colors=True,
+                edge_color_mode="attr",
+                style_rules=[
+                    {
+                        "target": "edge",
+                        "when": 'role == "spouse" and v.sex == "F"',
+                        "set": {"color": "green"},
+                    },
+                    {
+                        "target": "edge",
+                        "when": 'role == "spouse" and v.sex == "M"',
+                        "set": {"color": "blue"},
+                    },
+                ],
+                bboxes=True,
+                layer_spacing=4,
+            ),
+        )
+        renderer.render()
+        self.assertEqual(renderer._edge_color_map[("A", "B")], "\x1b[32m")  # noqa: SLF001
+        self.assertEqual(renderer._edge_color_map[("A", "C")], "\x1b[34m")  # noqa: SLF001
+
+    def test_edge_style_rule_priority_orders_matches(self):
+        graph = nx.DiGraph()
+        graph.add_node("A", sex="M")
+        graph.add_node("B", sex="F")
+        graph.add_edge("A", "B", role="spouse")
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=False,
+                ansi_colors=True,
+                edge_color_mode="attr",
+                style_rules=[
+                    {
+                        "target": "edge",
+                        "priority": 1,
+                        "when": 'role == "spouse"',
+                        "set": {"color": "red"},
+                    },
+                    {
+                        "target": "edge",
+                        "priority": 10,
+                        "when": 'role == "spouse" and v.sex == "F"',
+                        "set": {"color": "green"},
+                    },
+                ],
+                bboxes=True,
+                layer_spacing=4,
+            ),
+        )
+        renderer.render()
+        self.assertEqual(renderer._edge_color_map[("A", "B")], "\x1b[32m")  # noqa: SLF001
+
+    def test_node_style_rule_prefix_suffix_applies_to_labels(self):
+        graph = nx.DiGraph()
+        graph.add_node("n1", name="Alice")
+        options = LayoutOptions(
+            use_labels=True,
+            style_rules=[
+                {
+                    "target": "node",
+                    "when": 'name == "Alice"',
+                    "set": {"prefix": "{", "suffix": "}"},
+                }
+            ],
+        )
+        lines = nodes_mod.resolved_node_label_lines(options, graph.nodes["n1"], "n1")
+        self.assertEqual(lines, ["{Alice}"])
+
+    def test_node_style_rule_node_style_overrides_global_style(self):
+        graph = nx.DiGraph()
+        graph.add_node("n1", name="Alice", sex="F")
+        graph.add_node("n2", name="Bob", sex="M")
+        options = LayoutOptions(
+            use_labels=True,
+            node_style=NodeStyle.SQUARE,
+            style_rules=[
+                {
+                    "target": "node",
+                    "when": 'sex == "F"',
+                    "set": {"node_style": "round"},
+                }
+            ],
+        )
+        f_lines = nodes_mod.resolved_node_label_lines(options, graph.nodes["n1"], "n1")
+        m_lines = nodes_mod.resolved_node_label_lines(options, graph.nodes["n2"], "n2")
+        self.assertEqual(f_lines, ["(Alice)"])
+        self.assertEqual(m_lines, ["[Bob]"])
+
+    def test_node_style_rule_can_override_node_color(self):
+        graph = nx.DiGraph([("A", "B")])
+        graph.nodes["A"]["sex"] = "F"
+        graph.nodes["B"]["sex"] = "M"
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                ansi_colors=True,
+                edge_color_mode="source",
+                style_rules=[
+                    {
+                        "target": "node",
+                        "when": 'sex == "F"',
+                        "set": {"color": "red"},
+                    }
+                ],
+            ),
+        )
+        renderer.render()
+        self.assertEqual(renderer._node_color_map["A"], "\x1b[31m")  # noqa: SLF001
+
+    def test_node_style_rule_color_respects_no_color_nodes(self):
+        graph = nx.DiGraph([("A", "B")])
+        graph.nodes["A"]["sex"] = "F"
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                ansi_colors=True,
+                edge_color_mode="source",
+                color_nodes=False,
+                style_rules=[
+                    {
+                        "target": "node",
+                        "when": 'sex == "F"',
+                        "set": {"color": "red"},
+                    }
+                ],
+            ),
+        )
+        renderer.render()
+        self.assertEqual(renderer._node_color_map, {})  # noqa: SLF001
+
+    def test_edge_style_rule_can_override_edge_line_and_arrow_glyphs(self):
+        graph = nx.DiGraph()
+        graph.add_edge("A", "B", role="link")
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=True,
+                bboxes=True,
+                hpad=1,
+                layer_spacing=5,
+                flow_direction=FlowDirection.DOWN,
+                style_rules=[
+                    {
+                        "target": "edge",
+                        "when": 'role == "link"',
+                        "set": {
+                            "line_vertical": "!",
+                            "arrow_down": "x",
+                        },
+                    }
+                ],
+            ),
+        )
+        output = renderer.render()
+        self.assertIn("!", output)
+        self.assertIn("x", output)
+
+    def test_edge_glyph_preset_thick_applies_unicode_line_art(self):
+        graph = nx.DiGraph([("A", "B")])
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=False,
+                bboxes=True,
+                layer_spacing=5,
+                edge_glyph_preset="thick",
+            ),
+        )
+        output = renderer.render()
+        self.assertIn("┃", output)
+
+    def test_edge_arrow_style_unicode_applies_unicode_arrowheads(self):
+        graph = nx.DiGraph([("A", "B")])
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=False,
+                bboxes=True,
+                layer_spacing=5,
+                edge_arrow_style="unicode",
+            ),
+        )
+        output = renderer.render()
+        self.assertIn("↓", output)
+
+    def test_edge_style_rule_glyph_overrides_global_preset(self):
+        graph = nx.DiGraph()
+        graph.add_edge("A", "B", role="link")
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=False,
+                bboxes=True,
+                layer_spacing=5,
+                edge_glyph_preset="thick",
+                style_rules=[
+                    {
+                        "target": "edge",
+                        "when": 'role == "link"',
+                        "set": {"line_vertical": "!"},
+                    }
+                ],
+            ),
+        )
+        output = renderer.render()
+        self.assertIn("!", output)
+
     def test_attr_mode_bidirectional_requires_rule_attribute_agreement(self):
         graph = nx.DiGraph()
         graph.add_edge("Alice", "Bob", relationship="friend")
@@ -1582,6 +2028,279 @@ class TestASCIIRenderer(unittest.TestCase):
 
         self.assertEqual(counts[frozenset(("Alice", "Bob"))], 2)
 
+    def test_constrained_render_outputs_multi_panel_text_with_connectors(self):
+        graph = nx.DiGraph()
+        graph.add_edge("R", "A1")
+        graph.add_edge("R", "A2")
+        graph.add_edge("R", "A3")
+        graph.add_edge("R", "A4")
+        graph.add_edge("A1", "B1")
+        graph.add_edge("A2", "B2")
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="layered",
+                constrained=True,
+                target_canvas_width=12,
+                panel_header_mode="basic",
+                use_ascii=True,
+            ),
+        )
+        output = renderer.render()
+
+        self.assertIn("=== Panel P1/2", output)
+        self.assertIn("=== Panel P2/2", output)
+        self.assertIn("Connectors:", output)
+        self.assertIn("-> [P2] R->A3", output)
+        self.assertIn("from [P1] -> B1 (A1->B1)", output)
+        self.assertIn("Boundary Out:", output)
+        self.assertIn("Boundary In:", output)
+
+    def test_constrained_render_respects_connector_style_none(self):
+        graph = nx.DiGraph()
+        graph.add_edge("R", "A1")
+        graph.add_edge("R", "A2")
+        graph.add_edge("R", "A3")
+        graph.add_edge("R", "A4")
+        graph.add_edge("A1", "B1")
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="layered",
+                constrained=True,
+                target_canvas_width=12,
+                cross_partition_edge_style="none",
+                use_ascii=True,
+            ),
+        )
+        output = renderer.render()
+
+        self.assertNotIn("Connectors:", output)
+        self.assertNotIn("-> [P", output)
+
+    def test_constrained_render_lineage_headers_include_roots_and_rank_ranges(self):
+        graph = nx.DiGraph()
+        graph.add_edge("R", "A1")
+        graph.add_edge("R", "A2")
+        graph.add_edge("R", "A3")
+        graph.add_edge("R", "A4")
+        graph.add_edge("A1", "B1")
+        graph.add_edge("A2", "B2")
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="layered",
+                constrained=True,
+                target_canvas_width=12,
+                panel_header_mode="lineage",
+                use_ascii=True,
+            ),
+        )
+        output = renderer.render()
+
+        self.assertIn("ranks=", output)
+        self.assertIn("roots=", output)
+
+    def test_constrained_render_supports_connector_and_panel_header_style_rules(self):
+        graph = nx.DiGraph()
+        graph.add_edge("R", "A1")
+        graph.add_edge("R", "A2")
+        graph.add_edge("R", "A3")
+        graph.add_edge("R", "A4")
+        graph.add_edge("A1", "B1")
+        graph.add_edge("A2", "B2")
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="layered",
+                constrained=True,
+                target_canvas_width=12,
+                panel_header_mode="basic",
+                style_rules=[
+                    {
+                        "target": "panel_header",
+                        "when": "partition_number == 1",
+                        "set": {"prefix": "[HDR] "},
+                    },
+                    {
+                        "target": "connector",
+                        "when": 'kind == "incoming"',
+                        "set": {"prefix": "[IN] "},
+                    },
+                ],
+                use_ascii=True,
+            ),
+        )
+        output = renderer.render()
+
+        self.assertIn("[HDR]=== Panel P1/2", output)
+        self.assertIn("[IN]  from [P1] -> B1 (A1->B1)", output)
+
+    def test_constrained_render_supports_connector_style_rule_color(self):
+        graph = nx.DiGraph()
+        graph.add_edge("R", "A1")
+        graph.add_edge("R", "A2")
+        graph.add_edge("R", "A3")
+        graph.add_edge("R", "A4")
+        graph.add_edge("A1", "B1")
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="layered",
+                constrained=True,
+                target_canvas_width=12,
+                ansi_colors=True,
+                use_ascii=False,
+                style_rules=[
+                    {
+                        "target": "connector",
+                        "when": 'kind == "outgoing"',
+                        "set": {"color": "red"},
+                    }
+                ],
+            ),
+        )
+        output = renderer.render()
+
+        self.assertIn("\x1b[31m", output)
+        self.assertIn("\x1b[0m", output)
+
+    def test_constrained_render_overlap_includes_context_layers(self):
+        graph = nx.DiGraph()
+        graph.add_edge("R", "A1")
+        graph.add_edge("R", "A2")
+        graph.add_edge("R", "A3")
+        graph.add_edge("R", "A4")
+        graph.add_edge("A1", "B1")
+        graph.add_edge("A2", "B2")
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="layered",
+                constrained=True,
+                target_canvas_width=12,
+                partition_overlap=1,
+                use_ascii=True,
+            ),
+        )
+        output = renderer.render()
+
+        self.assertIn("=== Panel P1/2", output)
+        self.assertIn("=== Panel P2/2", output)
+        self.assertNotIn("Boundary In:", output)
+        self.assertNotIn("Boundary Out:", output)
+        self.assertIn("B1", output)
+        self.assertIn("B2", output)
+        self.assertIn("R", output)
+
+    def test_constrained_render_connector_ref_mode_both_uses_labels_and_ids(self):
+        graph = nx.DiGraph()
+        graph.add_edge("R", "A1")
+        graph.add_edge("R", "A2")
+        graph.add_edge("R", "A3")
+        graph.add_edge("R", "A4")
+        graph.add_edge("A1", "B1")
+        graph.add_edge("A2", "B2")
+        labels = {
+            "R": "Root",
+            "A1": "Alice",
+            "A2": "Aaron",
+            "A3": "Asha",
+            "A4": "Aria",
+            "B1": "Ben",
+            "B2": "Bianca",
+        }
+        for node, label in labels.items():
+            graph.nodes[node]["label"] = label
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="layered",
+                constrained=True,
+                target_canvas_width=12,
+                connector_ref_mode="both",
+                use_ascii=True,
+            ),
+        )
+        output = renderer.render()
+
+        self.assertIn("Alice [A1]->Ben [B1]", output)
+        self.assertIn("Root [R]->Asha [A3]", output)
+
+    def test_constrained_render_connector_compaction_groups_by_partition(self):
+        graph = nx.DiGraph()
+        graph.add_edge("R", "A1")
+        graph.add_edge("R", "A2")
+        graph.add_edge("R", "A3")
+        graph.add_edge("R", "A4")
+        graph.add_edge("A1", "B1")
+        graph.add_edge("A2", "B2")
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="layered",
+                constrained=True,
+                target_canvas_width=12,
+                connector_compaction="partition",
+                use_ascii=True,
+            ),
+        )
+        output = renderer.render()
+
+        self.assertIn("Boundary Out:", output)
+        self.assertIn("4 edges", output)
+        self.assertIn("R->A3", output)
+        self.assertIn("R->A4", output)
+        self.assertEqual(output.count("-> [P2]"), 2)
+
+    def test_export_partition_metadata_returns_stable_dict(self):
+        graph = nx.DiGraph()
+        graph.add_edge("R", "A1")
+        graph.add_edge("R", "A2")
+        graph.add_edge("R", "A3")
+        graph.add_edge("R", "A4")
+        graph.add_edge("A1", "B1")
+        graph.add_edge("A2", "B2")
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="layered",
+                constrained=True,
+                target_canvas_width=12,
+                use_ascii=True,
+            ),
+        )
+        metadata = renderer.export_partition_metadata()
+
+        self.assertEqual(metadata["schema_version"], "1.0")
+        self.assertTrue(metadata["constrained"])
+        self.assertEqual(metadata["partition_count"], 2)
+        self.assertEqual(metadata["partitions"][0]["partition_number"], 1)
+        self.assertIn("R", metadata["node_to_partition"])
+        self.assertTrue(
+            any(
+                edge["edge_id"] == "R->A3" for edge in metadata["cross_partition_edges"]
+            )
+        )
+
     def test_file_writing(self):
         """Test writing to file with proper encoding."""
 
@@ -1696,11 +2415,57 @@ class TestLayoutOptions(unittest.TestCase):
         options = LayoutOptions(layout_strategy="spring")
         self.assertEqual(options.layout_strategy, "spring")
 
+    def test_constrained_layout_accepts_target_width(self):
+        options = LayoutOptions(
+            layout_strategy="layered",
+            constrained=True,
+            target_canvas_width=80,
+        )
+        self.assertEqual(options.layout_strategy, "layered")
+        self.assertTrue(options.constrained)
+        self.assertEqual(options.target_canvas_width, 80)
+
+    def test_constrained_layout_requires_target_canvas_width(self):
+        with self.assertRaises(ValueError):
+            LayoutOptions(layout_strategy="layered", constrained=True)
+
     def test_layout_strategy_accepts_arf_spiral_shell(self):
         for strategy in ("arf", "spiral", "shell"):
             with self.subTest(strategy=strategy):
                 options = LayoutOptions(layout_strategy=strategy)
                 self.assertEqual(options.layout_strategy, strategy)
+
+    def test_partition_overlap_must_be_non_negative(self):
+        with self.assertRaises(ValueError):
+            LayoutOptions(partition_overlap=-1)
+
+    def test_partition_affinity_strength_must_be_non_negative(self):
+        with self.assertRaises(ValueError):
+            LayoutOptions(partition_affinity_strength=-1)
+
+    def test_connector_compaction_defaults_to_none(self):
+        options = LayoutOptions()
+        self.assertEqual(options.connector_compaction, "none")
+
+    def test_invalid_connector_compaction_raises(self):
+        with self.assertRaises(ValueError):
+            LayoutOptions(connector_compaction="invalid")
+
+    def test_panel_header_mode_defaults_to_basic(self):
+        options = LayoutOptions()
+        self.assertEqual(options.panel_header_mode, "basic")
+
+    def test_invalid_panel_header_mode_raises(self):
+        with self.assertRaises(ValueError):
+            LayoutOptions(panel_header_mode="invalid")
+
+    def test_connector_ref_mode_defaults_to_auto(self):
+        options = LayoutOptions()
+        self.assertEqual(options.connector_ref_mode, "auto")
+
+    def test_invalid_connector_ref_mode_raises(self):
+        with self.assertRaises(ValueError):
+            LayoutOptions(connector_ref_mode="invalid")
 
     def test_invalid_edge_color_mode(self):
         with self.assertRaises(ValueError):
@@ -1718,6 +2483,115 @@ class TestLayoutOptions(unittest.TestCase):
         self.assertEqual(
             options.edge_color_rules["relationship"]["friend"], "bright_green"
         )
+
+    def test_style_rules_are_compiled(self):
+        options = LayoutOptions(
+            style_rules=[
+                {
+                    "target": "edge",
+                    "when": 'role == "spouse"',
+                    "set": {"color": "blue"},
+                }
+            ]
+        )
+        self.assertEqual(len(options._compiled_style_rules), 1)  # noqa: SLF001
+
+    def test_style_rules_accept_connector_and_panel_header_targets(self):
+        options = LayoutOptions(
+            style_rules=[
+                {
+                    "target": "connector",
+                    "when": 'kind == "incoming"',
+                    "set": {"prefix": "[IN] ", "suffix": " !"},
+                },
+                {
+                    "target": "panel_header",
+                    "when": "partition_number == 1",
+                    "set": {"color": "red"},
+                },
+            ]
+        )
+        self.assertEqual(len(options._compiled_style_rules), 2)  # noqa: SLF001
+
+    def test_style_rule_invalid_target_raises(self):
+        with self.assertRaises(ValueError):
+            LayoutOptions(
+                style_rules=[
+                    {"target": "bogus", "when": "true", "set": {"color": "blue"}}
+                ]
+            )
+
+    def test_style_rule_invalid_connector_set_key_raises(self):
+        with self.assertRaises(ValueError):
+            LayoutOptions(
+                style_rules=[
+                    {
+                        "target": "connector",
+                        "when": "true",
+                        "set": {"line_vertical": "!"},
+                    }
+                ]
+            )
+
+    def test_style_rule_invalid_set_key_raises(self):
+        with self.assertRaises(ValueError):
+            LayoutOptions(
+                style_rules=[
+                    {
+                        "target": "edge",
+                        "when": "true",
+                        "set": {"prefix": "<"},
+                    }
+                ]
+            )
+
+    def test_style_rule_invalid_node_style_value_raises(self):
+        with self.assertRaises(ValueError):
+            LayoutOptions(
+                style_rules=[
+                    {
+                        "target": "node",
+                        "when": "true",
+                        "set": {"node_style": "hexagon"},
+                    }
+                ]
+            )
+
+    def test_style_rule_invalid_edge_glyph_value_raises(self):
+        with self.assertRaises(ValueError):
+            LayoutOptions(
+                style_rules=[
+                    {
+                        "target": "edge",
+                        "when": "true",
+                        "set": {"line_horizontal": "=="},
+                    }
+                ]
+            )
+
+    def test_style_rule_wide_edge_glyph_value_raises(self):
+        with self.assertRaises(ValueError):
+            LayoutOptions(
+                style_rules=[
+                    {
+                        "target": "edge",
+                        "when": "true",
+                        "set": {"line_horizontal": "好"},
+                    }
+                ]
+            )
+
+    def test_edge_arrow_style_unicode_coerces_to_ascii_in_ascii_mode(self):
+        options = LayoutOptions(use_ascii=True, edge_arrow_style="unicode")
+        self.assertEqual(options.edge_arrow_style, "ascii")
+
+    def test_invalid_edge_glyph_preset_raises(self):
+        with self.assertRaises(ValueError):
+            LayoutOptions(edge_glyph_preset="unknown")
+
+    def test_invalid_edge_arrow_style_raises(self):
+        with self.assertRaises(ValueError):
+            LayoutOptions(edge_arrow_style="unknown")
 
     def test_default_edge_color_mode_is_source(self):
         options = LayoutOptions()

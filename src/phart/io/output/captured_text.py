@@ -14,6 +14,7 @@ from phart.rendering.ansi import (
     UNICODE_DITAA_MAP,
     ansi_to_hex,
 )
+from phart.rendering.output import apply_padding_char
 from phart.rendering.svg import append_svg_glyph_paths
 
 _TILDE_SPACE_RATIO = 32.0 / 15.0
@@ -186,7 +187,8 @@ def _render_latex_markdown(
 def render_captured_text(raw_text: str, *, config: OutputRenderConfig) -> str:
     """Convert captured text output into the selected output format."""
     if config.output_format == "text":
-        return raw_text
+        padding_char = "\u00a0" if config.markdown_safe_text else " "
+        return apply_padding_char(raw_text, padding_char=padding_char)
     if config.output_format == "ditaa":
         return _render_ditaa(raw_text, wrap_plantuml=False)
     if config.output_format == "ditaa-puml":

@@ -518,6 +518,210 @@ class TestLayoutManager(unittest.TestCase):
         self.assertNotEqual(positions["A"][1], positions["C"][1])
         self.assertNotEqual(positions["C"][1], positions["E"][1])
 
+    def test_constrained_mode_populates_partition_plan(self):
+        graph = nx.DiGraph()
+        graph.add_edge("R", "A1")
+        graph.add_edge("R", "A2")
+        graph.add_edge("R", "A3")
+        graph.add_edge("R", "A4")
+        graph.add_edge("A1", "B1")
+        graph.add_edge("A2", "B2")
+
+        manager = LayoutManager(
+            graph,
+            LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="layered",
+                constrained=True,
+                target_canvas_width=12,
+                node_spacing=4,
+                use_ascii=True,
+            ),
+        )
+        positions, _, _ = manager.calculate_layout()
+
+        self.assertEqual(set(positions.keys()), set(graph.nodes()))
+        self.assertIsNotNone(manager.partition_plan)
+        assert manager.partition_plan is not None
+        self.assertEqual(len(manager.partition_plan.partitions), 2)
+        self.assertEqual(manager.partition_plan.node_to_partition["R"], 0)
+        self.assertEqual(manager.partition_plan.node_to_partition["A1"], 0)
+        self.assertEqual(manager.partition_plan.node_to_partition["B1"], 1)
+        self.assertTrue(
+            any(
+                edge.u == "R" and edge.v == "A3"
+                for edge in manager.partition_plan.cross_partition_edges
+            )
+        )
+
+    def test_constrained_mode_partition_order_size_reorders_panels(self):
+        graph = nx.DiGraph()
+        graph.add_edge("R", "A1")
+        graph.add_edge("R", "A2")
+        graph.add_edge("R", "A3")
+        graph.add_edge("R", "A4")
+        graph.add_edge("A1", "B1")
+        graph.add_edge("A2", "B2")
+
+        manager = LayoutManager(
+            graph,
+            LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="layered",
+                constrained=True,
+                target_canvas_width=12,
+                partition_order="size",
+                node_spacing=4,
+                use_ascii=True,
+            ),
+        )
+        positions, _, _ = manager.calculate_layout()
+
+        self.assertEqual(positions["A3"][1], 0)
+        self.assertEqual(positions["A4"][1], 0)
+        self.assertEqual(positions["B1"][1], 2)
+        self.assertEqual(positions["B2"][1], 2)
+        self.assertLess(positions["R"][1], positions["A1"][1])
+        self.assertIsNotNone(manager.partition_plan)
+        assert manager.partition_plan is not None
+        self.assertEqual(manager.partition_plan.node_to_partition["A1"], 1)
+        self.assertEqual(manager.partition_plan.node_to_partition["B1"], 0)
+        self.assertEqual(manager.partition_plan.node_to_partition["R"], 1)
+
+    def test_constrained_affinity_tuning_keeps_bidirectional_neighbors_together(self):
+        graph = nx.DiGraph()
+        graph.add_edge("R", "LONG")
+        graph.add_edge("R", "B")
+        graph.add_edge("R", "C")
+        graph.add_edge("R", "D")
+        graph.add_edge("B", "C")
+        graph.add_edge("C", "B")
+
+        no_affinity = LayoutManager(
+            graph,
+            LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="layered",
+                constrained=True,
+                target_canvas_width=8,
+                node_spacing=2,
+                node_order_mode="preserve",
+                partition_affinity_strength=0,
+                use_ascii=True,
+            ),
+        )
+        no_affinity.calculate_layout()
+        self.assertIsNotNone(no_affinity.partition_plan)
+        assert no_affinity.partition_plan is not None
+        self.assertNotEqual(
+            no_affinity.partition_plan.node_to_partition["B"],
+            no_affinity.partition_plan.node_to_partition["C"],
+        )
+
+        affinity = LayoutManager(
+            graph,
+            LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="layered",
+                constrained=True,
+                target_canvas_width=8,
+                node_spacing=2,
+                node_order_mode="preserve",
+                partition_affinity_strength=1,
+                use_ascii=True,
+            ),
+        )
+        affinity.calculate_layout()
+        self.assertIsNotNone(affinity.partition_plan)
+        assert affinity.partition_plan is not None
+        self.assertEqual(
+            affinity.partition_plan.node_to_partition["B"],
+            affinity.partition_plan.node_to_partition["C"],
+        )
+
+    def test_constrained_affinity_tuning_can_choose_earlier_boundary_on_height_limit(
+        self,
+    ):
+        graph = nx.DiGraph()
+        graph.add_edge("R", "A1")
+        graph.add_edge("R", "A2")
+        graph.add_edge("R", "A3")
+        graph.add_edge("A1", "B1")
+        graph.add_edge("A1", "B2")
+        graph.add_edge("A2", "B1")
+        graph.add_edge("A2", "B2")
+        graph.add_edge("A3", "B3")
+
+        no_affinity = LayoutManager(
+            graph,
+            LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="layered",
+                constrained=True,
+                target_canvas_width=30,
+                target_canvas_height=3,
+                partition_affinity_strength=0,
+                use_ascii=True,
+            ),
+        )
+        no_affinity.calculate_layout()
+        self.assertIsNotNone(no_affinity.partition_plan)
+        assert no_affinity.partition_plan is not None
+        self.assertEqual(no_affinity.partition_plan.node_to_partition["A1"], 0)
+
+        affinity = LayoutManager(
+            graph,
+            LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="layered",
+                constrained=True,
+                target_canvas_width=30,
+                target_canvas_height=3,
+                partition_affinity_strength=1,
+                use_ascii=True,
+            ),
+        )
+        affinity.calculate_layout()
+        self.assertIsNotNone(affinity.partition_plan)
+        assert affinity.partition_plan is not None
+        self.assertEqual(affinity.partition_plan.node_to_partition["R"], 0)
+        self.assertEqual(affinity.partition_plan.node_to_partition["A1"], 1)
+        self.assertEqual(affinity.partition_plan.node_to_partition["B1"], 1)
+
+    def test_constrained_mode_supports_left_right_flow(self):
+        graph = nx.DiGraph([("A", "B")])
+        for flow in ("left", "right"):
+            manager = LayoutManager(
+                graph,
+                LayoutOptions(
+                    node_style=NodeStyle.MINIMAL,
+                    layout_strategy="layered",
+                    constrained=True,
+                    target_canvas_width=10,
+                    flow_direction=flow,
+                    use_ascii=True,
+                ),
+            )
+            positions, _width, _height = manager.calculate_layout()
+            self.assertEqual(set(positions.keys()), {"A", "B"})
+            self.assertIsNotNone(manager.partition_plan)
+
+    def test_constrained_mode_rejects_unsupported_layout_strategy(self):
+        graph = nx.DiGraph([("A", "B"), ("B", "C"), ("C", "A")])
+        manager = LayoutManager(
+            graph,
+            LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                layout_strategy="circular",
+                constrained=True,
+                target_canvas_width=20,
+                use_ascii=True,
+            ),
+        )
+
+        with self.assertRaises(ValueError):
+            manager.calculate_layout()
+
 
 if __name__ == "__main__":
     unittest.main()

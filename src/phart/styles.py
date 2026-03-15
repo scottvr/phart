@@ -2,7 +2,9 @@
 from dataclasses import dataclass, field, fields
 from enum import Enum
 import unicodedata
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
+
+from .style_rules import CompiledStyleRule, compile_style_rules
 
 
 class NodeStyle(Enum):
@@ -118,6 +120,16 @@ class LayoutOptions:
     layout_strategy: str = field(
         default="auto"
     )  # auto, bfs, bipartite, circular, hierarchical, planar, layered, kamada_kawai, spring, arf, spiral, shell, random, multipartite, vertical
+    constrained: bool = field(default=False)
+    target_canvas_width: Optional[int] = field(default=None)
+    target_canvas_height: Optional[int] = field(default=None)
+    partition_overlap: int = field(default=0)
+    partition_affinity_strength: int = field(default=1)
+    cross_partition_edge_style: str = field(default="stub")  # stub or none
+    connector_compaction: str = field(default="none")  # none or partition
+    partition_order: str = field(default="natural")  # natural or size
+    panel_header_mode: str = field(default="basic")  # none, basic, or lineage
+    connector_ref_mode: str = field(default="auto")  # auto, id, label, both
     node_order_mode: str = field(
         default="layout_default"
     )  # layout_default, preserve, alpha, natural, numeric
@@ -131,7 +143,25 @@ class LayoutOptions:
     edge_anchor_mode: str = field(default="auto")  # auto, center, or ports
     shared_ports_mode: str = field(default="any")  # any, minimize, or none
     bidirectional_mode: str = field(default="coalesce")  # coalesce or separate
-    use_labels: bool = field(default=False)  # Prefer node labels for display text
+    use_labels: bool = field(default=False)  # Legacy alias: enable node+edge labels
+    node_label_attr: Optional[str] = field(
+        default=None
+    )  # Node attribute name for display labels; None disables node labels
+    edge_label_attr: Optional[str] = field(
+        default=None
+    )  # Edge attribute name for display labels; None disables edge labels
+    node_label_lines: tuple[str, ...] = field(
+        default_factory=tuple
+    )  # Ordered attribute-path specs for synthesized labels
+    node_label_sep: str = field(
+        default=" "
+    )  # Separator used when composing multi-value label line parts
+    node_label_max_lines: Optional[int] = field(
+        default=None
+    )  # Optional cap for synthesized label lines
+    bbox_multiline_labels: bool = field(
+        default=False
+    )  # Expand bbox height and paint multiline labels when enabled
     ansi_colors: bool = field(default=False)  # ANSI colorized render output
     allow_ansi_in_ascii: bool = field(
         default=False
@@ -151,7 +181,13 @@ class LayoutOptions:
     edge_color_rules: Dict[str, Dict[str, str]] = field(
         default_factory=dict
     )  # attr mode rules: {"attr_name": {"attr_value": "color_spec"}}
+    style_rules: List[Dict[str, Any]] = field(default_factory=list)
+    edge_glyph_preset: str = field(default="default")  # default, thick, or double
+    edge_arrow_style: str = field(default="ascii")  # ascii or unicode
     color_nodes: bool = field(default=True)
+    whitespace_mode: str = field(
+        default="auto"
+    )  # auto, ascii_space, or nbsp for text output spacing
 
     # Instance-specific ID (unchanged)
     instance_id: int = field(init=False)
@@ -292,6 +328,40 @@ class LayoutOptions:
                 "layout_strategy must be one of: legacy, bfs, bipartite, circular, hierarchical, layered, "
                 "planar, kamada_kawai, spring, arf, spiral, shell, random, multipartite, vertical"
             )
+        if self.target_canvas_width is not None:
+            if self.target_canvas_width <= 0:
+                raise ValueError("target_canvas_width must be greater than zero")
+        if self.target_canvas_height is not None:
+            if self.target_canvas_height <= 0:
+                raise ValueError("target_canvas_height must be greater than zero")
+        if self.partition_overlap < 0:
+            raise ValueError("partition_overlap must be non-negative")
+        if self.partition_affinity_strength < 0:
+            raise ValueError("partition_affinity_strength must be non-negative")
+        if isinstance(self.cross_partition_edge_style, str):
+            self.cross_partition_edge_style = (
+                self.cross_partition_edge_style.strip().lower()
+            )
+        if self.cross_partition_edge_style not in {"stub", "none"}:
+            raise ValueError("cross_partition_edge_style must be one of: stub, none")
+        if isinstance(self.connector_compaction, str):
+            self.connector_compaction = self.connector_compaction.strip().lower()
+        if self.connector_compaction not in {"none", "partition"}:
+            raise ValueError("connector_compaction must be one of: none, partition")
+        if isinstance(self.partition_order, str):
+            self.partition_order = self.partition_order.strip().lower()
+        if self.partition_order not in {"natural", "size"}:
+            raise ValueError("partition_order must be one of: natural, size")
+        if isinstance(self.panel_header_mode, str):
+            self.panel_header_mode = self.panel_header_mode.strip().lower()
+        if self.panel_header_mode not in {"none", "basic", "lineage"}:
+            raise ValueError("panel_header_mode must be one of: none, basic, lineage")
+        if isinstance(self.connector_ref_mode, str):
+            self.connector_ref_mode = self.connector_ref_mode.strip().lower()
+        if self.connector_ref_mode not in {"auto", "id", "label", "both"}:
+            raise ValueError("connector_ref_mode must be one of: auto, id, label, both")
+        if self.constrained and self.target_canvas_width is None:
+            raise ValueError("constrained layout requires target_canvas_width")
 
         if isinstance(self.node_order_mode, str):
             self.node_order_mode = (
@@ -319,6 +389,46 @@ class LayoutOptions:
             raise ValueError(
                 "edge_color_mode must be one of: target, source, path, attr"
             )
+        if isinstance(self.edge_glyph_preset, str):
+            self.edge_glyph_preset = self.edge_glyph_preset.strip().lower()
+        if self.edge_glyph_preset not in {"default", "thick", "double"}:
+            raise ValueError("edge_glyph_preset must be one of: default, thick, double")
+        if isinstance(self.edge_arrow_style, str):
+            self.edge_arrow_style = self.edge_arrow_style.strip().lower()
+        if self.edge_arrow_style not in {"ascii", "unicode"}:
+            raise ValueError("edge_arrow_style must be one of: ascii, unicode")
+        if self.use_ascii and self.edge_arrow_style == "unicode":
+            # Unicode arrows are not guaranteed visible in ASCII mode.
+            self.edge_arrow_style = "ascii"
+
+        if isinstance(self.whitespace_mode, str):
+            self.whitespace_mode = (
+                self.whitespace_mode.strip().lower().replace("-", "_")
+            )
+        if self.whitespace_mode not in {"auto", "ascii_space", "nbsp"}:
+            raise ValueError("whitespace_mode must be one of: auto, ascii_space, nbsp")
+
+        self.node_label_attr = self._normalize_label_attr_name(self.node_label_attr)
+        self.edge_label_attr = self._normalize_label_attr_name(self.edge_label_attr)
+        if self.use_labels:
+            if self.node_label_attr is None:
+                self.node_label_attr = "label"
+            if self.edge_label_attr is None:
+                self.edge_label_attr = "label"
+        self.use_labels = bool(self.node_label_attr or self.edge_label_attr)
+
+        if self.node_label_max_lines is not None and self.node_label_max_lines < 1:
+            raise ValueError("node_label_max_lines must be >= 1 when provided")
+
+        if not isinstance(self.node_label_sep, str):
+            self.node_label_sep = str(self.node_label_sep)
+
+        normalized_label_lines: list[str] = []
+        for raw in self.node_label_lines:
+            spec = str(raw).strip()
+            if spec:
+                normalized_label_lines.append(spec)
+        self.node_label_lines = tuple(normalized_label_lines)
 
         if not isinstance(self.edge_color_rules, dict):
             raise ValueError("edge_color_rules must be a dict of dicts")
@@ -346,6 +456,11 @@ class LayoutOptions:
             if normalized_value_map:
                 normalized_rules[attr_key] = normalized_value_map
         self.edge_color_rules = normalized_rules
+        if not isinstance(self.style_rules, list):
+            raise ValueError("style_rules must be a list of dicts")
+        self._compiled_style_rules: List[CompiledStyleRule] = compile_style_rules(
+            self.style_rules
+        )
 
     @staticmethod
     def _normalize_edge_color_rule_value(value: Any) -> str:
@@ -354,6 +469,17 @@ class LayoutOptions:
         if len(text) >= 2 and text[0] == text[-1] and text[0] in {"'", '"'}:
             text = text[1:-1]
         return text.strip().lower()
+
+    @staticmethod
+    def _normalize_label_attr_name(value: Optional[Any]) -> Optional[str]:
+        if value is None:
+            return None
+        text = str(value).strip()
+        if not text:
+            return None
+        if text.lower() == "none":
+            return None
+        return text
 
     def get_effective_node_spacing(self, has_edges: bool = True) -> int:
         """Calculate effective node spacing considering edge requirements.
@@ -385,10 +511,10 @@ class LayoutOptions:
         arrow orientation.
         """
         arrow_map = {
-            "up": self.edge_arrow_up,
-            "down": self.edge_arrow_down,
-            "left": self.edge_arrow_l,
-            "right": self.edge_arrow_r,
+            "up": self.get_edge_glyph("arrow_up", self.edge_arrow_up),
+            "down": self.get_edge_glyph("arrow_down", self.edge_arrow_down),
+            "left": self.get_edge_glyph("arrow_left", self.edge_arrow_l),
+            "right": self.get_edge_glyph("arrow_right", self.edge_arrow_r),
         }
         try:
             return arrow_map[base_direction]
@@ -397,6 +523,62 @@ class LayoutOptions:
             raise ValueError(
                 f"Invalid arrow direction '{base_direction}'. Valid: {valid}"
             ) from e
+
+    def get_edge_glyph_defaults(self) -> Dict[str, str]:
+        """Return global edge glyph defaults after preset + arrow style."""
+        defaults: Dict[str, str] = {}
+        if not self.use_ascii:
+            if self.edge_glyph_preset == "thick":
+                defaults.update(
+                    {
+                        "line_horizontal": "━",
+                        "line_vertical": "┃",
+                        "corner_ul": "┏",
+                        "corner_ur": "┓",
+                        "corner_ll": "┗",
+                        "corner_lr": "┛",
+                        "tee_up": "┻",
+                        "tee_down": "┳",
+                        "tee_left": "┫",
+                        "tee_right": "┣",
+                        "cross": "╋",
+                    }
+                )
+            elif self.edge_glyph_preset == "double":
+                defaults.update(
+                    {
+                        "line_horizontal": "═",
+                        "line_vertical": "║",
+                        "corner_ul": "╔",
+                        "corner_ur": "╗",
+                        "corner_ll": "╚",
+                        "corner_lr": "╝",
+                        "tee_up": "╩",
+                        "tee_down": "╦",
+                        "tee_left": "╣",
+                        "tee_right": "╠",
+                        "cross": "╬",
+                    }
+                )
+        if self.edge_arrow_style == "unicode" and not self.use_ascii:
+            defaults.update(
+                {
+                    "arrow_up": "↑",
+                    "arrow_down": "↓",
+                    "arrow_left": "←",
+                    "arrow_right": "→",
+                }
+            )
+        return defaults
+
+    def get_edge_glyph(self, key: str, fallback: Optional[str] = None) -> str:
+        """Resolve a global edge glyph by key with optional fallback."""
+        defaults = self.get_edge_glyph_defaults()
+        if key in defaults:
+            return defaults[key]
+        if fallback is not None:
+            return fallback
+        raise ValueError(f"Unknown edge glyph key '{key}'")
 
     def __str__(self) -> str:
         # Get all dataclass fields and their current values from this instance
@@ -459,18 +641,24 @@ class LayoutOptions:
         prefix, suffix = self.get_node_decorators(node_str)
         return f"{prefix}{node_str}{suffix}"
 
-    def get_node_height(self) -> int:
+    def get_node_height(self, *, content_lines: int = 1) -> int:
         """Get rendered node height in rows."""
         if not self.bboxes:
             return 1
-        # top border + bottom border + content row + optional vertical padding rows
-        return (2 * self.vpad) + 3
+        # top border + bottom border + content rows + optional vertical padding rows
+        return (2 * self.vpad) + 2 + max(1, content_lines)
 
     def get_node_dimensions(
         self, node_str: str, widest_text_width: Optional[int] = None
     ) -> Tuple[int, int]:
         """Get rendered node width/height for a given node text."""
-        text_width = self.get_text_display_width(self.get_node_text(node_str))
+        multiline = self.bboxes and self.bbox_multiline_labels
+        raw_lines = node_str.split("\n") if multiline else [node_str]
+        rendered_lines = [self.get_node_text(line) for line in raw_lines]
+        text_width = max(
+            (self.get_text_display_width(line) for line in rendered_lines),
+            default=0,
+        )
         if self.bboxes and self.uniform and widest_text_width is not None:
             text_width = max(text_width, widest_text_width)
 
@@ -478,7 +666,8 @@ class LayoutOptions:
             return text_width, 1
 
         width = text_width + (2 * self.hpad) + 2  # left/right border columns
-        return width, self.get_node_height()
+        content_lines = len(rendered_lines) if multiline else 1
+        return width, self.get_node_height(content_lines=content_lines)
 
     @staticmethod
     def get_char_display_width(char: str) -> int:
@@ -502,3 +691,11 @@ class LayoutOptions:
     def get_text_display_width(cls, text: str) -> int:
         """Return terminal display width for text in monospace columns."""
         return sum(cls.get_char_display_width(ch) for ch in text)
+
+    def resolve_padding_char(self, *, markdown_safe: bool = False) -> str:
+        """Resolve output padding character for text rendering."""
+        if self.whitespace_mode == "ascii_space":
+            return " "
+        if self.whitespace_mode == "nbsp":
+            return "\u00a0"
+        return "\u00a0" if markdown_safe else " "

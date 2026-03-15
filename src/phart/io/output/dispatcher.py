@@ -13,7 +13,7 @@ def render_renderer_output(
     if config.output_format == "mmd":
         return "" + str(renderer.mermaid_out())
     if config.output_format == "text":
-        return renderer.render()
+        return renderer.render(markdown_safe=config.markdown_safe_text)
     if config.output_format == "ditaa":
         return renderer.render_ditaa(wrap_plantuml=False)
     if config.output_format == "ditaa-puml":

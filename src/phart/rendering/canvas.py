@@ -138,9 +138,4 @@ def paint_cell(
 
 
 def is_arrow_glyph(renderer: ASCIIRenderer, char: str) -> bool:
-    return char in {
-        renderer.options.edge_arrow_up,
-        renderer.options.edge_arrow_down,
-        renderer.options.edge_arrow_l,
-        renderer.options.edge_arrow_r,
-    }
+    return renderer._is_arrow_glyph(char)

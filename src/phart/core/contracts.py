@@ -26,6 +26,7 @@ class OutputRenderConfig:
     svg_font_path: str | None = None
     svg_fg: str = "#111111"
     svg_bg: str = "#ffffff"
+    markdown_safe_text: bool = False
 
 
 @dataclass(frozen=True)
@@ -39,6 +40,7 @@ class RendererOutputConfig:
     svg_font_path: str | None = None
     svg_fg: str = "#111111"
     svg_bg: str = "#ffffff"
+    markdown_safe_text: bool = False
 
 
 class GraphLoader(Protocol):

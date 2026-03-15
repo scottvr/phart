@@ -46,6 +46,14 @@ class TestLayoutOptions(unittest.TestCase):
         # 4 columns for text + 2 inner hpad + 2 borders
         self.assertEqual(width, 8)
 
+    def test_whitespace_mode_normalizes_hyphenated_values(self):
+        options = LayoutOptions(whitespace_mode="ascii-space")
+        self.assertEqual(options.whitespace_mode, "ascii_space")
+
+    def test_invalid_whitespace_mode_is_rejected(self):
+        with self.assertRaises(ValueError):
+            LayoutOptions(whitespace_mode="tabs")
+
 
 if __name__ == "__main__":
     unittest.main()

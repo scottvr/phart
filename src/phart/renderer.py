@@ -4,11 +4,12 @@ import io
 import os
 import sys
 
+from dataclasses import fields
 from typing import Any, ClassVar, Dict, List, Optional, Set, TextIO, Tuple, cast
 
 import networkx as nx  # type: ignore
 
-from .layout import LayoutManager
+from .layout import CrossPartitionEdge, LayoutManager, PartitionPlan
 from .rendering import colors as colors_mod
 from .rendering import nodes as nodes_mod
 from .rendering import ports as ports_mod
@@ -25,6 +26,7 @@ from .rendering.ansi import resolve_color_spec as _resolve_color_spec_impl
 from .rendering.ansi import xterm_index_to_hex as _xterm_index_to_hex_impl
 
 from .styles import LayoutOptions, NodeStyle
+from .style_rules import evaluate_style_rule_color, evaluate_style_rule_set
 
 
 class ASCIIRenderer:
@@ -149,6 +151,75 @@ class ASCIIRenderer:
         self._edge_color_map: Dict[Tuple[Any, Any], str] = {}
         self._edge_conflict_cells: Set[Tuple[int, int]] = set()
         self._locked_arrow_cells: Set[Tuple[int, int]] = set()
+        self._active_edge_style_set: Dict[str, str] = {}
+        self._line_dirs_override_map = self._build_line_dirs_override_map()
+        self._all_edge_arrow_glyphs = self._build_all_edge_arrow_glyphs()
+
+    def _build_line_dirs_override_map(self) -> Dict[str, Set[str]]:
+        key_to_dirs = {
+            "arrow_up": {"up", "down"},
+            "arrow_down": {"up", "down"},
+            "line_vertical": {"up", "down"},
+            "arrow_left": {"left", "right"},
+            "arrow_right": {"left", "right"},
+            "line_horizontal": {"left", "right"},
+            "corner_ul": {"right", "down"},
+            "corner_ur": {"left", "down"},
+            "corner_ll": {"right", "up"},
+            "corner_lr": {"left", "up"},
+            "tee_up": {"left", "right", "up"},
+            "tee_down": {"left", "right", "down"},
+            "tee_left": {"up", "down", "left"},
+            "tee_right": {"up", "down", "right"},
+            "cross": {"up", "down", "left", "right"},
+        }
+        line_map: Dict[str, Set[str]] = {}
+        for key, preset_dirs in key_to_dirs.items():
+            fallback_map = {
+                "arrow_up": self.options.edge_arrow_up,
+                "arrow_down": self.options.edge_arrow_down,
+                "arrow_left": self.options.edge_arrow_l,
+                "arrow_right": self.options.edge_arrow_r,
+                "line_horizontal": self.options.edge_horizontal,
+                "line_vertical": self.options.edge_vertical,
+                "corner_ul": self.options.edge_corner_ul,
+                "corner_ur": self.options.edge_corner_ur,
+                "corner_ll": self.options.edge_corner_ll,
+                "corner_lr": self.options.edge_corner_lr,
+                "tee_up": self.options.edge_tee_up,
+                "tee_down": self.options.edge_tee_down,
+                "tee_left": self.options.edge_tee_left,
+                "tee_right": self.options.edge_tee_right,
+                "cross": self.options.edge_cross,
+            }
+            glyph = self.options.get_edge_glyph(key, fallback_map[key])
+            line_map.setdefault(glyph, set()).update(preset_dirs)
+        for rule in getattr(self.options, "_compiled_style_rules", []):
+            if rule.target != "edge":
+                continue
+            for key, glyph in rule.set_values.items():
+                rule_dirs = key_to_dirs.get(key)
+                if rule_dirs is None:
+                    continue
+                resolved_dirs: Set[str] = set(rule_dirs)
+                line_map.setdefault(glyph, set()).update(resolved_dirs)
+        return line_map
+
+    def _build_all_edge_arrow_glyphs(self) -> Set[str]:
+        arrows = {
+            self.options.get_edge_glyph("arrow_up", self.options.edge_arrow_up),
+            self.options.get_edge_glyph("arrow_down", self.options.edge_arrow_down),
+            self.options.get_edge_glyph("arrow_left", self.options.edge_arrow_l),
+            self.options.get_edge_glyph("arrow_right", self.options.edge_arrow_r),
+        }
+        for rule in getattr(self.options, "_compiled_style_rules", []):
+            if rule.target != "edge":
+                continue
+            for key in ("arrow_up", "arrow_down", "arrow_left", "arrow_right"):
+                glyph = rule.set_values.get(key)
+                if glyph:
+                    arrows.add(glyph)
+        return arrows
 
     @classmethod
     def _resolve_options(cls, options: Optional[LayoutOptions]) -> LayoutOptions:
@@ -230,12 +301,52 @@ class ASCIIRenderer:
             for key, value in edge_data.items()
         }
 
+    def _resolve_edge_style_color_spec(self, start: Any, end: Any) -> Optional[str]:
+        edge_style = self._resolve_effective_edge_style_set(start, end)
+        return edge_style.get("color")
+
+    def _resolve_effective_edge_style_set(self, start: Any, end: Any) -> Dict[str, str]:
+        edge_data = self.graph.get_edge_data(start, end) or {}
+        context = {
+            "self": edge_data,
+            "edge": edge_data,
+            "u": self.graph.nodes.get(start, {}),
+            "v": self.graph.nodes.get(end, {}),
+        }
+        return evaluate_style_rule_set(
+            getattr(self.options, "_compiled_style_rules", []),
+            "edge",
+            context,
+        )
+
+    def _edge_style_glyph(self, key: str, fallback: str) -> str:
+        value = self._active_edge_style_set.get(key)
+        if value:
+            return value
+        return self.options.get_edge_glyph(key, fallback)
+
+    def _edge_arrow_for_direction(self, direction: str) -> str:
+        key_map = {
+            "up": "arrow_up",
+            "down": "arrow_down",
+            "left": "arrow_left",
+            "right": "arrow_right",
+        }
+        key = key_map[direction]
+        fallback = self.options.get_arrow_for_direction(direction)
+        return self._edge_style_glyph(key, fallback)
+
     def _attr_rules_match_for_reverse_edge(self, start: Any, end: Any) -> bool:
         """Return True when attr-color rule attributes agree in both directions."""
         if self.options.edge_color_mode != "attr":
             return True
-        if not self.options.edge_color_rules:
+        has_style_rules = bool(getattr(self.options, "_compiled_style_rules", []))
+        if not self.options.edge_color_rules and not has_style_rules:
             return True
+        if has_style_rules:
+            return self._resolve_edge_style_color_spec(
+                start, end
+            ) == self._resolve_edge_style_color_spec(end, start)
 
         forward_attrs = self._normalized_edge_attrs(start, end)
         reverse_attrs = self._normalized_edge_attrs(end, start)
@@ -278,11 +389,12 @@ class ASCIIRenderer:
             # and depending on the disparity, maybe we make them longer here. Or, we  couldl expose a flag
             for u, v in self.graph.edges():
                 ulabel = vlabel = ""
-                if self.options.use_labels:
-                    if "label" in self.graph.nodes[u]:
-                        ulabel = self.graph.nodes[u]["label"]
-                    if "label" in self.graph.nodes[v]:
-                        vlabel = self.graph.nodes[v]["label"]
+                node_label_attr = self.options.node_label_attr
+                if node_label_attr:
+                    if node_label_attr in self.graph.nodes[u]:
+                        ulabel = self.graph.nodes[u][node_label_attr]
+                    if node_label_attr in self.graph.nodes[v]:
+                        vlabel = self.graph.nodes[v][node_label_attr]
                 if ulabel == "":
                     ulabel = u
                 if vlabel == "":
@@ -305,12 +417,7 @@ class ASCIIRenderer:
         colors_mod.paint_cell(self, x, y, char, color)
 
     def _is_arrow_glyph(self, char: str) -> bool:
-        return char in {
-            self.options.edge_arrow_up,
-            self.options.edge_arrow_down,
-            self.options.edge_arrow_l,
-            self.options.edge_arrow_r,
-        }
+        return char in self._all_edge_arrow_glyphs
 
     def _merge_edge_cell_color(self, x: int, y: int, color: Optional[str]) -> None:
         colors_mod.merge_edge_cell_color(self, x, y, color)
@@ -477,9 +584,818 @@ class ASCIIRenderer:
             start_anchor[1] - end_anchor[1]
         )
 
-    def render(self, print_config: Optional[bool] = False) -> str:
-        """Render the graph as ASCII art."""
-        positions, width, height = self.layout_manager.calculate_layout()
+    def _render_panel_options(self) -> LayoutOptions:
+        option_kwargs: Dict[str, Any] = {}
+        for field in fields(LayoutOptions):
+            if not field.init:
+                continue
+            option_kwargs[field.name] = getattr(self.options, field.name)
+        option_kwargs["constrained"] = False
+        return LayoutOptions(**option_kwargs)
+
+    def _format_text_with_style_rule(
+        self,
+        *,
+        target: str,
+        text: str,
+        context: Dict[str, Any],
+    ) -> str:
+        style_set = evaluate_style_rule_set(
+            getattr(self.options, "_compiled_style_rules", []),
+            target,
+            context,
+        )
+        if not style_set:
+            return text
+
+        styled = f"{style_set.get('prefix', '')}{text}{style_set.get('suffix', '')}"
+        color_spec = style_set.get("color")
+        if not color_spec or not self._use_ansi_colors():
+            return styled
+        resolved_color = self._resolve_color_spec(color_spec)
+        if not resolved_color:
+            return styled
+        return f"{resolved_color}{styled}{ANSI_RESET}"
+
+    @staticmethod
+    def _coerce_connector_label(value: Any) -> Optional[str]:
+        if value is None:
+            return None
+        if isinstance(value, dict):
+            return None
+        if isinstance(value, (list, tuple)):
+            for item in value:
+                candidate = ASCIIRenderer._coerce_connector_label(item)
+                if candidate:
+                    return candidate
+            return None
+        text = nodes_mod.normalize_label_value(value)
+        return text if text else None
+
+    def _connector_label_for_node(self, node: Any) -> Optional[str]:
+        if node not in self.graph:
+            return None
+
+        attrs = self.graph.nodes[node]
+        candidate_keys: List[str] = []
+        if self.options.node_label_attr and self.options.node_label_attr != "label":
+            candidate_keys.append(self.options.node_label_attr)
+        candidate_keys.extend(["label", "name", "title"])
+
+        seen: Set[str] = set()
+        for key in candidate_keys:
+            key_text = str(key).strip()
+            if not key_text or key_text in seen:
+                continue
+            seen.add(key_text)
+            if key_text not in attrs:
+                continue
+            label = self._coerce_connector_label(attrs.get(key_text))
+            if label:
+                return label
+        return None
+
+    def _format_connector_node_ref(self, node: Any) -> str:
+        node_id = str(node)
+        label = self._connector_label_for_node(node)
+        mode = self.options.connector_ref_mode
+
+        if mode == "id":
+            return node_id
+        if mode == "label":
+            return label or node_id
+        if mode == "both":
+            if label and label != node_id:
+                return f"{label} [{node_id}]"
+            return node_id
+        if label and label.casefold() != node_id.casefold():
+            return label
+        return node_id
+
+    def _format_connector_edge_ref(self, u: Any, v: Any) -> str:
+        return f"{self._format_connector_node_ref(u)}->{self._format_connector_node_ref(v)}"
+
+    def _connector_compaction_enabled(self) -> bool:
+        mode = (
+            str(getattr(self.options, "connector_compaction", "none")).strip().lower()
+        )
+        return mode == "partition"
+
+    def _summarize_connector_edge_refs(
+        self, edges: List["CrossPartitionEdge"], *, max_refs: int = 4
+    ) -> str:
+        refs = [self._format_connector_edge_ref(edge.u, edge.v) for edge in edges]
+        if len(refs) <= max_refs:
+            return ", ".join(refs)
+        shown = ", ".join(refs[:max_refs])
+        return f"{shown}, ... (+{len(refs) - max_refs})"
+
+    def _panel_boundary_connector_lines(
+        self, partition_idx: int
+    ) -> Tuple[List[str], List[str]]:
+        plan = self.layout_manager.partition_plan
+        if plan is None:
+            return [], []
+        if self.options.cross_partition_edge_style == "none":
+            return [], []
+        if self.options.partition_overlap > 0:
+            return [], []
+
+        incoming = sorted(
+            (
+                edge
+                for edge in plan.cross_partition_edges
+                if edge.dest_partition == partition_idx
+            ),
+            key=lambda item: (item.source_partition, str(item.u), str(item.v)),
+        )
+        outgoing = sorted(
+            (
+                edge
+                for edge in plan.cross_partition_edges
+                if edge.source_partition == partition_idx
+            ),
+            key=lambda item: (item.dest_partition, str(item.u), str(item.v)),
+        )
+        top_lines: List[str] = []
+        bottom_lines: List[str] = []
+        if incoming:
+            top_lines.append(
+                self._format_text_with_style_rule(
+                    target="connector",
+                    text="Boundary In:",
+                    context={
+                        "self": {
+                            "kind": "boundary_section",
+                            "position": "top",
+                            "partition_index": partition_idx,
+                            "partition_number": partition_idx + 1,
+                        },
+                        "connector": {
+                            "kind": "boundary_section",
+                            "position": "top",
+                            "partition_index": partition_idx,
+                            "partition_number": partition_idx + 1,
+                        },
+                    },
+                )
+            )
+            if self._connector_compaction_enabled():
+                incoming_groups: Dict[int, List[CrossPartitionEdge]] = {}
+                for edge in incoming:
+                    incoming_groups.setdefault(edge.source_partition, []).append(edge)
+                for source_partition in sorted(incoming_groups):
+                    grouped = incoming_groups[source_partition]
+                    edge_count = len(grouped)
+                    if edge_count == 1:
+                        edge = grouped[0]
+                        edge_ref = self._format_connector_edge_ref(edge.u, edge.v)
+                        text = f"  from [P{edge.source_partition + 1}] {edge_ref}"
+                    else:
+                        refs = self._summarize_connector_edge_refs(grouped)
+                        text = (
+                            f"  from [P{source_partition + 1}] "
+                            f"{edge_count} edges: {refs}"
+                        )
+                    top_lines.append(
+                        self._format_text_with_style_rule(
+                            target="connector",
+                            text=text,
+                            context={
+                                "self": {
+                                    "kind": "boundary_incoming_compact",
+                                    "position": "top",
+                                    "partition_index": partition_idx,
+                                    "partition_number": partition_idx + 1,
+                                    "source_partition": source_partition,
+                                    "source_partition_number": source_partition + 1,
+                                    "dest_partition": partition_idx,
+                                    "dest_partition_number": partition_idx + 1,
+                                    "edge_count": edge_count,
+                                },
+                                "connector": {
+                                    "kind": "boundary_incoming_compact",
+                                    "position": "top",
+                                    "partition_index": partition_idx,
+                                    "partition_number": partition_idx + 1,
+                                    "source_partition": source_partition,
+                                    "source_partition_number": source_partition + 1,
+                                    "dest_partition": partition_idx,
+                                    "dest_partition_number": partition_idx + 1,
+                                    "edge_count": edge_count,
+                                },
+                            },
+                        )
+                    )
+            else:
+                for edge in incoming:
+                    edge_ref = self._format_connector_edge_ref(edge.u, edge.v)
+                    text = f"  from [P{edge.source_partition + 1}] {edge_ref}"
+                    top_lines.append(
+                        self._format_text_with_style_rule(
+                            target="connector",
+                            text=text,
+                            context={
+                                "self": {
+                                    "kind": "boundary_incoming",
+                                    "position": "top",
+                                    "partition_index": partition_idx,
+                                    "partition_number": partition_idx + 1,
+                                    "source_partition": edge.source_partition,
+                                    "source_partition_number": edge.source_partition
+                                    + 1,
+                                    "dest_partition": edge.dest_partition,
+                                    "dest_partition_number": edge.dest_partition + 1,
+                                    "edge_id": edge.edge_id,
+                                    "u": edge.u,
+                                    "v": edge.v,
+                                    "u_ref": self._format_connector_node_ref(edge.u),
+                                    "v_ref": self._format_connector_node_ref(edge.v),
+                                    "edge_ref": edge_ref,
+                                },
+                                "connector": {
+                                    "kind": "boundary_incoming",
+                                    "position": "top",
+                                    "partition_index": partition_idx,
+                                    "partition_number": partition_idx + 1,
+                                    "source_partition": edge.source_partition,
+                                    "source_partition_number": edge.source_partition
+                                    + 1,
+                                    "dest_partition": edge.dest_partition,
+                                    "dest_partition_number": edge.dest_partition + 1,
+                                    "edge_id": edge.edge_id,
+                                    "u": edge.u,
+                                    "v": edge.v,
+                                    "u_ref": self._format_connector_node_ref(edge.u),
+                                    "v_ref": self._format_connector_node_ref(edge.v),
+                                    "edge_ref": edge_ref,
+                                },
+                            },
+                        )
+                    )
+        if outgoing:
+            bottom_lines.append(
+                self._format_text_with_style_rule(
+                    target="connector",
+                    text="Boundary Out:",
+                    context={
+                        "self": {
+                            "kind": "boundary_section",
+                            "position": "bottom",
+                            "partition_index": partition_idx,
+                            "partition_number": partition_idx + 1,
+                        },
+                        "connector": {
+                            "kind": "boundary_section",
+                            "position": "bottom",
+                            "partition_index": partition_idx,
+                            "partition_number": partition_idx + 1,
+                        },
+                    },
+                )
+            )
+            if self._connector_compaction_enabled():
+                outgoing_groups: Dict[int, List[CrossPartitionEdge]] = {}
+                for edge in outgoing:
+                    outgoing_groups.setdefault(edge.dest_partition, []).append(edge)
+                for dest_partition in sorted(outgoing_groups):
+                    grouped = outgoing_groups[dest_partition]
+                    edge_count = len(grouped)
+                    if edge_count == 1:
+                        edge = grouped[0]
+                        edge_ref = self._format_connector_edge_ref(edge.u, edge.v)
+                        text = f"  -> [P{edge.dest_partition + 1}] {edge_ref}"
+                    else:
+                        refs = self._summarize_connector_edge_refs(grouped)
+                        text = (
+                            f"  -> [P{dest_partition + 1}] {edge_count} edges: {refs}"
+                        )
+                    bottom_lines.append(
+                        self._format_text_with_style_rule(
+                            target="connector",
+                            text=text,
+                            context={
+                                "self": {
+                                    "kind": "boundary_outgoing_compact",
+                                    "position": "bottom",
+                                    "partition_index": partition_idx,
+                                    "partition_number": partition_idx + 1,
+                                    "source_partition": partition_idx,
+                                    "source_partition_number": partition_idx + 1,
+                                    "dest_partition": dest_partition,
+                                    "dest_partition_number": dest_partition + 1,
+                                    "edge_count": edge_count,
+                                },
+                                "connector": {
+                                    "kind": "boundary_outgoing_compact",
+                                    "position": "bottom",
+                                    "partition_index": partition_idx,
+                                    "partition_number": partition_idx + 1,
+                                    "source_partition": partition_idx,
+                                    "source_partition_number": partition_idx + 1,
+                                    "dest_partition": dest_partition,
+                                    "dest_partition_number": dest_partition + 1,
+                                    "edge_count": edge_count,
+                                },
+                            },
+                        )
+                    )
+            else:
+                for edge in outgoing:
+                    edge_ref = self._format_connector_edge_ref(edge.u, edge.v)
+                    text = f"  -> [P{edge.dest_partition + 1}] {edge_ref}"
+                    bottom_lines.append(
+                        self._format_text_with_style_rule(
+                            target="connector",
+                            text=text,
+                            context={
+                                "self": {
+                                    "kind": "boundary_outgoing",
+                                    "position": "bottom",
+                                    "partition_index": partition_idx,
+                                    "partition_number": partition_idx + 1,
+                                    "source_partition": edge.source_partition,
+                                    "source_partition_number": edge.source_partition
+                                    + 1,
+                                    "dest_partition": edge.dest_partition,
+                                    "dest_partition_number": edge.dest_partition + 1,
+                                    "edge_id": edge.edge_id,
+                                    "u": edge.u,
+                                    "v": edge.v,
+                                    "u_ref": self._format_connector_node_ref(edge.u),
+                                    "v_ref": self._format_connector_node_ref(edge.v),
+                                    "edge_ref": edge_ref,
+                                },
+                                "connector": {
+                                    "kind": "boundary_outgoing",
+                                    "position": "bottom",
+                                    "partition_index": partition_idx,
+                                    "partition_number": partition_idx + 1,
+                                    "source_partition": edge.source_partition,
+                                    "source_partition_number": edge.source_partition
+                                    + 1,
+                                    "dest_partition": edge.dest_partition,
+                                    "dest_partition_number": edge.dest_partition + 1,
+                                    "edge_id": edge.edge_id,
+                                    "u": edge.u,
+                                    "v": edge.v,
+                                    "u_ref": self._format_connector_node_ref(edge.u),
+                                    "v_ref": self._format_connector_node_ref(edge.v),
+                                    "edge_ref": edge_ref,
+                                },
+                            },
+                        )
+                    )
+        return top_lines, bottom_lines
+
+    def _panel_header_line(
+        self,
+        *,
+        partition_idx: int,
+        total_partitions: int,
+        panel_nodes: List[Any],
+        primary_nodes: List[Any],
+    ) -> str:
+        mode = self.options.panel_header_mode
+        if mode == "none":
+            return ""
+
+        plan = self.layout_manager.partition_plan
+        label = f"P{partition_idx + 1}/{total_partitions}"
+        if mode == "basic":
+            text = f"=== Panel {label} (nodes={len(panel_nodes)}) ==="
+            return self._format_text_with_style_rule(
+                target="panel_header",
+                text=text,
+                context={
+                    "self": {
+                        "mode": mode,
+                        "partition_index": partition_idx,
+                        "partition_number": partition_idx + 1,
+                        "total_partitions": total_partitions,
+                        "node_count": len(panel_nodes),
+                    },
+                    "panel_header": {
+                        "mode": mode,
+                        "partition_index": partition_idx,
+                        "partition_number": partition_idx + 1,
+                        "total_partitions": total_partitions,
+                        "node_count": len(panel_nodes),
+                    },
+                },
+            )
+
+        rank_text = ""
+        rank_start: Optional[int] = None
+        rank_end: Optional[int] = None
+        if plan is not None and partition_idx < len(plan.partition_layer_ranges):
+            start_rank, end_rank = plan.partition_layer_ranges[partition_idx]
+            rank_start = start_rank
+            rank_end = max(start_rank, end_rank - 1)
+            rank_text = f"ranks={start_rank}-{max(start_rank, end_rank - 1)}"
+
+        roots: List[Any] = []
+        if self.graph.is_directed() and plan is not None:
+            for node in primary_nodes:
+                preds = list(self.graph.predecessors(node))
+                if not preds or any(
+                    plan.node_to_partition.get(pred) != partition_idx for pred in preds
+                ):
+                    roots.append(node)
+        else:
+            roots = list(primary_nodes)
+
+        roots_sorted = sorted(roots, key=lambda node: str(node))
+        if len(roots_sorted) > 3:
+            root_text = ", ".join(str(node) for node in roots_sorted[:3]) + ", ..."
+        elif roots_sorted:
+            root_text = ", ".join(str(node) for node in roots_sorted)
+        else:
+            root_text = "-"
+
+        parts = [f"=== Panel {label}"]
+        if rank_text:
+            parts.append(rank_text)
+        parts.append(f"roots={root_text}")
+        text = " | ".join(parts) + " ==="
+        return self._format_text_with_style_rule(
+            target="panel_header",
+            text=text,
+            context={
+                "self": {
+                    "mode": mode,
+                    "partition_index": partition_idx,
+                    "partition_number": partition_idx + 1,
+                    "total_partitions": total_partitions,
+                    "node_count": len(panel_nodes),
+                    "primary_node_count": len(primary_nodes),
+                    "rank_start": rank_start,
+                    "rank_end": rank_end,
+                    "roots": [str(node) for node in roots_sorted],
+                    "root_count": len(roots_sorted),
+                },
+                "panel_header": {
+                    "mode": mode,
+                    "partition_index": partition_idx,
+                    "partition_number": partition_idx + 1,
+                    "total_partitions": total_partitions,
+                    "node_count": len(panel_nodes),
+                    "primary_node_count": len(primary_nodes),
+                    "rank_start": rank_start,
+                    "rank_end": rank_end,
+                    "roots": [str(node) for node in roots_sorted],
+                    "root_count": len(roots_sorted),
+                },
+            },
+        )
+
+    def _panel_connector_lines(self, partition_idx: int) -> List[str]:
+        plan = self.layout_manager.partition_plan
+        if plan is None:
+            return []
+        if self.options.cross_partition_edge_style == "none":
+            return []
+
+        incoming = [
+            edge
+            for edge in plan.cross_partition_edges
+            if edge.dest_partition == partition_idx
+        ]
+        outgoing = [
+            edge
+            for edge in plan.cross_partition_edges
+            if edge.source_partition == partition_idx
+        ]
+        if not incoming and not outgoing:
+            return []
+
+        lines = [
+            self._format_text_with_style_rule(
+                target="connector",
+                text="Connectors:",
+                context={
+                    "self": {
+                        "kind": "section",
+                        "partition_index": partition_idx,
+                        "partition_number": partition_idx + 1,
+                        "source_partition": partition_idx,
+                        "dest_partition": partition_idx,
+                    },
+                    "connector": {
+                        "kind": "section",
+                        "partition_index": partition_idx,
+                        "partition_number": partition_idx + 1,
+                        "source_partition": partition_idx,
+                        "dest_partition": partition_idx,
+                    },
+                },
+            )
+        ]
+        if self._connector_compaction_enabled():
+            incoming_groups: Dict[int, List[CrossPartitionEdge]] = {}
+            for edge in sorted(
+                incoming,
+                key=lambda item: (item.source_partition, str(item.u), str(item.v)),
+            ):
+                incoming_groups.setdefault(edge.source_partition, []).append(edge)
+            for source_partition in sorted(incoming_groups):
+                grouped = incoming_groups[source_partition]
+                edge_count = len(grouped)
+                if edge_count == 1:
+                    edge = grouped[0]
+                    edge_ref = self._format_connector_edge_ref(edge.u, edge.v)
+                    text = (
+                        f"  from [P{source_partition + 1}] -> "
+                        f"{self._format_connector_node_ref(edge.v)} ({edge_ref})"
+                    )
+                else:
+                    refs = self._summarize_connector_edge_refs(grouped)
+                    text = (
+                        f"  from [P{source_partition + 1}] -> "
+                        f"{edge_count} edges: {refs}"
+                    )
+                lines.append(
+                    self._format_text_with_style_rule(
+                        target="connector",
+                        text=text,
+                        context={
+                            "self": {
+                                "kind": "incoming_compact",
+                                "partition_index": partition_idx,
+                                "partition_number": partition_idx + 1,
+                                "source_partition": source_partition,
+                                "source_partition_number": source_partition + 1,
+                                "dest_partition": partition_idx,
+                                "dest_partition_number": partition_idx + 1,
+                                "edge_count": edge_count,
+                            },
+                            "connector": {
+                                "kind": "incoming_compact",
+                                "partition_index": partition_idx,
+                                "partition_number": partition_idx + 1,
+                                "source_partition": source_partition,
+                                "source_partition_number": source_partition + 1,
+                                "dest_partition": partition_idx,
+                                "dest_partition_number": partition_idx + 1,
+                                "edge_count": edge_count,
+                            },
+                        },
+                    )
+                )
+
+            outgoing_groups: Dict[int, List[CrossPartitionEdge]] = {}
+            for edge in sorted(
+                outgoing,
+                key=lambda item: (item.dest_partition, str(item.u), str(item.v)),
+            ):
+                outgoing_groups.setdefault(edge.dest_partition, []).append(edge)
+            for dest_partition in sorted(outgoing_groups):
+                grouped = outgoing_groups[dest_partition]
+                edge_count = len(grouped)
+                if edge_count == 1:
+                    edge = grouped[0]
+                    edge_ref = self._format_connector_edge_ref(edge.u, edge.v)
+                    text = f"  -> [P{dest_partition + 1}] {edge_ref}"
+                else:
+                    refs = self._summarize_connector_edge_refs(grouped)
+                    text = f"  -> [P{dest_partition + 1}] {edge_count} edges: {refs}"
+                lines.append(
+                    self._format_text_with_style_rule(
+                        target="connector",
+                        text=text,
+                        context={
+                            "self": {
+                                "kind": "outgoing_compact",
+                                "partition_index": partition_idx,
+                                "partition_number": partition_idx + 1,
+                                "source_partition": partition_idx,
+                                "source_partition_number": partition_idx + 1,
+                                "dest_partition": dest_partition,
+                                "dest_partition_number": dest_partition + 1,
+                                "edge_count": edge_count,
+                            },
+                            "connector": {
+                                "kind": "outgoing_compact",
+                                "partition_index": partition_idx,
+                                "partition_number": partition_idx + 1,
+                                "source_partition": partition_idx,
+                                "source_partition_number": partition_idx + 1,
+                                "dest_partition": dest_partition,
+                                "dest_partition_number": dest_partition + 1,
+                                "edge_count": edge_count,
+                            },
+                        },
+                    )
+                )
+        else:
+            for edge in sorted(
+                incoming,
+                key=lambda item: (item.source_partition, str(item.u), str(item.v)),
+            ):
+                edge_ref = self._format_connector_edge_ref(edge.u, edge.v)
+                text = (
+                    f"  from [P{edge.source_partition + 1}] -> "
+                    f"{self._format_connector_node_ref(edge.v)} ({edge_ref})"
+                )
+                lines.append(
+                    self._format_text_with_style_rule(
+                        target="connector",
+                        text=text,
+                        context={
+                            "self": {
+                                "kind": "incoming",
+                                "partition_index": partition_idx,
+                                "partition_number": partition_idx + 1,
+                                "source_partition": edge.source_partition,
+                                "source_partition_number": edge.source_partition + 1,
+                                "dest_partition": edge.dest_partition,
+                                "dest_partition_number": edge.dest_partition + 1,
+                                "edge_id": edge.edge_id,
+                                "u": edge.u,
+                                "v": edge.v,
+                                "u_ref": self._format_connector_node_ref(edge.u),
+                                "v_ref": self._format_connector_node_ref(edge.v),
+                                "edge_ref": edge_ref,
+                            },
+                            "connector": {
+                                "kind": "incoming",
+                                "partition_index": partition_idx,
+                                "partition_number": partition_idx + 1,
+                                "source_partition": edge.source_partition,
+                                "source_partition_number": edge.source_partition + 1,
+                                "dest_partition": edge.dest_partition,
+                                "dest_partition_number": edge.dest_partition + 1,
+                                "edge_id": edge.edge_id,
+                                "u": edge.u,
+                                "v": edge.v,
+                                "u_ref": self._format_connector_node_ref(edge.u),
+                                "v_ref": self._format_connector_node_ref(edge.v),
+                                "edge_ref": edge_ref,
+                            },
+                        },
+                    )
+                )
+            for edge in sorted(
+                outgoing,
+                key=lambda item: (item.dest_partition, str(item.u), str(item.v)),
+            ):
+                edge_ref = self._format_connector_edge_ref(edge.u, edge.v)
+                text = f"  -> [P{edge.dest_partition + 1}] {edge_ref}"
+                lines.append(
+                    self._format_text_with_style_rule(
+                        target="connector",
+                        text=text,
+                        context={
+                            "self": {
+                                "kind": "outgoing",
+                                "partition_index": partition_idx,
+                                "partition_number": partition_idx + 1,
+                                "source_partition": edge.source_partition,
+                                "source_partition_number": edge.source_partition + 1,
+                                "dest_partition": edge.dest_partition,
+                                "dest_partition_number": edge.dest_partition + 1,
+                                "edge_id": edge.edge_id,
+                                "u": edge.u,
+                                "v": edge.v,
+                                "u_ref": self._format_connector_node_ref(edge.u),
+                                "v_ref": self._format_connector_node_ref(edge.v),
+                                "edge_ref": edge_ref,
+                            },
+                            "connector": {
+                                "kind": "outgoing",
+                                "partition_index": partition_idx,
+                                "partition_number": partition_idx + 1,
+                                "source_partition": edge.source_partition,
+                                "source_partition_number": edge.source_partition + 1,
+                                "dest_partition": edge.dest_partition,
+                                "dest_partition_number": edge.dest_partition + 1,
+                                "edge_id": edge.edge_id,
+                                "u": edge.u,
+                                "v": edge.v,
+                                "u_ref": self._format_connector_node_ref(edge.u),
+                                "v_ref": self._format_connector_node_ref(edge.v),
+                                "edge_ref": edge_ref,
+                            },
+                        },
+                    )
+                )
+        return lines
+
+    def _build_constrained_panel_blocks(
+        self, *, markdown_safe: bool = False
+    ) -> List[str]:
+        plan = self.layout_manager.partition_plan
+        if plan is None:
+            return []
+
+        panel_count = len(plan.partitions)
+        panel_blocks: List[str] = []
+        for partition_idx, panel_nodes in enumerate(plan.partitions):
+            panel_node_set = {node for node in panel_nodes if node in self.graph}
+            primary_nodes = [
+                node
+                for node in panel_nodes
+                if plan.node_to_partition.get(node) == partition_idx
+            ]
+
+            panel_graph: nx.DiGraph = nx.DiGraph()
+            for node in panel_nodes:
+                if node not in self.graph:
+                    continue
+                panel_graph.add_node(node, **dict(self.graph.nodes[node]))
+
+            for u, v, data in self.graph.edges(data=True):
+                if u not in panel_node_set or v not in panel_node_set:
+                    continue
+                if self.options.partition_overlap <= 0:
+                    if plan.node_to_partition.get(u) != partition_idx:
+                        continue
+                    if plan.node_to_partition.get(v) != partition_idx:
+                        continue
+                panel_graph.add_edge(u, v, **dict(data))
+
+            panel_renderer = ASCIIRenderer(
+                panel_graph, options=self._render_panel_options()
+            )
+            panel_text = panel_renderer._render_single_canvas(
+                markdown_safe=markdown_safe
+            )
+            top_boundary_lines, bottom_boundary_lines = (
+                self._panel_boundary_connector_lines(partition_idx)
+            )
+
+            block_lines: List[str] = []
+            header = self._panel_header_line(
+                partition_idx=partition_idx,
+                total_partitions=panel_count,
+                panel_nodes=panel_nodes,
+                primary_nodes=primary_nodes,
+            )
+            if header:
+                block_lines.append(header)
+            block_lines.extend(top_boundary_lines)
+            if panel_text:
+                block_lines.append(panel_text)
+            block_lines.extend(bottom_boundary_lines)
+            block_lines.extend(self._panel_connector_lines(partition_idx))
+            panel_blocks.append("\n".join(block_lines).rstrip())
+
+        return [block for block in panel_blocks if block]
+
+    def _render_constrained_panels(self, *, markdown_safe: bool = False) -> str:
+        blocks = self._build_constrained_panel_blocks(markdown_safe=markdown_safe)
+        if not blocks:
+            return self._render_single_canvas(markdown_safe=markdown_safe)
+        return "\n\n".join(blocks)
+
+    def render_panel_blocks(self, *, markdown_safe: bool = False) -> List[str]:
+        layout = self.layout_manager.calculate_layout()
+        positions, _width, _height = layout
+        if not positions:
+            return []
+
+        plan = self.layout_manager.partition_plan
+        if self.options.constrained and plan is not None and len(plan.partitions) > 1:
+            return self._build_constrained_panel_blocks(markdown_safe=markdown_safe)
+
+        text = self._render_single_canvas(
+            markdown_safe=markdown_safe, precomputed_layout=layout
+        )
+        return [text] if text else []
+
+    def get_partition_plan(self) -> Optional[PartitionPlan]:
+        self.layout_manager.calculate_layout()
+        return self.layout_manager.partition_plan
+
+    def export_partition_metadata(self) -> Dict[str, Any]:
+        plan = self.get_partition_plan()
+        if plan is None:
+            return {
+                "schema_version": "1.0",
+                "constrained": bool(self.options.constrained),
+                "partition_count": 0,
+                "partitions": [],
+                "node_to_partition": {},
+                "cross_partition_edges": [],
+            }
+
+        metadata = plan.to_export_dict()
+        metadata["constrained"] = bool(self.options.constrained)
+        return metadata
+
+    def _render_single_canvas(
+        self,
+        print_config: Optional[bool] = False,
+        *,
+        markdown_safe: bool = False,
+        precomputed_layout: Optional[
+            Tuple[Dict[str, Tuple[int, int]], int, int]
+        ] = None,
+    ) -> str:
+        if precomputed_layout is None:
+            positions, width, height = self.layout_manager.calculate_layout()
+        else:
+            positions, width, height = precomputed_layout
         if not positions:
             return ""
 
@@ -524,9 +1440,34 @@ class ASCIIRenderer:
                     f"Node drawing failed: {pos_info}, {canvas_info}"
                 ) from e
 
-        return "\n".join(
+        text = "\n".join(
             self._render_row(row, colors)
             for row, colors in zip(self.canvas, self._color_canvas, strict=True)
+        )
+        padding_char = self.options.resolve_padding_char(markdown_safe=markdown_safe)
+        if padding_char != " ":
+            from .rendering.output import apply_padding_char
+
+            text = apply_padding_char(text, padding_char=padding_char)
+        return text
+
+    def render(
+        self, print_config: Optional[bool] = False, *, markdown_safe: bool = False
+    ) -> str:
+        """Render the graph as ASCII art."""
+        layout = self.layout_manager.calculate_layout()
+        positions, _width, _height = layout
+        if not positions:
+            return ""
+
+        plan = self.layout_manager.partition_plan
+        if self.options.constrained and plan is not None and len(plan.partitions) > 1:
+            return self._render_constrained_panels(markdown_safe=markdown_safe)
+
+        return self._render_single_canvas(
+            print_config=print_config,
+            markdown_safe=markdown_safe,
+            precomputed_layout=layout,
         )
 
     def draw(self, file: Optional[TextIO] = None) -> None:
@@ -705,6 +1646,26 @@ class ASCIIRenderer:
         # Ensure minimum dimensions that can hold all nodes and edge routing.
         min_width = max_right + 1
         min_height = max_bottom + 2
+        max_edge_label_width = 0
+        edge_label_attr = self.options.edge_label_attr
+        if edge_label_attr:
+            for _start, _end, edge_data in self.graph.edges(data=True):
+                label = (
+                    edge_data.get(edge_label_attr)
+                    if isinstance(edge_data, dict)
+                    else None
+                )
+                if label is None:
+                    continue
+                normalized = self._normalize_label_value(label)
+                if not normalized:
+                    continue
+                max_edge_label_width = max(
+                    max_edge_label_width,
+                    self.options.get_text_display_width(normalized),
+                )
+        if max_edge_label_width > 0:
+            min_width += max_edge_label_width + 2
 
         final_width = max(width, min_width)
         final_height = max(height, min_height)
@@ -831,6 +1792,15 @@ def merge_layout_options(
         "layer_spacing",
         "binary_tree_layout",
         "layout_strategy",
+        "constrained",
+        "target_canvas_width",
+        "target_canvas_height",
+        "partition_overlap",
+        "partition_affinity_strength",
+        "cross_partition_edge_style",
+        "connector_compaction",
+        "partition_order",
+        "panel_header_mode",
         "node_order_mode",
         "node_order_attr",
         "node_order_reverse",
@@ -846,10 +1816,19 @@ def merge_layout_options(
         "shared_ports_mode",
         "bidirectional_mode",
         "use_labels",
+        "node_label_attr",
+        "edge_label_attr",
+        "node_label_lines",
+        "node_label_sep",
+        "node_label_max_lines",
+        "bbox_multiline_labels",
         "ansi_colors",
         "allow_ansi_in_ascii",
         "edge_color_mode",
         "edge_color_rules",
+        "style_rules",
+        "edge_glyph_preset",
+        "edge_arrow_style",
         "color_nodes",
     }
 

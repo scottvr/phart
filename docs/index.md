@@ -1,7 +1,6 @@
 # phart
 
-**PHART:** The Python Hierarchical ASCII Representation Tool - A Pure Python graph visualization in ASCII, no external dependencies\*
-_\*except NetworkX, which should be mentioned prominently, as rendering NX digraphs as ASCII was the entire reason for phart's creation. but **phart** will **not** require you to stand up a webserver to run PHP and install Perl and some libraries just to render a Graph in 7-bit text (or UTF-8 or Unicode) from Python._
+**PHART:** The Python Hierarchical ASCII Representation Tool - A Pure Python tool for graph visualization via charts and diagrams rendered in ASCII.
 
 ## Features
 
@@ -13,8 +12,29 @@ _\*except NetworkX, which should be mentioned prominently, as rendering NX digra
 - Handles cycles and complex layouts
 - Bidirectional edge support
 - Edge attribute support (and attribute-based coloring of edges)
+- Edge label rendering from edge `label` attributes
 - Over ten layout strategies
 - Orthogonal edge paths (all 90 degree turns, "Manhattan" style)
+- Node labels using multi-column character sets (such as CJK)
+- Optional width/height pagination for text output
+- Optional multiline node labels in bounding boxes
+
+---
+
+Design/spec references:
+
+- [Style Rules Specification (Implemented)](./architecture/style-rules-spec.md)
+- [Constrained Layout Partitioning Spec (Draft)](./architecture/layout-partitioning-spec.md)
+- [mermaid `flowchart TD` is now a supported output](./architecture/mermaid-flowchart-syntax.md")
+
+## NEW mermaid output support
+
+Read about it here.](https://github.com/scottvr/phart/blob/main/docs/mermaid-phart.md)
+
+TL;DR:
+
+- `--output-format mmd` along with, optionally `--output yourfile.mmd` (or you can just redirect stdout with `> yourfile.md`
+  Will generate a Mermaid `flowchart TD` from your graph.
 
 ## New Layout Strategies
 
@@ -164,7 +184,7 @@ We can test other options, without having to edit that python script we just wro
 Let's see how the balanced tree looks with the nodes in bounding boxes:
 
 ```bash
-$ phart balanced_tree.py --bbox --hpad 2 --style minimal --layer-spacing 3  --ascii
+$ phart balanced_tree.py --bboxes --hpad 2 --style minimal --layer-spacing 3  --ascii
                 +-----+
                 |  0  |
                 +-----+
@@ -183,7 +203,7 @@ $ phart balanced_tree.py --bbox --hpad 2 --style minimal --layer-spacing 3  --as
 We can increasae the space between "layers" of nodes, we can move the edges to connect to/from "ports" on the most efficient side of the nodes, and we can render in unicode, using the same script, by passing the options via the command-line until we find what we like:
 
 ```
-$ phart balanced_tree.py --bbox --hpad 2 --style minimal --layer-spacing 4 --edge-anchors ports
+$ phart balanced_tree.py --bboxes --hpad 2 --style minimal --layer-spacing 4 --edge-anchors ports
                 ┌─────┐
                 │  0  │
                 └─────┘
@@ -205,7 +225,7 @@ We can put a NodeStyle around our label, and put a bounding box around that, and
 edges come out of the center of the boxes.
 
 ```
-$ phart balanced_tree.py --bbox --hpad 0 --style round --layer-spacing 4 --edge-anchors center
+$ phart balanced_tree.py --bboxes --hpad 0 --style round --layer-spacing 4 --edge-anchors center
              ┌───┐
              │(0)│
              └───┘
@@ -267,7 +287,7 @@ As we'll see here, I will `tail` to just the last 15 lines of output so I can ju
 something new and interesting, further down the tree:
 
 ```bash
-$ phart --colors attr --edge-color-rule side:left=green,right=red --bbox --binary-tree \
+$ phart --colors attr --edge-color-rule side:left=green,right=red --bboxes --binary-tree \
  --charset unicode --no-color-nodes examples/collatz.py -- 5 | tail -15
 ```
 
@@ -339,14 +359,16 @@ To install all `extra` requirements (e.g., `fonttools` for svg rendering support
 
 ## The CLI
 
-````bash
+```bash
 usage: phart [-h] [--output OUTPUT] [--style {minimal,square,round,diamond,custom,bbox}]
              [--node-spacing NODE_SPACING] [--layer-spacing LAYER_SPACING]
              [--charset {ascii,ansi,unicode}] [--ascii] [--function FUNCTION] [--binary-tree]
              [--layout {arf,auto,bfs,bipartite,circular,hierarchical,kamada-kawai,layered,multipartite,planar,random,shell,spiral,spring,vertical}]
              [--flow-direction {down,up,left,right}] [--bboxes] [--hpad HPAD] [--vpad VPAD]
              [--uniform] [--edge-anchors {auto,center,ports}] [--labels]
-             [--colors {attr,none,path,source,target}] [--edge-color-rule RULE]
+             [--colors {attr,none,path,source,target}] [--edge-glyph-preset {default,thick,double}]
+             [--edge-arrow-style {ascii,unicode}] [--edge-color-rule RULE]
+             [--style-rule RULE] [--style-rules-file FILE]
              input
 
 PHART: Python Hierarchical ASCII Rendering Tool
@@ -385,10 +407,18 @@ options:
   --labels              Use node labels (if present) for displayed node text
   --colors {attr,none,path,source,target}
                         ANSI edge coloring mode: none (default), source, target, path, or attr
+  --edge-glyph-preset {default,thick,double}
+                        Global edge line-art preset: default (thin), thick, or double
+  --edge-arrow-style {ascii,unicode}
+                        Global edge arrowhead style: ascii (default) or unicode
   --edge-color-rule RULE
                         Attribute-driven edge color rule for --colors attr. Format:
-                        <attribute>:<value>=<color>[,<value>=<color>...] (repeatable)```
-````
+                        <attribute>:<value>=<color>[,<value>=<color>...] (repeatable)
+  --style-rule RULE     Advanced style rule expression:
+                        '<target>: <predicate> -> color=<color>' (repeatable)
+  --style-rules-file FILE
+                        JSON or YAML file containing {'rules': [...]} canonical style rules
+```
 
 ## Quick Start
 

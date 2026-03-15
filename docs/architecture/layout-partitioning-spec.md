@@ -1,0 +1,250 @@
+# Constrained Layout Partitioning Spec (v1.5, Implemented in phart v1.5.0)
+
+Status: Final (v1.5.0)
+Audience: maintainers and advanced users
+
+## 1. Problem
+
+Output pagination solves viewport slicing after render, but it does not reduce routing complexity or visual density when a layout naturally expands to thousands of columns.
+
+We need an optional layout mode that constrains width (and optionally height) during layout, producing readable partitioned diagrams rather than one giant canvas.
+
+## 2. Goals
+
+- Constrain rendered width at layout time.
+- Preserve semantic readability for genealogical/tree-like graphs.
+- Keep the current pagination feature intact and independent.
+- Work across `flow` directions (`down|up|left|right`).
+
+## 3. Non-Goals
+
+- Exact global optimum partitioning.
+- Generic graph decomposition for every topology in v1.
+- Replacing existing layout strategies.
+
+## 4. Terminology
+
+- Partition: a bounded sub-layout rendered as one panel/page.
+- Panel: output canvas for a partition after routing.
+- Cross-partition edge: edge whose endpoints land in different partitions.
+- Connector stub: marker indicating continuation to/from another partition.
+
+## 5. User-Facing Surface
+
+New layout modifier:
+
+- `--constrained` (applies partitioning to compatible layout strategies)
+
+New options:
+
+- `--target-canvas-width N|auto` (required when `--constrained` is enabled)
+- `--target-canvas-height N|auto` (optional; disabled when omitted)
+- `--partition-overlap N` (default `0`)
+- `--partition-affinity-strength N` (default `1`; `0` disables affinity heuristics)
+- `--cross-partition-edge-style {stub,none}` (default `stub`)
+- `--connector-ref {auto,id,label,both}` (default `auto`)
+- `--connector-compaction {none,partition}` (default `none`)
+- `--partition-order {natural,size}` (default `natural`)
+- `--panel-headers {none,basic,lineage}` (default `basic`)
+
+Notes:
+
+- `auto` width/height uses terminal dimensions only when writing to terminal.
+- Existing `--paginate-output-width/height` remains a post-render viewport feature.
+- In constrained mode, text output is emitted as multi-panel output by default.
+
+## 6. Conceptual Model
+
+Constrained mode performs:
+
+1. Initial rank assignment from the selected flow direction.
+2. Estimate node bbox footprint (including labels, padding, and style).
+3. Partition ranked nodes into contiguous rank bands that fit target width.
+4. Route each partition independently.
+5. Emit connector stubs for cross-partition edges.
+
+This avoids drawing the full ultra-wide graph first and slicing later.
+
+## 7. Partitioning Algorithm (v1)
+
+For `flow=down|up`:
+
+- Partition by contiguous depth/rank ranges.
+- Each partition grows rank-by-rank until estimated width would exceed target width.
+- Start a new partition at the next rank.
+
+For `flow=left|right`:
+
+- Apply the same logic on transposed axes (breadth/rank in flow axis).
+
+Packing heuristics:
+
+- Keep spouses/parents/children together when possible:
+  - Assign affinity penalties for splitting couples and immediate parent-child edges.
+  - Allow split only when width constraint would otherwise be violated.
+
+Determinism:
+
+- Given same graph/options, partition assignment must be stable.
+
+Implementation notes (v1.5.0):
+
+- Layer segment splitting is affinity-aware: optimize for fewer segments first, then lower split-penalty cost.
+- Partition boundary selection prefers lower affinity-cut penalties; ties favor a later cut.
+- If affinity optimization cannot produce a valid split plan, constrained layout falls back to deterministic greedy splitting.
+
+## 8. Cross-Partition Edges
+
+When an edge crosses partitions:
+
+- In source panel, draw a short stub + marker like `-> [P3]`.
+- In destination panel, draw `from [P1] ->` near the target side.
+
+Connector metadata:
+
+- `source_partition`, `dest_partition`, `edge_id`, `u`, `v`.
+
+`cross-partition-edge-style=none` suppresses markers.
+
+## 9. Data Model and Export Surface (v1.5.0)
+
+`LayoutOptions` constrained-mode fields (implemented):
+
+- `constrained: bool = False`
+- `target_canvas_width: Optional[int] = None`
+- `target_canvas_height: Optional[int] = None`
+- `partition_overlap: int = 0`
+- `partition_affinity_strength: int = 1`
+- `cross_partition_edge_style: str = "stub"`
+- `connector_ref_mode: str = "auto"` (`--connector-ref`)
+- `connector_compaction: str = "none"`
+- `partition_order: str = "natural"`
+- `panel_header_mode: str = "basic"` (`--panel-headers`)
+
+`PartitionPlan` (runtime object):
+
+- `partitions: List[List[Any]]`
+- `partition_layer_ranges: List[Tuple[int, int]]`
+- `node_to_partition: Dict[Any, int]`
+- `cross_partition_edges: List[CrossPartitionEdge]`
+
+Programmatic API:
+
+- `ASCIIRenderer.get_partition_plan() -> Optional[PartitionPlan]`
+- `ASCIIRenderer.export_partition_metadata() -> Dict[str, Any]`
+
+`export_partition_metadata()` output includes:
+
+- `schema_version`
+- `constrained`
+- `partition_count`
+- `partitions` entries with partition indices/numbers, node ids, primary node ids, counts, and rank ranges
+- `node_to_partition` mapping
+- `cross_partition_edges` entries with `source_partition`, `dest_partition`, partition numbers, `edge_id`, `u`, `v`
+
+## 10. Rendering Semantics
+
+- Each partition gets its own local coordinate system.
+- Node ids remain globally unique; labels/attrs unchanged.
+- Colors/style rules evaluate against original graph attrs.
+- Page index maps to partition index by default.
+
+Interaction with existing output pagination:
+
+- If constrained mode is enabled, output pagination can still apply within each panel.
+- Recommended behavior is to disable viewport pagination by default when constrained mode is active, unless explicitly requested.
+
+## 11. Failure Modes and Safeguards
+
+- Node wider than target width:
+  - keep node intact and allow controlled overflow for that panel.
+- Dense cyclic graph where partitioning explodes connectors:
+  - connector listings can become noisy; consider `--connector-compaction partition`,
+    `--cross-partition-edge-style none`, or fallback to regular layout + output pagination.
+- `auto` width/height without terminal stdout:
+  - error with explicit guidance to provide numeric dimensions.
+
+## 12. Metrics and Acceptance Criteria
+
+Functional:
+
+- Graphs that previously rendered at >1000 columns can be rendered into bounded panels.
+- Partitioning honors flow direction and remains deterministic.
+- Cross-partition edges are traceable via connector ids.
+
+Quality:
+
+- No node text truncation introduced by partitioning itself.
+- Comparable or better readability than viewport slicing on family-tree graphs.
+
+## 13. Phased Delivery
+
+Phase A:
+
+- Width-only constrained partitioning (`target_canvas_width`).
+- Down/up flow support first.
+- Stub connectors and panel ordering.
+
+Phase B:
+
+- Height constraint support.
+- Left/right flow support parity.
+- Overlap context layers (rank bands), not text rows.
+
+Phase C:
+
+- Affinity penalty tuning and optional connector compaction.
+- Programmatic export of partition metadata.
+
+## 14. Resolved Design Questions
+
+- Do we want a dedicated output mode for multi-panel files by default?
+  Yes. Implemented in PR2.
+- Should connector stubs be style-rule targetable (e.g., `target=connector`)?
+  Yes. Implemented in PR3.
+- Should panel headers include lineage summary (root ids, rank range)?
+  Yes. Implemented as `none|basic|lineage` with default `basic`.
+
+### 14.1 Additional Details
+
+- `partition-overlap` is analogous to `--paginate-overlap`, except it refers to layers (rank bands) and nodes, not text rows/columns.
+- In constrained mode, we should never split node boxes for panel fit.
+- If overlap is 0, still render boundary entry/exit cues at panel boundaries (not just bottom "Connectors:" block).
+- Connector endpoints should prefer readable refs (label and/or id), not only raw internal ids.
+
+## 15. Implementation Tracker (As of March 13, 2026)
+
+Legend:
+
+- `[x]` implemented in branch
+- `[ ]` not implemented yet
+
+Phase A:
+
+- [x] `--constrained` mode and constrained-layout option surface
+- [x] Width-only partitioning using `target_canvas_width`
+- [x] Down/up flow support in constrained mode
+- [x] Deterministic partition assignment and ordering (`partition_order`)
+- [x] `PartitionPlan` metadata with cross-partition edge metadata
+- [x] Connector stub rendering in output panels
+- [x] Dedicated multi-panel output UX
+
+Phase B:
+
+- [x] Height constraint behavior (`target_canvas_height`) in partitioning
+- [x] Left/right flow support parity in constrained mode
+- [x] Overlap context rendering in panel output
+
+Phase C:
+
+- [x] Affinity penalties for family/tree adjacency splitting
+- [x] Optional connector compaction
+- [x] Stable public/programmatic export surface for partition metadata
+
+Suggested PR checklist:
+
+- [x] PR1: constrained mode core + partition metadata
+- [x] PR2: panelized output mode + connector stubs
+- [x] PR3: style-rule targeting for connectors + panel headers
+- [x] PR4: height/left-right support + overlap rendering
+- [x] PR5: affinity tuning + connector compaction + metadata export finalization

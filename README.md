@@ -1,8 +1,149 @@
-# phart
+# phart v1.5.0
 
 **PHART:** The Python Hierarchical ASCII Representation Tool - A Pure Python tool for graph visualization via charts and diagrams rendered in ASCII.
 
-## Features
+# New for v1.5.0!
+
+This 1.5.0 release is bigger than any single update in the two years phart has been in development.
+
+I'll try to document all of the new features, but alas, I tend to get too wordy so I've trashed and reverted back the old README several times already. For deep dives into new topics, I'm creating separate docs in the docs directory in the repo.
+
+nodes, edges, and
+
+### Label Synthesis and Multiline BBoxes
+
+When node labels are enabled with `--labels` (or `--node-labels`), and a node does not define `label`, PHART can synthesize label text from ordered attribute paths:
+
+```bash
+phart --labels --bboxes --bbox-multiline-labels \
+  --node-label-lines name,birt.date,deat.date \
+  examples/gedcom.py
+```
+
+Notes:
+
+- `name,birt.date,deat.date` renders those three values in order (multiline in bboxes when enabled).
+- You can also use dotted paths directly, such as `name,birt.date,deat.date`.
+
+### Text Pagination
+
+Pagination is available for `--output-format text` and is useful for wide/tall renders:
+
+```bash
+phart --labels --bboxes \
+  --paginate-output-width 100 \
+  --paginate-output-height 30 \
+  --page-x 1 --page-y 0 \
+  --list-pages \
+  examples/gedcom.py
+```
+
+Notes:
+
+- `--paginate-output-width auto` and `--paginate-output-height auto` require terminal stdout.
+- Pagination is ANSI-aware: escape sequences are not counted toward visible width, and page slices preserve complete ANSI sequences.
+
+### Constrained Layout Panels and Partition Metadata
+
+Constrained layout is different from output pagination: it partitions during layout/routing, then renders panelized output with connector cues between panels.
+
+```bash
+phart --layout layered --constrained \
+  --target-canvas-width 80 \
+  --target-canvas-height 24 \
+  --partition-overlap 1 \
+  --partition-affinity-strength 1 \
+  --panel-headers lineage \
+  --connector-ref label \
+  --connector-compaction partition \
+  examples/gedcom.py
+```
+
+Notes:
+
+- Constrained mode currently supports `--layout auto|bfs|hierarchical|layered`.
+- `--partition-affinity-strength 0` disables split-affinity heuristics. Values greater than zero bias boundaries to keep close family/group relationships together.
+- Constrained splitting uses affinity-aware boundary selection; if no valid optimized split is found, it falls back to deterministic greedy splitting.
+- If a single node cannot fit inside the target canvas width, that node is kept intact and the panel can overflow.
+- `--target-canvas-width auto` and `--target-canvas-height auto` require terminal stdout.
+
+Programmatic export of partition metadata:
+
+```python
+import networkx as nx
+from phart import ASCIIRenderer, LayoutOptions, NodeStyle
+
+G = nx.DiGraph()
+G.add_edges_from(
+    [("R", "A1"), ("R", "A2"), ("R", "A3"), ("A1", "B1"), ("A2", "B2")]
+)
+
+renderer = ASCIIRenderer(
+    G,
+    options=LayoutOptions(
+        node_style=NodeStyle.MINIMAL,
+        layout_strategy="layered",
+        constrained=True,
+        target_canvas_width=12,
+        partition_affinity_strength=1,
+        connector_compaction="partition",
+        connector_ref_mode="label",
+    ),
+)
+
+print(renderer.render())
+
+plan = renderer.get_partition_plan()  # PartitionPlan | None
+metadata = renderer.export_partition_metadata()  # dict (schema_version=1.0)
+print(metadata["partition_count"])
+print(metadata["cross_partition_edges"][:2])
+```
+
+### Why export metadata?
+
+- Build your own panel index/navigation around constrained output.
+- Assert deterministic partitioning in tests/CI.
+- Compare effects of `partition_affinity_strength`, `partition_order`, and overlap settings during tuning.
+
+### Edge Glyph Presets and Arrow Styles
+
+You can set global edge line-art and arrowhead style without per-glyph mapping:
+
+```bash
+phart --edge-glyph-preset thick --edge-arrow-style unicode your_graph.py
+```
+
+Full style-rule semantics and field reference: [docs/architecture/style-rules-spec.md](./docs/architecture/style-rules-spec.md)
+
+Node decorators can also be driven by style rules:
+
+```bash
+phart --labels \
+  --style-rule 'node: sex=="F" -> prefix=(,suffix=)' \
+  --style-rule 'node: sex=="M" -> prefix=[,suffix=]' \
+  examples/gedcom.py
+```
+
+Style rules still win for keys they set:
+
+```bash
+phart --edge-glyph-preset thick \
+  --style-rule 'edge: role=="link" -> line_vertical=!,arrow_down=x' \
+  your_graph.py
+```
+
+### Legacy note:
+
+- Legacy global style fields continue to work.
+- Style rules are the preferred per-node/per-edge customization path and take precedence for overlapping keys.
+
+**Compatibility / breaking-notes:**
+
+- Style-rule validation is strict: unknown `set` keys and wrong target/key combinations now fail fast with explicit errors.
+- Edge glyph rule values must be single-cell glyphs (multi-character and wide glyphs are rejected).
+- `--edge-arrow-style unicode` is automatically coerced to ASCII when using ASCII charset mode.
+
+## Features (some pre-date v1.5.0 but hadnt been documentewd yet.)
 
 - Render using ASCII (7-bit) or Unicode characters
 - Optional ANSI color for either charset
@@ -12,13 +153,28 @@
 - Handles cycles and complex layouts
 - Bidirectional edge support
 - Edge attribute support (and attribute-based coloring of edges)
+- Edge label rendering from edge `label` attributes
 - Over ten layout strategies
 - Orthogonal edge paths (all 90 degree turns, "Manhattan" style)
-- Node labels using multi-column character sets (such as CJK)
+- **Node labels using multi-column character sets (such as CJK)**
+- **Optional width/height pagination for text output**
+- **Optional multiline node labels in bounding boxes**
+- **mermaid flowchart, svg, and html source output**
+- **pagination (horizontal and vertical) witth CLI page-selector support**
+- **partitioning (horizontal and vertical - set the screen canvas size as a contraint, and adjust the layers (rank aands ) to fit within canvas constraints**
+- **nodes and edges support arbitrary attribiutes now, not just label, color, etc)**
+- **those attributes can be displayed as lbels on nodes and edges**
+- **styling, coloring, etc based on attributes is now done with a single unified, simple, and flexible syntax.**
+- **not that you asked for it, but connectors and panel headers can now be styled too**
+- **and the phart 0.1.4 original node styling and edge styling is now fully realized.**
+- **what's a panel header? Check out the new docs in the docs/ directory for deep dives architecturally**
+- **the rest I'll try to touch on in this README**
+- [docs/architecture/style-rules-spec.md](https://github.com/scottvr/phart/blob/main/docs/architecture/style-rules-spec.md)
+- [docs/architecture/layout-partitioning-spec.md](https://github.com/scottvr/phart/blob/main/docs/architecture/layout-partitioning-spec.md)
 
 ---
 
-## New! mermaid output
+## mermaid output
 
 [`flowchart TD` is now a supported output. Read about it here.](https://github.com/scottvr/phart/blob/main/docs/mermaid-phart.md)
 
@@ -32,38 +188,7 @@ TL;DR:
 See [LAYOUT-STRATEGIES.md](https://github.com/scottvr/phart/blob/main/LAYOUT-STRATEGIES.md) in the repo for some examples of output.
 I have also documented one of the scripts in the `examples/` directory and shown its output here in [TRIADIC-CENSUS.md](https://github.com/scottvr/phart/blob/main/examples/docs/TRIADIC-CENSUS.md)
 
-## "Rainbow Coloring" demo
-
-Anyone interested in representing potentially very dense and complex graphs with an ascii line-drawing generator
-such that they find themselves here reading this is probably someone with a fair likelyhood to find this next
-trick as amusing as I did.
-
-There is a Gallery of some of the visualization capabilities native(-ish) to NetworkX using matplotlib and GraphViz,
-and maybe some other tools. Among the things in that Gallery I found was this demonstration of ["Rainbow Coloring"](https://networkx.org/documentation/stable/auto_examples/drawing/plot_rainbow_coloring.html) that shows this neat image, which I will reproduce by way of a screenshot of their website:
-
-<img width="800" height="800" alt="nx-rainbow-graph-screenshot" src="https://github.com/user-attachments/assets/ce5aea65-c086-48ae-9c4d-b2dc324b1da7" />
-
-Pretty cool, huh? Well, one thing that was an early goal in the development of PHART was to be able to go to websites like the one linked above,and find demos of how these systems visualize various graphs, and then to try to get phart to ingest it and see how it works (or doesn't) to represent complex systems of relationships under the very tight constraints it is working with.. It does a pretty good job most of the time, and gets better as I and others attempt things that it hasn't yet done before.
-
-### not a spirograph, it's not yarn art, not better than that - it's just p-hart
-
-So, of course when I saw the code used to generate the image above using NetworkX and matplotlib, I wanted to see if I could get **phart** to handle it. With the recent addition of ANSI color code escape sequences to its limited palettte with which to express itself, I am quite pleased to show you phart's interpretation of the geometric design made by the colored edge paths between nodes as in the image above. Recalll that while phart does have the capabilities originally planned for it - that of drawing rectangles with 7-bit terminal characters, and it has since acquired the ability to translate a graph into a circular layout within those means - still it is, after all, doing so using only orthogonal paths, 90 degree angles... "**Manhattan routing**", as it is sometimes called.
-
-<img width="700" height="700" alt="rainjbow-coloring-13-nodes-correct-sorting" src="https://github.com/user-attachments/assets/78646dd0-b371-4652-b7db-3a1dce91716b" />
-
-So, with only 90 degree jogs available to connect any node to another, and with this graph being comprised of 13 nodes, each connected to all the other nodes... (This complete connectivity is precisely why the circular layout with distance-based coloring gives the pleasing appearance that it does in the original image. My friends and colleagues working in fields involving computer networking, though, may be slightly triggered by [this concept](https://en.wikipedia.org/wiki/Network_topology#Fully_connected_network), and start thinking of things like [this](https://datatracker.ietf.org/doc/html/rfc7727) or [this](https://datatracker.ietf.org/doc/html/rfc2328). _I realize that STP is an IEEE standard, I found an RFC on the topic to link to because an IETF document will have 7-bit hand-drawn ASCII diagrams in it, which is a topic near and dear to me, as you possibly can tell._)
-
-### You can get there from here, just probably not as a crow flies
-
-If you did the math, you know that there are 78 connections to account for in this graph (or 156, depending on how you count a bidirectional path; we're going to use the same connection to go both ways in our diagram. You will see it is quite crowded already.
-
-Here's the original cool-but-incorrect render I had prominently at the top before I realized that the "rainbow" is not the same pattern due to some nodes being out if order, so the length-based color is askew for several edges. Notice that while it makes an interesting rainbow-ish gradient from left to right, it isn't what was intended and you can see the bottom-most node has two same-length horizontal lines to each side, and they are of different colors despite being the same apparent distance. (now notice the labels on the nodes; that's the problem. 0 should be next to 1 and on side and 11 on the other, by shortest (graph) distance; a "green-length" edge (path) got incorrectly respresented by a short (Cartesian) length line.) Here:
-
-<img width="700" height="700"  src="https://github.com/user-attachments/assets/41a402f1-4443-491e-9033-fa5795b7cf9d" />
-
----
-
-## Newest additions are:
+-
 
 ```
   --node-order {layout-default,preserve,alpha,natural,numeric}
@@ -116,6 +241,35 @@ Additionally, a `public get_edge_route_length()` function was added to ASCIIRend
 
 You probably won't need it.
 
+## "Rainbow Coloring" demo
+
+Anyone interested in representing potentially very dense and complex graphs with an ascii line-drawing generator
+such that they find themselves here reading this is probably someone with a fair likelyhood to find this next
+trick as amusing as I did.
+
+There is a Gallery of some of the visualization capabilities native(-ish) to NetworkX using matplotlib and GraphViz,
+and maybe some other tools. Among the things in that Gallery I found was this demonstration of ["Rainbow Coloring"](https://networkx.org/documentation/stable/auto_examples/drawing/plot_rainbow_coloring.html) that shows this neat image, which I will reproduce by way of a screenshot of their website:
+
+<img width="800" height="800" alt="nx-rainbow-graph-screenshot" src="https://github.com/user-attachments/assets/ce5aea65-c086-48ae-9c4d-b2dc324b1da7" />
+
+Pretty cool, huh? Well, one thing that was an early goal in the development of PHART was to be able to go to websites like the one linked above,and find demos of how these systems visualize various graphs, and then to try to get phart to ingest it and see how it works (or doesn't) to represent complex systems of relationships under the very tight constraints it is working with.. It does a pretty good job most of the time, and gets better as I and others attempt things that it hasn't yet done before.
+
+### not a spirograph, it's not yarn art, not better than that - it's just p-hart
+
+So, of course when I saw the code used to generate the image above using NetworkX and matplotlib, I wanted to see if I could get **phart** to handle it. With the recent addition of ANSI color code escape sequences to its limited palettte with which to express itself, I am quite pleased to show you phart's interpretation of the geometric design made by the colored edge paths between nodes as in the image above. Recalll that while phart does have the capabilities originally planned for it - that of drawing rectangles with 7-bit terminal characters, and it has since acquired the ability to translate a graph into a circular layout within those means - still it is, after all, doing so using only orthogonal paths, 90 degree angles... "**Manhattan routing**", as it is sometimes called.
+
+<img width="700" height="700" alt="rainjbow-coloring-13-nodes-correct-sorting" src="https://github.com/user-attachments/assets/78646dd0-b371-4652-b7db-3a1dce91716b" />
+
+So, with only 90 degree jogs available to connect any node to another, and with this graph being comprised of 13 nodes, each connected to all the other nodes... (This complete connectivity is precisely why the circular layout with distance-based coloring gives the pleasing appearance that it does in the original image. My friends and colleagues working in fields involving computer networking, though, may be slightly triggered by [this concept](https://en.wikipedia.org/wiki/Network_topology#Fully_connected_network), and start thinking of things like [this](https://datatracker.ietf.org/doc/html/rfc7727) or [this](https://datatracker.ietf.org/doc/html/rfc2328). _I realize that STP is an IEEE standard, I found an RFC on the topic to link to because an IETF document will have 7-bit hand-drawn ASCII diagrams in it, which is a topic near and dear to me, as you possibly can tell._)
+
+### You can get there from here, just probably not as a crow flies
+
+If you did the math, you know that there are 78 connections to account for in this graph (or 156, depending on how you count a bidirectional path; we're going to use the same connection to go both ways in our diagram. You will see it is quite crowded already.
+
+Here's the original cool-but-incorrect render I had prominently at the top before I realized that the "rainbow" is not the same pattern due to some nodes being out if order, so the length-based color is askew for several edges. Notice that while it makes an interesting rainbow-ish gradient from left to right, it isn't what was intended and you can see the bottom-most node has two same-length horizontal lines to each side, and they are of different colors despite being the same apparent distance. (now notice the labels on the nodes; that's the problem. 0 should be next to 1 and on side and 11 on the other, by shortest (graph) distance; a "green-length" edge (path) got incorrectly respresented by a short (Cartesian) length line.) Here:
+
+<img width="700" height="700"  src="https://github.com/user-attachments/assets/41a402f1-4443-491e-9033-fa5795b7cf9d" />
+
 ---
 
 ## NEW Features Feb 2026
@@ -124,8 +278,17 @@ You probably won't need it.
 - binary_tree sort can respect "side" properties ("left", 'right")
 - bounding box mode (line art rectangles with configurable inner padding)
 - (optionally) use labels instead of node names when rendering diagram.
+- (optionally) synthesize labels from ordered node attributes and render multiline bbox labels
 - (optionally) color edges with ANSI colors to help discern edge paths in dense complex diagrams
 - and several **new layout strategies** including `circular`, `bfs`, `shell`, `Kamada-Kawai`, and others.
+
+## NEWER! - Accidental Features
+
+So, I inadvertently merged some code into main that was not intended to be released yet, because it's - while not _**not**_ working, per se - still a little half-baked, and not documented well.
+
+Nevertheless, some might notice the command-line options, when runnning `phart --help` for example, and try to use some of the features, so I figured I may as well explain one of the goofier ones. I've written about it here in [GHM-LAtEX.md](https://github.com/scottvr/phart/blob/main/docs/GHM-LATEX.md).
+
+I just finished updating the SVG documentation with a couple of surprising results achieved by what was intended to be a silly and useless feature that I didn't actually plan to release. Check out the two vector diagrams at the top of [svg-renderer.md](https://github.com/scottvr/phart/blob/main/docs/svg-renderer.md).
 
 ### Labelling with label properties
 
@@ -141,14 +304,6 @@ ANSI color support turned out more interesting than I expected. Not completely s
 <img width="700" height="600" alt="go-package-dependencies" src="https://github.com/user-attachments/assets/932ce0db-cc4e-42ce-b77e-895ecf80fb56" />
 
 I'm not sure it's all _that_ much easier to discern what goes to where, but it sure is fun to look at.
-
-## NEWER! - Accidental Features
-
-So, I inadvertently merged some code into main that was not intended to be released yet, because it's - while not _**not**_ working, per se - still a little half-baked, and not documented well.
-
-Nevertheless, some might notice the command-line options, when runnning `phart --help` for example, and try to use some of the features, so I figured I may as well explain one of the goofier ones. I've written about it here in [GHM-LAtEX.md](https://github.com/scottvr/phart/blob/main/docs/GHM-LATEX.md).
-
-I just finished updating the SVG documentation with a couple of surprising results achieved by what was intended to be a silly and useless feature that I didn't actually plan to release. Check out the two vector diagrams at the top of [svg-renderer.md](https://github.com/scottvr/phart/blob/main/docs/svg-renderer.md).
 
 ---
 
@@ -232,7 +387,7 @@ We can test other options, without having to edit that python script we just wro
 Let's see how the balanced tree looks with the nodes in bounding boxes:
 
 ```bash
-$ phart balanced_tree.py --bbox --hpad 2 --style minimal --layer-spacing 3  --ascii
+$ phart balanced_tree.py --bboxes --hpad 2 --style minimal --layer-spacing 3  --ascii
                 +-----+
                 |  0  |
                 +-----+
@@ -251,7 +406,7 @@ $ phart balanced_tree.py --bbox --hpad 2 --style minimal --layer-spacing 3  --as
 We can increasae the space between "layers" of nodes, we can move the edges to connect to/from "ports" on the most efficient side of the nodes, and we can render in unicode, using the same script, by passing the options via the command-line until we find what we like:
 
 ```
-$ phart balanced_tree.py --bbox --hpad 2 --style minimal --layer-spacing 4 --edge-anchors ports
+$ phart balanced_tree.py --bboxes --hpad 2 --style minimal --layer-spacing 4 --edge-anchors ports
                 ┌─────┐
                 │  0  │
                 └─────┘
@@ -273,7 +428,7 @@ We can put a NodeStyle around our label, and put a bounding box around that, and
 edges come out of the center of the boxes.
 
 ```
-$ phart balanced_tree.py --bbox --hpad 0 --style round --layer-spacing 4 --edge-anchors center
+$ phart balanced_tree.py --bboxes --hpad 0 --style round --layer-spacing 4 --edge-anchors center
              ┌───┐
              │(0)│
              └───┘
@@ -335,7 +490,7 @@ As we'll see here, I will `tail` to just the last 15 lines of output so I can ju
 something new and interesting, further down the tree:
 
 ```bash
-$ phart --colors attr --edge-color-rule side:left=green,right=red --bbox -- \
+$ phart --colors attr --edge-color-rule side:left=green,right=red --bboxes -- \
  --charset unicode --no-color-nodes examples/collatz.py -- 5 | tail -15
 ```
 
@@ -404,18 +559,19 @@ To install all `extra` requirements (e.g., `fonttools` for svg rendering support
 ## The CLI
 
 ```bash
-usage: phart [-h] [--output OUTPUT] [--version] [--output-format {ditaa,ditaa-puml,html,latex-markdown,mmd,svg,text}]
-             [--style {minimal,square,round,diamond,custom,bbox}] [--node-spacing NODE_SPACING]
-             [--layer-spacing LAYER_SPACING] [--charset {ascii,ansi,unicode}] [--ascii] [--function FUNCTION]
-             [--layout {arf,auto,bfs,bipartite,circular,hierarchical,kamada-kawai,layered,multipartite,planar,random,shell,spiral,spring,vertical}]
-             [--binary-tree]
-             [--node-order {layout-default,preserve,alpha,natural,numeric}] [--node-order-attr NODE_ORDER_ATTR] [--node-order-reverse]
-             [--flow-direction {down,up,left,right}] [--bboxes] [--hpad HPAD] [--vpad VPAD] [--uniform]
-             [--edge-anchors {auto,center,ports}] [--shared-ports {any,minimize,none}]
-             [--bidirectional-mode {coalesce,separate}] [--labels] [--colors {attr,none,path,source,target}]
-             [--no-color-nodes] [--edge-color-rule RULE] [--svg-cell-size SVG_CELL_SIZE]
-             [--svg-font-family SVG_FONT_FAMILY] [--svg-text-mode {text,path}] [--svg-font-path SVG_FONT_PATH]
-             [--svg-fg SVG_FG] [--svg-bg SVG_BG]
+$ phart --help
+usage: phart [-h] [--output OUTPUT] [--version] [--output-format {ditaa,ditaa-puml,html,latex-markdown,mmd,svg,text}] [--style {minimal,square,round,diamond,custom,bbox}] [--node-spacing NODE_SPACING]
+             [--layer-spacing LAYER_SPACING] [--charset {ascii,ansi,unicode}] [--ascii] [--function FUNCTION] [--binary-tree]
+             [--layout {arf,auto,bfs,bipartite,circular,hierarchical,kamada-kawai,layered,multipartite,planar,random,shell,spiral,spring,vertical}] [--constrained]
+             [--node-order {layout-default,preserve,alpha,natural,numeric}] [--node-order-attr NODE_ORDER_ATTR] [--node-order-reverse] [--flow-direction {down,up,left,right}]
+             [--target-canvas-width [WIDTH|auto]] [--target-canvas-height [HEIGHT|auto]] [--partition-overlap PARTITION_OVERLAP] [--partition-affinity-strength PARTITION_AFFINITY_STRENGTH]
+             [--cross-partition-edge-style {stub,none}] [--connector-compaction {none,partition}] [--partition-order {natural,size}] [--panel-headers {none,basic,lineage}]
+             [--connector-ref {auto,id,label,both}] [--bboxes] [--hpad HPAD] [--vpad VPAD] [--uniform] [--edge-anchors {auto,center,ports}] [--shared-ports {any,minimize,none}]
+             [--bidirectional-mode {coalesce,separate}] [--labels] [--node-labels [ATTR]] [--edge-labels [ATTR]] [--node-label-lines SPEC] [--node-label-sep NODE_LABEL_SEP]
+             [--node-label-max-lines NODE_LABEL_MAX_LINES] [--bbox-multiline-labels] [--colors {attr,none,path,source,target}] [--no-color-nodes] [--edge-glyph-preset {default,thick,double}]
+             [--edge-arrow-style {ascii,unicode}] [--edge-color-rule RULE] [--style-rule RULE] [--style-rules-file FILE] [--svg-cell-size SVG_CELL_SIZE] [--svg-font-family SVG_FONT_FAMILY]
+             [--svg-text-mode {text,path}] [--svg-font-path SVG_FONT_PATH] [--svg-fg SVG_FG] [--svg-bg SVG_BG] [--whitespace {auto,ascii-space,nbsp}] [--paginate-output-width [WIDTH|auto]]
+             [--paginate-output-height [HEIGHT|auto]] [--paginate-overlap COLUMNS] [--select-output-page-x PAGE_X] [--select-output-page-y PAGE_Y] [--list-pages] [--write-pages DIR]
              input
 
 PHART: Python Hierarchical ASCII Rendering Tool
@@ -440,23 +596,36 @@ options:
   --ascii               Force ASCII output (deprecated, use --charset ascii instead)
   --function, -f FUNCTION
                         Function to call in Python file (default: main)
-  --binary-tree
-                        Enable binary tree layout (respects edge 'side' attributes)
-                        Equivalent to setting node-order to 'natural', but having the sort
-                        key be an edge attribute ('side'), or if none exists, the sort will
-                        be applied to the nodes directly using the node ordering policy specified.
+  --binary-tree         Enable binary tree layout (respects edge 'side' attributes)
   --layout, --layout-strategy {arf,auto,bfs,bipartite,circular,hierarchical,kamada-kawai,layered,multipartite,planar,random,shell,spiral,spring,vertical}
                         Node positioning strategy (default: auto)
+  --constrained         Enable constrained partitioning mode for compatible layout strategies
   --node-order {layout-default,preserve,alpha,natural,numeric}
                         Node ordering policy: layout-default (default), preserve, alpha, natural, or numeric
   --node-order-attr NODE_ORDER_ATTR
                         Optional node attribute name to use as the ordering key
-  --node-order-reverse
-                        The result of the sorting method used by the layout strategy will be reversed
+  --node-order-reverse  The result of the sorting method used by the layout strategy will be reversed
   --flow-direction, --flow {down,up,left,right}
-                        Layout flow direction: down (default, root at top), up (root at bottom), left (root at right),
-                        right (root at left)
-  --bboxes              Draw line-art boxes around nodes
+                        Layout flow direction: down (default, root at top), up (root at bottom), left (root at right), right (root at left)
+  --target-canvas-width [WIDTH|auto]
+                        Target width for constrained mode. Accepts WIDTH columns or 'auto' (terminal width on terminal stdout).
+  --target-canvas-height [HEIGHT|auto]
+                        Optional target height for constrained partitioning. Accepts HEIGHT rows or 'auto' (terminal height on terminal stdout).
+  --partition-overlap PARTITION_OVERLAP
+                        Context overlap between neighboring constrained partitions (default: 0)
+  --partition-affinity-strength PARTITION_AFFINITY_STRENGTH
+                        Affinity weight used to keep closely related nodes together while splitting constrained partitions (0 disables)
+  --cross-partition-edge-style {stub,none}
+                        Cross-partition edge rendering style for constrained layout (default: stub)
+  --connector-compaction {none,partition}
+                        Connector listing compaction mode for constrained panels: none (default) or partition
+  --partition-order {natural,size}
+                        Constrained partition ordering: natural rank order or size (default: natural)
+  --panel-headers {none,basic,lineage}
+                        Constrained panel header mode: none, basic (default), or lineage
+  --connector-ref {auto,id,label,both}
+                        Connector endpoint reference mode: auto (default), id, label, or both
+  --bboxes, --bbox      Draw line-art boxes around nodes
   --hpad HPAD           Horizontal padding inside node boxes (default: 1)
   --vpad VPAD           Vertical padding inside node boxes (default: 0)
   --uniform, --size-to-widest
@@ -464,18 +633,32 @@ options:
   --edge-anchors {auto,center,ports}
                         Edge anchor strategy: auto (default), center, or ports (distributed on box edges)
   --shared-ports {any,minimize,none}
-                        Terminal port sharing policy: any (default), minimize (prefer unused points on the same face),
-                        or none (avoid sharing until the node has no free terminal slots)
+                        Terminal port sharing policy: any (default), minimize (prefer unused points on the same face), or none (avoid sharing until the node has no free terminal slots)
   --bidirectional-mode {coalesce,separate}
-                        How to render reciprocal directed edges: coalesce (default) draws one shared route with arrows
-                        at both ends; separate draws each direction independently
-  --labels              Use node labels (if present) for displayed node text
+                        How to render reciprocal directed edges: coalesce (default) draws one shared route with arrows at both ends; separate draws each direction independently
+  --labels              Enable both node and edge labels using each element's 'label' attribute. Equivalent to --node-labels --edge-labels.
+  --node-labels [ATTR]  Enable node labels. Optionally provide the node attribute name to display (default: label). Use 'none' to disable node labels explicitly.
+  --edge-labels [ATTR]  Enable edge labels. Optionally provide the edge attribute name to display (default: label). Use 'none' to disable edge labels explicitly.
+  --node-label-lines SPEC
+                        Comma-separated ordered label line specs used when --labels is enabled and node 'label' is absent. Supports dotted paths (e.g. name,birt.date,deat.date).
+  --node-label-sep NODE_LABEL_SEP
+                        Separator for joining multi-value parts within one synthesized label line
+  --node-label-max-lines NODE_LABEL_MAX_LINES
+                        Optional maximum number of synthesized label lines
+  --bbox-multiline-labels
+                        Enable multiline node labels and bbox height expansion when labels contain line breaks
   --colors {attr,none,path,source,target}
                         ANSI edge coloring mode: none (default), source, target, path, or attr
   --no-color-nodes      Color edges only, not nodes
+  --edge-glyph-preset {default,thick,double}
+                        Global edge line-art preset: default (thin), thick, or double (Unicode mode only for thick/double; ASCII falls back to standard glyphs)
+  --edge-arrow-style {ascii,unicode}
+                        Global arrowhead style for edges: ascii (default) or unicode. Unicode arrows are disabled automatically in ASCII charset mode.
   --edge-color-rule RULE
-                        Attribute-driven edge color rule for --colors attr. Format:
-                        <attribute>:<value>=<color>[,<value>=<color>...] (repeatable)
+                        Attribute-driven edge color rule for --colors attr. Format: <attribute>:<value>=<color>[,<value>=<color>...] (repeatable)
+  --style-rule RULE     Advanced style rule expression. Format: '<target>: <predicate> -> color=<color>' where target is edge|node|connector|panel_header. Repeat to add multiple rules.
+  --style-rules-file FILE
+                        JSON or YAML file containing {'rules': [...]} canonical style rules. YAML requires PyYAML.
   --svg-cell-size SVG_CELL_SIZE
                         Cell size in pixels for SVG output (default: 12)
   --svg-font-family SVG_FONT_FAMILY
@@ -486,6 +669,20 @@ options:
                         Font file path required when --svg-text-mode path is used
   --svg-fg SVG_FG       Foreground color for SVG/HTML/LaTeX output
   --svg-bg SVG_BG       Background color for SVG/HTML output
+  --whitespace {auto,ascii-space,nbsp}
+                        Text output whitespace mode: auto (default), ascii-space, or nbsp. In auto mode, output-format defaults are used.
+  --paginate-output-width [WIDTH|auto]
+                        Paginate text output horizontally by terminal width (auto) or WIDTH columns. With no value, defaults to auto.
+  --paginate-output-height [HEIGHT|auto]
+                        Paginate text output vertically by terminal height (auto) or HEIGHT rows. If omitted, row pagination is disabled and all rows remain in one page.
+  --paginate-overlap COLUMNS
+                        Overlap columns between neighboring output pages (default: 8)
+  --select-output-page-x, --page-x, -x PAGE_X
+                        Select horizontal page index (default: 0)
+  --select-output-page-y, --page-y, -y PAGE_Y
+                        Select vertical page index (currently must be 0)
+  --list-pages          Print page index metadata when pagination is enabled
+  --write-pages DIR     Write all paginated pages to DIR as page_xNN_yNN.txt files
 ```
 
 ## Quick Start

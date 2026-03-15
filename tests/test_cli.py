@@ -6,6 +6,7 @@ import unittest
 import tempfile
 import shutil
 import re
+import json
 from pathlib import Path
 import sys
 from io import StringIO
@@ -38,6 +39,15 @@ class TestCLI(unittest.TestCase):
         }
         """
         self.labeled_dot_file.write_text(labeled_dot, encoding="utf-8")
+        self.labels_and_edge_dot_file = Path(self.temp_dir) / "labels_and_edge.dot"
+        labels_and_edge_dot = """
+        digraph {
+            n1 [label="Alpha Node", display_name="Alpha Name"];
+            n2 [label="Beta Node", display_name="Beta Name"];
+            n1 -> n2 [label="REL_LABEL", rel="friend"];
+        }
+        """
+        self.labels_and_edge_dot_file.write_text(labels_and_edge_dot, encoding="utf-8")
         self.edge_attr_dot_file = Path(self.temp_dir) / "edge_attr.dot"
         edge_attr_dot = """
         digraph {
@@ -127,6 +137,41 @@ def main():
     print(f"DEPTH:{depth}")
 """
         self.py_argv_file.write_text(argv_content, encoding="utf-8")
+        self.py_wide_output_file = Path(self.temp_dir) / "test_wide_output.py"
+        wide_output_content = """
+def main():
+    print("ABCDEFGHIJKLMNO")
+"""
+        self.py_wide_output_file.write_text(wide_output_content, encoding="utf-8")
+        self.py_multirow_output_file = Path(self.temp_dir) / "test_multirow_output.py"
+        multirow_output_content = """
+def main():
+    print("ROW0")
+    print("ROW1")
+    print("ROW2")
+    print("ROW3")
+"""
+        self.py_multirow_output_file.write_text(
+            multirow_output_content, encoding="utf-8"
+        )
+        self.py_ansi_output_file = Path(self.temp_dir) / "test_ansi_output.py"
+        ansi_output_content = """
+def main():
+    print("\\x1b[31mABCDEFGHIJ\\x1b[0m")
+"""
+        self.py_ansi_output_file.write_text(ansi_output_content, encoding="utf-8")
+        self.py_panelized_output_file = Path(self.temp_dir) / "test_panelized_output.py"
+        panelized_output_content = """
+def main():
+    print("=== Panel P1/2 (nodes=1) ===")
+    print("ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890ABCDE")
+    print("")
+    print("=== Panel P2/2 (nodes=1) ===")
+    print("XYZ")
+"""
+        self.py_panelized_output_file.write_text(
+            panelized_output_content, encoding="utf-8"
+        )
 
         # Create Python file with script-level bbox disabled, for CLI override tests
         self.py_bbox_override_file = Path(self.temp_dir) / "test_bbox_override.py"
@@ -454,6 +499,29 @@ def main():
         self.assertIn("C", content)
         self.assertNotIn("Error", self.stderr.getvalue())
 
+    def test_markdown_extension_does_not_trigger_nbsp_in_auto_mode(self):
+        output_file = Path(self.temp_dir) / "diagram.md"
+        sys.argv = ["phart", str(self.py_main_file), "--output", str(output_file)]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        content = output_file.read_text(encoding="utf-8")
+        self.assertNotIn("\u00a0", content)
+
+    def test_text_output_whitespace_nbsp_override(self):
+        output_file = Path(self.temp_dir) / "diagram.txt"
+        sys.argv = [
+            "phart",
+            "--whitespace",
+            "nbsp",
+            str(self.py_main_file),
+            "--output",
+            str(output_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        content = output_file.read_text(encoding="utf-8")
+        self.assertIn("\u00a0", content)
+
     def test_python_with_main_block(self):
         """Test executing Python file with __main__ block."""
         sys.argv = ["phart", str(self.py_block_file)]
@@ -515,6 +583,166 @@ def main():
         output = self.stdout.getvalue()
         self.assertIn("DEPTH:7", output)
         self.assertNotIn("Error", self.stderr.getvalue())
+
+    def test_gedcom_example_handles_level2_family_subattrs_without_dict_key_errors(
+        self,
+    ):
+        gedcom_example = Path(__file__).resolve().parents[1] / "examples" / "gedcom.py"
+        sys.argv = [
+            "phart",
+            "--labels",
+            "--bboxes",
+            "--bbox-multiline-labels",
+            "--node-label-lines",
+            "name,*",
+            str(gedcom_example),
+            "--",
+            "fam_marr.ged",
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        self.assertNotIn("Error", self.stderr.getvalue())
+
+    def test_paginate_output_width_selects_page_x(self):
+        sys.argv = [
+            "phart",
+            "--paginate-output-width",
+            "10",
+            str(self.py_wide_output_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(self.stdout.getvalue(), "ABCDEFGHIJ")
+
+    def test_paginate_output_width_supports_overlap_and_page_x(self):
+        sys.argv = [
+            "phart",
+            "--paginate-output-width",
+            "10",
+            "--paginate-overlap",
+            "2",
+            "--page-x",
+            "1",
+            str(self.py_wide_output_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(self.stdout.getvalue(), "FGHIJKLMNO")
+
+    def test_paginate_output_width_list_pages_writes_index_to_stderr(self):
+        sys.argv = [
+            "phart",
+            "--paginate-output-width",
+            "10",
+            "--list-pages",
+            str(self.py_wide_output_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        self.assertIn("Pagination:", self.stderr.getvalue())
+        self.assertIn("page[x=0,y=0]", self.stderr.getvalue())
+
+    def test_paginate_output_width_write_pages_emits_files(self):
+        page_dir = Path(self.temp_dir) / "pages"
+        sys.argv = [
+            "phart",
+            "--paginate-output-width",
+            "10",
+            "--write-pages",
+            str(page_dir),
+            str(self.py_wide_output_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        self.assertTrue((page_dir / "page_x00_y00.txt").exists())
+        self.assertTrue((page_dir / "page_x01_y00.txt").exists())
+
+    def test_paginate_output_width_auto_requires_tty_stdout(self):
+        sys.argv = [
+            "phart",
+            "--paginate-output-width",
+            "auto",
+            str(self.py_wide_output_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 1)
+        self.assertIn("requires terminal stdout", self.stderr.getvalue())
+
+    def test_paginate_output_height_selects_page_y(self):
+        sys.argv = [
+            "phart",
+            "--paginate-output-height",
+            "2",
+            "--page-y",
+            "1",
+            str(self.py_multirow_output_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(self.stdout.getvalue(), "ROW2\nROW3")
+
+    def test_paginate_output_height_auto_requires_tty_stdout(self):
+        sys.argv = [
+            "phart",
+            "--paginate-output-height",
+            "auto",
+            str(self.py_multirow_output_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 1)
+        self.assertIn(
+            "paginate-output-height auto requires terminal stdout",
+            self.stderr.getvalue(),
+        )
+
+    def test_paginate_output_width_rejects_non_text_format(self):
+        sys.argv = [
+            "phart",
+            "--output-format",
+            "svg",
+            "--paginate-output-width",
+            "10",
+            str(self.py_wide_output_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 1)
+        self.assertIn(
+            "only supported with --output-format text", self.stderr.getvalue()
+        )
+
+    def test_paginate_width_ignores_ansi_escape_length(self):
+        sys.argv = [
+            "phart",
+            "--paginate-output-width",
+            "5",
+            "--paginate-overlap",
+            "0",
+            str(self.py_ansi_output_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        stripped = re.sub(r"\x1b\[[0-9;]*m", "", output)
+        self.assertEqual(stripped, "ABCDE")
+
+    def test_paginate_width_preserves_ansi_sequence_integrity(self):
+        sys.argv = [
+            "phart",
+            "--paginate-output-width",
+            "5",
+            "--paginate-overlap",
+            "0",
+            "--page-x",
+            "1",
+            str(self.py_ansi_output_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        stripped = re.sub(r"\x1b\[[0-9;]*m", "", output)
+        self.assertEqual(stripped, "FGHIJ")
+        self.assertIn("\x1b[31m", output)
+        self.assertIn("\x1b[0m", output)
 
     def test_python_bbox_alias_overrides_script_bbox_option(self):
         sys.argv = ["phart", "--bbox", str(self.py_bbox_override_file)]
@@ -591,6 +819,54 @@ def main():
         self.assertIn("Beta Node", output)
         self.assertNotIn("n1", output)
 
+    def test_labels_absent_disables_node_and_edge_labels(self):
+        sys.argv = ["phart", str(self.labels_and_edge_dot_file)]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertIn("n1", output)
+        self.assertIn("n2", output)
+        self.assertNotIn("Alpha Node", output)
+        self.assertNotIn("REL_LABEL", output)
+
+    def test_labels_flag_enables_edge_labels(self):
+        sys.argv = ["phart", "--labels", str(self.labels_and_edge_dot_file)]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertIn("Alpha Node", output)
+        self.assertIn("Beta Node", output)
+        self.assertIn("REL_LABEL", output)
+
+    def test_node_labels_flag_supports_custom_attribute(self):
+        sys.argv = [
+            "phart",
+            "--node-labels",
+            "display_name",
+            str(self.labels_and_edge_dot_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertIn("Alpha Name", output)
+        self.assertIn("Beta Name", output)
+        self.assertNotIn("REL_LABEL", output)
+
+    def test_edge_labels_flag_supports_custom_attribute(self):
+        sys.argv = ["phart", "--edge-labels", "rel", str(self.labels_and_edge_dot_file)]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertIn("friend", output)
+        self.assertNotIn("Alpha Node", output)
+
+    def test_node_labels_bare_flag_does_not_consume_input_path(self):
+        sys.argv = ["phart", "--node-labels", str(self.labeled_dot_file)]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertIn("Alpha Node", output)
+
     def test_colors_flag_emits_ansi_in_unicode_mode(self):
         sys.argv = ["phart", "--colors", str(self.test_text_file)]
         exit_code = main()
@@ -665,6 +941,136 @@ def main():
         self.assertEqual(exit_code, 0)
         self.assertNotIn("Error", self.stderr.getvalue())
 
+    def test_create_layout_options_with_style_rule(self):
+        sys.argv = [
+            "phart",
+            "--colors",
+            "attr",
+            "--style-rule",
+            'edge: role=="spouse" and v.sex=="F" -> color=green',
+            "--style-rule",
+            'edge: role=="spouse" and v.sex=="M" -> color=blue',
+            str(self.test_text_file),
+        ]
+        args, _, explicit_fields, _ = parse_args()
+        options = create_layout_options(args, explicit_fields)
+        self.assertEqual(options.edge_color_mode, "attr")
+        self.assertEqual(len(options.style_rules), 2)
+        self.assertEqual(len(options._compiled_style_rules), 2)  # noqa: SLF001
+
+    def test_create_layout_options_with_connector_and_panel_header_style_rules(self):
+        sys.argv = [
+            "phart",
+            "--style-rule",
+            'connector: kind=="incoming" -> prefix=[IN]',
+            "--style-rule",
+            "panel_header: partition_number==1 -> color=red",
+            str(self.test_text_file),
+        ]
+        args, _, explicit_fields, _ = parse_args()
+        options = create_layout_options(args, explicit_fields)
+        self.assertEqual(len(options.style_rules), 2)
+        self.assertEqual(len(options._compiled_style_rules), 2)  # noqa: SLF001
+
+    def test_create_layout_options_with_style_rules_file_json(self):
+        style_rules_file = Path(self.temp_dir) / "style_rules.json"
+        style_rules_file.write_text(
+            json.dumps(
+                {
+                    "rules": [
+                        {
+                            "target": "edge",
+                            "when": 'role == "spouse" and v.sex == "F"',
+                            "set": {"color": "green"},
+                        }
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+        sys.argv = [
+            "phart",
+            "--colors",
+            "attr",
+            "--style-rules-file",
+            str(style_rules_file),
+            str(self.test_text_file),
+        ]
+        args, _, explicit_fields, _ = parse_args()
+        options = create_layout_options(args, explicit_fields)
+        self.assertEqual(len(options.style_rules), 1)
+        self.assertEqual(len(options._compiled_style_rules), 1)  # noqa: SLF001
+
+    def test_invalid_style_rule_format(self):
+        with self.assertRaises(ValueError):
+            sys.argv = [
+                "phart",
+                "--colors",
+                "attr",
+                "--style-rule",
+                "edge role=spouse",
+                str(self.test_text_file),
+            ]
+            args, _, explicit_fields, _ = parse_args()
+            create_layout_options(args, explicit_fields)
+
+    def test_invalid_style_rule_set_key_raises(self):
+        with self.assertRaises(ValueError):
+            sys.argv = [
+                "phart",
+                "--style-rule",
+                'edge: role=="x" -> prefix=[',
+                str(self.test_text_file),
+            ]
+            args, _, explicit_fields, _ = parse_args()
+            create_layout_options(args, explicit_fields)
+
+    def test_create_layout_options_with_style_rules_file_node_and_edge_keys(self):
+        style_rules_file = Path(self.temp_dir) / "style_rules_keys.json"
+        style_rules_file.write_text(
+            json.dumps(
+                {
+                    "rules": [
+                        {
+                            "target": "node",
+                            "when": 'sex == "F"',
+                            "set": {"prefix": "(", "suffix": ")"},
+                        },
+                        {
+                            "target": "edge",
+                            "when": 'role == "link"',
+                            "set": {"line_vertical": "!"},
+                        },
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+        sys.argv = [
+            "phart",
+            "--style-rules-file",
+            str(style_rules_file),
+            str(self.test_text_file),
+        ]
+        args, _, explicit_fields, _ = parse_args()
+        options = create_layout_options(args, explicit_fields)
+        self.assertEqual(len(options.style_rules), 2)
+        self.assertEqual(len(options._compiled_style_rules), 2)  # noqa: SLF001
+
+    def test_create_layout_options_with_edge_glyph_preset_and_arrow_style(self):
+        sys.argv = [
+            "phart",
+            "--edge-glyph-preset",
+            "thick",
+            "--edge-arrow-style",
+            "unicode",
+            str(self.test_text_file),
+        ]
+        args, _, explicit_fields, _ = parse_args()
+        options = create_layout_options(args, explicit_fields)
+        self.assertEqual(options.edge_glyph_preset, "thick")
+        self.assertEqual(options.edge_arrow_style, "unicode")
+
     def test_invalid_edge_color_rule_format(self):
         sys.argv = [
             "phart",
@@ -734,6 +1140,146 @@ def main():
             self.assertEqual(exit_code, 0)
             self.assertNotIn("Error", self.stderr.getvalue())
 
+    def test_constrained_flags_populate_layout_options(self):
+        sys.argv = [
+            "phart",
+            "--constrained",
+            "--layout",
+            "layered",
+            "--target-canvas-width",
+            "80",
+            "--target-canvas-height",
+            "40",
+            "--partition-overlap",
+            "2",
+            "--partition-affinity-strength",
+            "3",
+            "--cross-partition-edge-style",
+            "stub",
+            "--connector-compaction",
+            "partition",
+            "--partition-order",
+            "size",
+            "--panel-headers",
+            "lineage",
+            "--connector-ref",
+            "both",
+            str(self.test_text_file),
+        ]
+        args, _unknown, explicit_layout_fields, _module_argv = parse_args()
+        options = create_layout_options(args, explicit_layout_fields)
+
+        self.assertEqual(options.layout_strategy, "layered")
+        self.assertTrue(options.constrained)
+        self.assertEqual(options.target_canvas_width, 80)
+        self.assertEqual(options.target_canvas_height, 40)
+        self.assertEqual(options.partition_overlap, 2)
+        self.assertEqual(options.partition_affinity_strength, 3)
+        self.assertEqual(options.cross_partition_edge_style, "stub")
+        self.assertEqual(options.connector_compaction, "partition")
+        self.assertEqual(options.partition_order, "size")
+        self.assertEqual(options.panel_header_mode, "lineage")
+        self.assertEqual(options.connector_ref_mode, "both")
+
+    def test_constrained_requires_target_canvas_width(self):
+        sys.argv = [
+            "phart",
+            "--constrained",
+            str(self.test_text_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 1)
+        self.assertIn(
+            "--constrained requires --target-canvas-width",
+            self.stderr.getvalue(),
+        )
+
+    def test_target_canvas_width_auto_requires_tty_stdout(self):
+        sys.argv = [
+            "phart",
+            "--constrained",
+            "--layout",
+            "layered",
+            "--target-canvas-width",
+            "auto",
+            str(self.test_text_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 1)
+        self.assertIn("requires terminal stdout", self.stderr.getvalue())
+
+    def test_partition_overlap_is_not_limited_by_canvas_width(self):
+        sys.argv = [
+            "phart",
+            "--constrained",
+            "--layout",
+            "layered",
+            "--target-canvas-width",
+            "10",
+            "--partition-overlap",
+            "10",
+            str(self.test_text_file),
+        ]
+        args, _unknown, explicit_layout_fields, _module_argv = parse_args()
+        options = create_layout_options(args, explicit_layout_fields)
+        self.assertEqual(options.partition_overlap, 10)
+
+    def test_partition_affinity_strength_must_be_non_negative(self):
+        sys.argv = [
+            "phart",
+            "--constrained",
+            "--layout",
+            "layered",
+            "--target-canvas-width",
+            "10",
+            "--partition-affinity-strength",
+            "-1",
+            str(self.test_text_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 1)
+        self.assertIn(
+            "--partition-affinity-strength must be non-negative",
+            self.stderr.getvalue(),
+        )
+
+    def test_paginate_output_width_is_panel_aware_for_constrained_text(self):
+        sys.argv = [
+            "phart",
+            "--constrained",
+            "--target-canvas-width",
+            "20",
+            "--paginate-output-width",
+            "30",
+            "--paginate-overlap",
+            "0",
+            "--page-x",
+            "1",
+            str(self.py_panelized_output_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertIn("XYZ", output)
+        self.assertIn("LMNOPQRSTUVWXYZ1234567890ABCDE", output)
+
+    def test_constrained_rejects_unsupported_layout_strategy(self):
+        sys.argv = [
+            "phart",
+            "--constrained",
+            "--layout",
+            "circular",
+            "--target-canvas-width",
+            "40",
+            str(self.test_text_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 1)
+        self.assertIn(
+            "constrained mode is currently supported with layout strategies",
+            self.stderr.getvalue(),
+        )
+
     def test_node_order_flags_populate_layout_options(self):
         sys.argv = [
             "phart",
@@ -748,3 +1294,54 @@ def main():
 
         self.assertEqual(options.node_order_mode, "numeric")
         self.assertEqual(options.node_order_attr, "rank")
+
+    def test_whitespace_flag_populates_layout_options(self):
+        sys.argv = [
+            "phart",
+            "--whitespace",
+            "ascii-space",
+            str(self.test_text_file),
+        ]
+        args, _unknown, explicit_layout_fields, _module_argv = parse_args()
+        options = create_layout_options(args, explicit_layout_fields)
+        self.assertEqual(options.whitespace_mode, "ascii_space")
+
+    def test_node_label_line_flags_populate_layout_options(self):
+        sys.argv = [
+            "phart",
+            "--labels",
+            "--node-label-lines",
+            "name,birt.date,deat.date",
+            "--node-label-sep",
+            " | ",
+            "--node-label-max-lines",
+            "2",
+            "--bbox-multiline-labels",
+            str(self.test_text_file),
+        ]
+        args, _unknown, explicit_layout_fields, _module_argv = parse_args()
+        options = create_layout_options(args, explicit_layout_fields)
+
+        self.assertTrue(options.use_labels)
+        self.assertEqual(options.node_label_attr, "label")
+        self.assertEqual(options.edge_label_attr, "label")
+        self.assertEqual(options.node_label_lines, ("name", "birt.date", "deat.date"))
+        self.assertEqual(options.node_label_sep, " | ")
+        self.assertEqual(options.node_label_max_lines, 2)
+        self.assertTrue(options.bbox_multiline_labels)
+
+    def test_node_and_edge_label_flags_populate_layout_options(self):
+        sys.argv = [
+            "phart",
+            "--node-labels",
+            "display_name",
+            "--edge-labels",
+            "rel",
+            str(self.test_text_file),
+        ]
+        args, _unknown, explicit_layout_fields, _module_argv = parse_args()
+        options = create_layout_options(args, explicit_layout_fields)
+
+        self.assertTrue(options.use_labels)
+        self.assertEqual(options.node_label_attr, "display_name")
+        self.assertEqual(options.edge_label_attr, "rel")
