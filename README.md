@@ -246,7 +246,7 @@ Often, I'll combine those with variations on `--hpad/--vpad`, `--layer/node-sizi
 
 You probably won't need it.
 
-[RAINBOW COLORING DEMOS](RAINBOW_COLORING.MD)
+[RAINBOW COLORING DEMOS](RAINBOW_COLORING.md)
 
 ## NEW Features Feb 2026
 
