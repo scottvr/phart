@@ -8,7 +8,9 @@ This 1.5.0 release is bigger than any single update in the two years phart has b
 
 I'll try to document all of the new features, but alas, I tend to get too wordy so I've trashed and reverted back the old README several times already. For deep dives into new topics, I'm creating separate docs in the docs directory in the repo.
 
-## Features (some pre-date v1.5.0 but hadnt been documentewd yet.)
+## Features (some pre-date v1.5.0 but hadn't been documented yet.)
+
+New stuff is **bolded.**
 
 - Render using ASCII (7-bit) or Unicode characters
 - Optional ANSI color for either charset
@@ -37,6 +39,8 @@ I'll try to document all of the new features, but alas, I tend to get too wordy 
 - [docs/architecture/style-rules-spec.md](https://github.com/scottvr/phart/blob/main/docs/architecture/style-rules-spec.md)
 - [docs/architecture/layout-partitioning-spec.md](https://github.com/scottvr/phart/blob/main/docs/architecture/layout-partitioning-spec.md)
 
+--
+##Some details on new v1.5.0 stuff:
 
 ### Label Synthesis and Multiline BBoxes
 
