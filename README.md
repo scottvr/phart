@@ -39,8 +39,8 @@ New stuff is **bolded.**
 - [docs/architecture/style-rules-spec.md](https://github.com/scottvr/phart/blob/main/docs/architecture/style-rules-spec.md)
 - [docs/architecture/layout-partitioning-spec.md](https://github.com/scottvr/phart/blob/main/docs/architecture/layout-partitioning-spec.md)
 
---
-##Some details on new v1.5.0 stuff:
+----
+## Some details on new v1.5.0 stuff:
 
 ### Label Synthesis and Multiline BBoxes
 
