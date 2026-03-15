@@ -1,0 +1,269 @@
+commit 2ee1efa26ddc84baa93a8a55729e9c95a99fd466
+Author: ScottVR <scottvr@gmail.com>
+Date:   Sat Mar 14 19:27:49 2026 -0500
+
+    add cling docs so I can make release-notes
+
+commit d26d2ee41bf445bc3d356b674e26e60780fbc3b2
+Author: ScottVR <scottvr@gmail.com>
+Date:   Sat Mar 14 16:28:59 2026 -0500
+
+    update README for v1.5.0. rtimeout to create cling. return with cling files to help write release notes
+
+commit 4bb10e10378b15ef9b5bf7e0d106f616124ec3e5
+Author: ScottVR <scottvr@gmail.com>
+Date:   Sat Mar 14 03:27:48 2026 -0500
+
+    correct typo in pyproject.toml
+
+commit a37ef26db5b217d6df70e6656424e9d376091443
+Author: ScottVR <scottvr@gmail.com>
+Date:   Fri Mar 13 20:31:26 2026 -0500
+
+     revise docs for 1.5.0
+
+commit 4c3cb0dea4212907b470b0f446ead990ea38fadc
+Author: ScottVR <scottvr@gmail.com>
+Date:   Fri Mar 13 10:29:17 2026 -0500
+
+    correct bugs in docs
+
+commit f80f73758f934d4d142bd6961ffe6f4a336b1aae
+Author: ScottVR <scottvr@gmail.com>
+Date:   Fri Mar 13 08:49:12 2026 -0500
+
+    PR5: affinity tuning + connector compaction + metadata export finalization. implement affinity penalty heuristics, boundary scoring, connector compaction, partition metadata extraction, cli wiring, and tests of same
+
+commit bb16f7be70c77c1500dbaea10c8e411f2a8dc3c5
+Author: ScottVR <scottvr@gmail.com>
+Date:   Fri Mar 13 08:10:00 2026 -0500
+
+    PR4: height/left-right support + overlap rendering. Phase B of layout-partitioning-spec is complete.
+
+commit 819c2ca47ea47405a814ff15e28c9892c201c3e6
+Author: ScottVR <scottvr@gmail.com>
+Date:   Fri Mar 13 07:44:46 2026 -0500
+
+    pre-commit fix
+
+commit 39970bfc987a70ef5024d17dc391982fcb906e66
+Author: ScottVR <scottvr@gmail.com>
+Date:   Fri Mar 13 07:33:16 2026 -0500
+
+    update layout-partitioning spec with notes from discussion between PR3 and starting PR4.
+
+commit cadb59d58e5195490a27a18435815aa33f4c54a6
+Author: ScottVR <scottvr@gmail.com>
+Date:   Fri Mar 13 07:23:49 2026 -0500
+
+    PR3: add style-rule targets connector and panel_header; extend predicate root resolution to connector and panel_header contexts; CLI: edge|node|connector|panel_header  targets for mew sty;e rules; tests for parse/compile/runtime behavior
+
+commit c7681e36874a844afda6a7e05134dc05cb06fe58
+Author: ScottVR <scottvr@gmail.com>
+Date:   Fri Mar 13 06:50:29 2026 -0500
+
+    PR2: panelized output mode + connector stubs
+
+commit 10db54cfec12ca8ae2440e00365f1b4860d791f3
+Author: ScottVR <scottvr@gmail.com>
+Date:   Fri Mar 13 06:38:23 2026 -0500
+
+    update layout-partitioning-spec with answers to open questions
+
+commit a41ba412e4b7a5a1521e352d372b3ee37af872e3
+Author: ScottVR <scottvr@gmail.com>
+Date:   Fri Mar 13 06:34:40 2026 -0500
+
+    update spec with tasklist, bring up-to-date with status.
+
+commit 3f6a1066c07008ce1702bfdbd57a660906a29b54
+Author: ScottVR <scottvr@gmail.com>
+Date:   Fri Mar 13 06:30:32 2026 -0500
+
+    small refactor to make 'constrained' a modifier for supported layout-strategies, and not a layout-strategy of its own
+
+commit 7738360c504aa334f7b5806e7ca810ff10cf3328
+Author: ScottVR <scottvr@gmail.com>
+Date:   Fri Mar 13 06:21:44 2026 -0500
+
+    early and often, cuz this could get in the weeds...
+
+commit 9f10bac84eefe0654c2c70e8261fec368deef9ba
+Author: ScottVR <scottvr@gmail.com>
+Date:   Fri Mar 13 06:04:15 2026 -0500
+
+    remove gedcom-specific attribute handling; demonstrate how to achieve it with generic functionality in README
+
+commit 705801bf31f95099885fe65841550a962c5a28c2
+Author: ScottVR <scottvr@gmail.com>
+Date:   Fri Mar 13 06:01:22 2026 -0500
+
+    separate edge-labels from node-labels; give them explicit cli options
+
+commit 2685f16eae77e10ede31fa7ef3b399339e56372f
+Author: ScottVR <scottvr@gmail.com>
+Date:   Fri Mar 13 05:38:32 2026 -0500
+
+    remove file extension sniffing, and ensure whitespae relies on out-putformat and --whitespace (if any)
+
+commit 1a001949e165c7c56dadbcc45108f4b287cbfcf8
+Author: ScottVR <scottvr@gmail.com>
+Date:   Fri Mar 13 05:26:27 2026 -0500
+
+    doc updates
+
+commit 7c9e9bd78c3d7ebe68158ceca65776255d15c9bc
+Author: ScottVR <scottvr@gmail.com>
+Date:   Fri Mar 13 05:25:48 2026 -0500
+
+    docs update
+
+commit d26a835c56e6dcb1b83d5c22ca4629ee8eea8a38
+Author: ScottVR <scottvr@gmail.com>
+Date:   Fri Mar 13 05:16:44 2026 -0500
+
+    update docs, bump version to 1.5.0
+
+commit 623880e3306153a5c7b21211d9f0244122761ba2
+Author: ScottVR <scottvr@gmail.com>
+Date:   Fri Mar 13 04:56:18 2026 -0500
+
+    Phase 3 cand d completed; true up docs, ensure examples, brakage callouts.
+
+commit 981b4c33283481a7d05bf956a48822b28e22ffff
+Author: ScottVR <scottvr@gmail.com>
+Date:   Fri Mar 13 04:37:52 2026 -0500
+
+    implement phase 3b from archicture/style-rules-spec.md
+
+commit a5c6fb639d486d2598143e58e913ea0c25257b28
+Author: ScottVR <scottvr@gmail.com>
+Date:   Fri Mar 13 04:24:07 2026 -0500
+
+    Implement Phase 3a for style-rule + node-style, and added a tracked execution board in the architecture doc
+
+commit c952534ec40cf7f5b818de6f3844d815f1f08bbc
+Author: ScottVR <scottvr@gmail.com>
+Date:   Fri Mar 13 04:11:39 2026 -0500
+
+    add basic implementation plan for phase 3 of style-rules-spec
+
+commit 1e83cd80475c2b750d2b7f6e63df86da3341324c
+Author: ScottVR <scottvr@gmail.com>
+Date:   Fri Mar 13 04:09:39 2026 -0500
+
+    update style-rules spec phaase 3, add pagination->in-layout-constraint spec
+
+commit 69d545b59cf7ccd8898bd5193b6573ef782d3d14
+Author: ScottVR <scottvr@gmail.com>
+Date:   Fri Mar 13 04:00:08 2026 -0500
+
+    revert gedcom.. again, this is not a phart problem
+
+commit a7dc4a0213611023df7d23196adcb5f938498340
+Author: ScottVR <scottvr@gmail.com>
+Date:   Fri Mar 13 03:04:05 2026 -0500
+
+    fix mypy types-yaml
+
+commit cb8644dc55f192a82a772eb45634ed1ac9f1ba95
+Author: ScottVR <scottvr@gmail.com>
+Date:   Fri Mar 13 02:27:50 2026 -0500
+
+    rm multiline ged note; that's more ged implementation than phart needs to deal with
+
+commit a0d5dab66763550a892f5aa93f837972361e6f35
+Author: ScottVR <scottvr@gmail.com>
+Date:   Fri Mar 13 02:11:24 2026 -0500
+
+    initial spec
+
+commit 20977a7027f511b2a0dd0d631d831b807dd6cc67
+Author: ScottVR <scottvr@gmail.com>
+Date:   Fri Mar 13 01:52:40 2026 -0500
+
+    normalize str|list|dict to fix unhashable type  error
+
+commit b70ed8a0bab4f0c3612866dfd3f6c07b07e56cd1
+Author: ScottVR <scottvr@gmail.com>
+Date:   Fri Mar 13 00:41:12 2026 -0500
+
+    make node-spacing awaare of new multiline label changes
+
+commit 61e31883cdad05b1bab3c242e87667efff1fee7c
+Author: ScottVR <scottvr@gmail.com>
+Date:   Fri Mar 13 00:19:51 2026 -0500
+
+    multiline node-labeling
+
+commit 095309fd1f15786fea1d63a46b33e30a8b9461f9
+Author: ScottVR <scottvr@gmail.com>
+Date:   Thu Mar 12 23:49:57 2026 -0500
+
+    ansi-aware pagination when calculating and slicing
+
+commit 294eab9e92088b61f19c7db97a1dbf42e5d4383b
+Author: ScottVR <scottvr@gmail.com>
+Date:   Thu Mar 12 23:48:53 2026 -0500
+
+    vertical pagination
+
+commit 46dff5600a79b0f7d2636f5697e899087c0a9447
+Author: ScottVR <scottvr@gmail.com>
+Date:   Thu Mar 12 23:18:03 2026 -0500
+
+    initial commit
+
+commit 66ab41bbc0d566fe098d2f0988cd9c03533580bf
+Author: ScottVR <scottvr@gmail.com>
+Date:   Sun Mar 8 18:11:13 2026 -0500
+
+    remove EOF "fixer"
+
+commit 87cc02a319faad803876380eabb437069b6433d0
+Author: ScottVR <scottvr@gmail.com>
+Date:   Sun Mar 8 18:10:02 2026 -0500
+
+    add sourcing note to mermaid flowchart syntax doc
+
+commit b240643e1c43a70958ae6afa338703ba0303f81a
+Author: ScottVR <scottvr@gmail.com>
+Date:   Sun Mar 8 18:05:33 2026 -0500
+
+    add smart whitespace handling, with override
+
+commit b1e0086d2127265e4e412d7f3cd5f6c364911c47
+Author: Scott VanRavenswaay <scottvr@gmail.com>
+Date:   Sun Mar 8 16:40:24 2026 -0500
+
+    Update README.md
+
+commit 422433e275e8b15587266bc95130036b4ba8f4e0
+Author: ScottVR <scottvr@gmail.com>
+Date:   Sun Mar 8 16:32:38 2026 -0500
+
+     rearrange README, The "NEW" section had gotten out of control
+
+commit 38814a608660757291587bf28e2a791376145e8f
+Author: ScottVR <scottvr@gmail.com>
+Date:   Sun Mar 8 16:28:58 2026 -0500
+
+    allow ruff to format issue_21.py
+
+commit 4ac4f2c477b08aae183b4f1a2d5eda4d9d668b61
+Author: Scott VanRavenswaay <scottvr@gmail.com>
+Date:   Sun Mar 8 16:26:24 2026 -0500
+
+    Update README.md
+
+commit 8712be45d5977440b8c26da423c9ffa239e262b2
+Author: ScottVR <scottvr@gmail.com>
+Date:   Sun Mar 8 16:21:02 2026 -0500
+
+    remove debug print; update issue_21 test
+
+commit d1c275c2c4ed772486d135112f05e0951d3644d6
+Author: ScottVR <scottvr@gmail.com>
+Date:   Sun Mar 8 15:54:02 2026 -0500
+
+    add TODO for width-aware border-edge drawing, should someone wish to set multi-column-width edge-drawing characters
