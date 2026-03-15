@@ -5,17 +5,10 @@
 # New for v1.5.0!
 
 This 1.5.0 release is bigger than any single update in the two years phart has been in development.
-Node and Edge attribute support had sorta emerged piecemeal - first, I wanted `label` properties to be displayed if requested instead of the node's id within NetworkX, then a user asked for 'side' edge attributes for a binary tre he wanted to render. While adding `side` support, I added support for a `color` attribute on edges so that paths could take on colors according to the `color` attribute on an edge.
 
-The syntax for the cli args for setting colors on edges by property seemed a shame to use only for colors, and a user has been asking for edge label display support, so I took this opportunity to implement edge labels. First partial implementation showed that width was going to be an issue, for renders where the user wants to display vertical or horizontal edge labels.
+I'll try to document all of the new features, but alas, I tend to get too wordy so I've trashed and reverted back the old README several times already. For deep dives into new topics, I'm creating separate docs in the docs directory in the repo.
 
-I wanted to test with something I hadn't done before, so I downloaded some test .ged files from another project, and wrote a script to read the GED files into a NX DiGraph. I thought this was going to be simpler than it turned out to be, and making this ged import work so I could render it as a graph lead to adding horizontal and vertical pagination, then when bboxes and colors and 100 or so ancestors in the fictional test family lead to, tooling around the paginated text output is a bit cumbersome, akin to a comand-line microfiche reader. It works though, and is probably a reasonable trade-off for someone doing genealogy research where they are accustomed to wide hierarchical layouts of their data.
-
-So I thought about how one might constrain a layered graph diagram to a specific width (such as the terminal width, but it can be specified by the user) and break the nodes into groups where they can be arracnged vertically, and the edge routing work around the new layout. So we have text pagination, where the layout is not altered, only the display of or file-writing of is modified to span multiple pages AND/OR we now have a concept of "constrained partitioning" where the canvas size on which your nodes will be layout out is of a pre-determined size, probably matching the row/column width of the intended display, and vertically scrolling to fit the data.
-
-So this was a perfect opportunity tpo make node and edge attributes fully supported with a generic, not-color-specific rule syntax, and now that we'll have pagination and partition header information most likely, might as well style them while we're at it. Oh and, finish the 2-year-old partial ciustom node-styling and custom-edge styling that was half-implemented. Scope kept creepin'. Until...
-
-### Shiny Object diverts my Attention
+nodes, edges, and
 
 ### Label Synthesis and Multiline BBoxes
 
@@ -106,7 +99,7 @@ print(metadata["partition_count"])
 print(metadata["cross_partition_edges"][:2])
 ```
 
-Why export metadata:
+### Why export metadata?
 
 - Build your own panel index/navigation around constrained output.
 - Assert deterministic partitioning in tests/CI.
@@ -139,20 +132,18 @@ phart --edge-glyph-preset thick \
   your_graph.py
 ```
 
-Legacy note:
+### Legacy note:
 
 - Legacy global style fields continue to work.
 - Style rules are the preferred per-node/per-edge customization path and take precedence for overlapping keys.
 
-Compatibility / breaking-notes:
+**Compatibility / breaking-notes:**
 
 - Style-rule validation is strict: unknown `set` keys and wrong target/key combinations now fail fast with explicit errors.
 - Edge glyph rule values must be single-cell glyphs (multi-character and wide glyphs are rejected).
 - `--edge-arrow-style unicode` is automatically coerced to ASCII when using ASCII charset mode.
 
-  ***
-
-## Features
+## Features (some pre-date v1.5.0 but hadnt been documentewd yet.)
 
 - Render using ASCII (7-bit) or Unicode characters
 - Optional ANSI color for either charset
@@ -165,13 +156,25 @@ Compatibility / breaking-notes:
 - Edge label rendering from edge `label` attributes
 - Over ten layout strategies
 - Orthogonal edge paths (all 90 degree turns, "Manhattan" style)
-- Node labels using multi-column character sets (such as CJK)
-- Optional width/height pagination for text output
-- Optional multiline node labels in bounding boxes
+- **Node labels using multi-column character sets (such as CJK)**
+- **Optional width/height pagination for text output**
+- **Optional multiline node labels in bounding boxes**
+- **mermaid flowchart, svg, and html source output**
+- **pagination (horizontal and vertical) witth CLI page-selector support**
+- **partitioning (horizontal and vertical - set the screen canvas size as a contraint, and adjust the layers (rank aands ) to fit within canvas constraints**
+- **nodes and edges support arbitrary attribiutes now, not just label, color, etc)**
+- **those attributes can be displayed as lbels on nodes and edges**
+- **styling, coloring, etc based on attributes is now done with a single unified, simple, and flexible syntax.**
+- **not that you asked for it, but connectors and panel headers can now be styled too**
+- **and the phart 0.1.4 original node styling and edge styling is now fully realized.**
+- **what's a panel header? Check out the new docs in the docs/ directory for deep dives architecturally**
+- **the rest I'll try to touch on in this README**
+- [docs/architecture/style-rules-spec.md](https://github.com/scottvr/phart/blob/main/docs/architecture/style-rules-spec.md)
+- [docs/architecture/layout-partitioning-spec.md](https://github.com/scottvr/phart/blob/main/docs/architecture/layout-partitioning-spec.md)
 
 ---
 
-## New! mermaid output
+## mermaid output
 
 [`flowchart TD` is now a supported output. Read about it here.](https://github.com/scottvr/phart/blob/main/docs/mermaid-phart.md)
 
@@ -185,38 +188,7 @@ TL;DR:
 See [LAYOUT-STRATEGIES.md](https://github.com/scottvr/phart/blob/main/LAYOUT-STRATEGIES.md) in the repo for some examples of output.
 I have also documented one of the scripts in the `examples/` directory and shown its output here in [TRIADIC-CENSUS.md](https://github.com/scottvr/phart/blob/main/examples/docs/TRIADIC-CENSUS.md)
 
-## "Rainbow Coloring" demo
-
-Anyone interested in representing potentially very dense and complex graphs with an ascii line-drawing generator
-such that they find themselves here reading this is probably someone with a fair likelyhood to find this next
-trick as amusing as I did.
-
-There is a Gallery of some of the visualization capabilities native(-ish) to NetworkX using matplotlib and GraphViz,
-and maybe some other tools. Among the things in that Gallery I found was this demonstration of ["Rainbow Coloring"](https://networkx.org/documentation/stable/auto_examples/drawing/plot_rainbow_coloring.html) that shows this neat image, which I will reproduce by way of a screenshot of their website:
-
-<img width="800" height="800" alt="nx-rainbow-graph-screenshot" src="https://github.com/user-attachments/assets/ce5aea65-c086-48ae-9c4d-b2dc324b1da7" />
-
-Pretty cool, huh? Well, one thing that was an early goal in the development of PHART was to be able to go to websites like the one linked above,and find demos of how these systems visualize various graphs, and then to try to get phart to ingest it and see how it works (or doesn't) to represent complex systems of relationships under the very tight constraints it is working with.. It does a pretty good job most of the time, and gets better as I and others attempt things that it hasn't yet done before.
-
-### not a spirograph, it's not yarn art, not better than that - it's just p-hart
-
-So, of course when I saw the code used to generate the image above using NetworkX and matplotlib, I wanted to see if I could get **phart** to handle it. With the recent addition of ANSI color code escape sequences to its limited palettte with which to express itself, I am quite pleased to show you phart's interpretation of the geometric design made by the colored edge paths between nodes as in the image above. Recalll that while phart does have the capabilities originally planned for it - that of drawing rectangles with 7-bit terminal characters, and it has since acquired the ability to translate a graph into a circular layout within those means - still it is, after all, doing so using only orthogonal paths, 90 degree angles... "**Manhattan routing**", as it is sometimes called.
-
-<img width="700" height="700" alt="rainjbow-coloring-13-nodes-correct-sorting" src="https://github.com/user-attachments/assets/78646dd0-b371-4652-b7db-3a1dce91716b" />
-
-So, with only 90 degree jogs available to connect any node to another, and with this graph being comprised of 13 nodes, each connected to all the other nodes... (This complete connectivity is precisely why the circular layout with distance-based coloring gives the pleasing appearance that it does in the original image. My friends and colleagues working in fields involving computer networking, though, may be slightly triggered by [this concept](https://en.wikipedia.org/wiki/Network_topology#Fully_connected_network), and start thinking of things like [this](https://datatracker.ietf.org/doc/html/rfc7727) or [this](https://datatracker.ietf.org/doc/html/rfc2328). _I realize that STP is an IEEE standard, I found an RFC on the topic to link to because an IETF document will have 7-bit hand-drawn ASCII diagrams in it, which is a topic near and dear to me, as you possibly can tell._)
-
-### You can get there from here, just probably not as a crow flies
-
-If you did the math, you know that there are 78 connections to account for in this graph (or 156, depending on how you count a bidirectional path; we're going to use the same connection to go both ways in our diagram. You will see it is quite crowded already.
-
-Here's the original cool-but-incorrect render I had prominently at the top before I realized that the "rainbow" is not the same pattern due to some nodes being out if order, so the length-based color is askew for several edges. Notice that while it makes an interesting rainbow-ish gradient from left to right, it isn't what was intended and you can see the bottom-most node has two same-length horizontal lines to each side, and they are of different colors despite being the same apparent distance. (now notice the labels on the nodes; that's the problem. 0 should be next to 1 and on side and 11 on the other, by shortest (graph) distance; a "green-length" edge (path) got incorrectly respresented by a short (Cartesian) length line.) Here:
-
-<img width="700" height="700"  src="https://github.com/user-attachments/assets/41a402f1-4443-491e-9033-fa5795b7cf9d" />
-
----
-
-## Newest additions are:
+-
 
 ```
   --node-order {layout-default,preserve,alpha,natural,numeric}
@@ -269,6 +241,35 @@ Additionally, a `public get_edge_route_length()` function was added to ASCIIRend
 
 You probably won't need it.
 
+## "Rainbow Coloring" demo
+
+Anyone interested in representing potentially very dense and complex graphs with an ascii line-drawing generator
+such that they find themselves here reading this is probably someone with a fair likelyhood to find this next
+trick as amusing as I did.
+
+There is a Gallery of some of the visualization capabilities native(-ish) to NetworkX using matplotlib and GraphViz,
+and maybe some other tools. Among the things in that Gallery I found was this demonstration of ["Rainbow Coloring"](https://networkx.org/documentation/stable/auto_examples/drawing/plot_rainbow_coloring.html) that shows this neat image, which I will reproduce by way of a screenshot of their website:
+
+<img width="800" height="800" alt="nx-rainbow-graph-screenshot" src="https://github.com/user-attachments/assets/ce5aea65-c086-48ae-9c4d-b2dc324b1da7" />
+
+Pretty cool, huh? Well, one thing that was an early goal in the development of PHART was to be able to go to websites like the one linked above,and find demos of how these systems visualize various graphs, and then to try to get phart to ingest it and see how it works (or doesn't) to represent complex systems of relationships under the very tight constraints it is working with.. It does a pretty good job most of the time, and gets better as I and others attempt things that it hasn't yet done before.
+
+### not a spirograph, it's not yarn art, not better than that - it's just p-hart
+
+So, of course when I saw the code used to generate the image above using NetworkX and matplotlib, I wanted to see if I could get **phart** to handle it. With the recent addition of ANSI color code escape sequences to its limited palettte with which to express itself, I am quite pleased to show you phart's interpretation of the geometric design made by the colored edge paths between nodes as in the image above. Recalll that while phart does have the capabilities originally planned for it - that of drawing rectangles with 7-bit terminal characters, and it has since acquired the ability to translate a graph into a circular layout within those means - still it is, after all, doing so using only orthogonal paths, 90 degree angles... "**Manhattan routing**", as it is sometimes called.
+
+<img width="700" height="700" alt="rainjbow-coloring-13-nodes-correct-sorting" src="https://github.com/user-attachments/assets/78646dd0-b371-4652-b7db-3a1dce91716b" />
+
+So, with only 90 degree jogs available to connect any node to another, and with this graph being comprised of 13 nodes, each connected to all the other nodes... (This complete connectivity is precisely why the circular layout with distance-based coloring gives the pleasing appearance that it does in the original image. My friends and colleagues working in fields involving computer networking, though, may be slightly triggered by [this concept](https://en.wikipedia.org/wiki/Network_topology#Fully_connected_network), and start thinking of things like [this](https://datatracker.ietf.org/doc/html/rfc7727) or [this](https://datatracker.ietf.org/doc/html/rfc2328). _I realize that STP is an IEEE standard, I found an RFC on the topic to link to because an IETF document will have 7-bit hand-drawn ASCII diagrams in it, which is a topic near and dear to me, as you possibly can tell._)
+
+### You can get there from here, just probably not as a crow flies
+
+If you did the math, you know that there are 78 connections to account for in this graph (or 156, depending on how you count a bidirectional path; we're going to use the same connection to go both ways in our diagram. You will see it is quite crowded already.
+
+Here's the original cool-but-incorrect render I had prominently at the top before I realized that the "rainbow" is not the same pattern due to some nodes being out if order, so the length-based color is askew for several edges. Notice that while it makes an interesting rainbow-ish gradient from left to right, it isn't what was intended and you can see the bottom-most node has two same-length horizontal lines to each side, and they are of different colors despite being the same apparent distance. (now notice the labels on the nodes; that's the problem. 0 should be next to 1 and on side and 11 on the other, by shortest (graph) distance; a "green-length" edge (path) got incorrectly respresented by a short (Cartesian) length line.) Here:
+
+<img width="700" height="700"  src="https://github.com/user-attachments/assets/41a402f1-4443-491e-9033-fa5795b7cf9d" />
+
 ---
 
 ## NEW Features Feb 2026
@@ -280,6 +281,14 @@ You probably won't need it.
 - (optionally) synthesize labels from ordered node attributes and render multiline bbox labels
 - (optionally) color edges with ANSI colors to help discern edge paths in dense complex diagrams
 - and several **new layout strategies** including `circular`, `bfs`, `shell`, `Kamada-Kawai`, and others.
+
+## NEWER! - Accidental Features
+
+So, I inadvertently merged some code into main that was not intended to be released yet, because it's - while not _**not**_ working, per se - still a little half-baked, and not documented well.
+
+Nevertheless, some might notice the command-line options, when runnning `phart --help` for example, and try to use some of the features, so I figured I may as well explain one of the goofier ones. I've written about it here in [GHM-LAtEX.md](https://github.com/scottvr/phart/blob/main/docs/GHM-LATEX.md).
+
+I just finished updating the SVG documentation with a couple of surprising results achieved by what was intended to be a silly and useless feature that I didn't actually plan to release. Check out the two vector diagrams at the top of [svg-renderer.md](https://github.com/scottvr/phart/blob/main/docs/svg-renderer.md).
 
 ### Labelling with label properties
 
@@ -295,14 +304,6 @@ ANSI color support turned out more interesting than I expected. Not completely s
 <img width="700" height="600" alt="go-package-dependencies" src="https://github.com/user-attachments/assets/932ce0db-cc4e-42ce-b77e-895ecf80fb56" />
 
 I'm not sure it's all _that_ much easier to discern what goes to where, but it sure is fun to look at.
-
-## NEWER! - Accidental Features
-
-So, I inadvertently merged some code into main that was not intended to be released yet, because it's - while not _**not**_ working, per se - still a little half-baked, and not documented well.
-
-Nevertheless, some might notice the command-line options, when runnning `phart --help` for example, and try to use some of the features, so I figured I may as well explain one of the goofier ones. I've written about it here in [GHM-LAtEX.md](https://github.com/scottvr/phart/blob/main/docs/GHM-LATEX.md).
-
-I just finished updating the SVG documentation with a couple of surprising results achieved by what was intended to be a silly and useless feature that I didn't actually plan to release. Check out the two vector diagrams at the top of [svg-renderer.md](https://github.com/scottvr/phart/blob/main/docs/svg-renderer.md).
 
 ---
 
