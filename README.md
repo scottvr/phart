@@ -42,7 +42,7 @@ New stuff is **bolded.**
 ----
 ## Some details on new v1.5.0 stuff:
 
-### Label Synthesis and Multiline BBoxes
+## Label Synthesis and Multiline BBoxes
 
 When node labels are enabled with `--labels` (or `--node-labels`), and a node does not define `label`, PHART can synthesize label text from ordered attribute paths:
 
@@ -57,7 +57,7 @@ Notes:
 - `name,birt.date,deat.date` renders those three values in order (multiline in bboxes when enabled).
 - You can also use dotted paths directly, such as `name,birt.date,deat.date`.
 
-### Text Pagination
+## Text Pagination
 
 Pagination is available for `--output-format text` and is useful for wide/tall renders:
 
@@ -75,7 +75,7 @@ Notes:
 - `--paginate-output-width auto` and `--paginate-output-height auto` require terminal stdout.
 - Pagination is ANSI-aware: escape sequences are not counted toward visible width, and page slices preserve complete ANSI sequences.
 
-### Constrained Layout Panels and Partition Metadata
+## Constrained Layout Panels and Partition Metadata
 
 Constrained layout is different from output pagination: it partitions during layout/routing, then renders panelized output with connector cues between panels.
 
@@ -99,7 +99,7 @@ Notes:
 - If a single node cannot fit inside the target canvas width, that node is kept intact and the panel can overflow.
 - `--target-canvas-width auto` and `--target-canvas-height auto` require terminal stdout.
 
-Programmatic export of partition metadata:
+### Programmatic export of partition metadata:
 
 ```python
 import networkx as nx
@@ -149,7 +149,7 @@ phart --edge-glyph-preset thick --edge-arrow-style unicode your_graph.py
 
 Full style-rule semantics and field reference: [docs/architecture/style-rules-spec.md](./docs/architecture/style-rules-spec.md)
 
-Node decorators can also be driven by style rules:
+## Node decorators can also be driven by style rules:
 
 ```bash
 phart --labels \
@@ -178,7 +178,6 @@ phart --edge-glyph-preset thick \
 - `--edge-arrow-style unicode` is automatically coerced to ASCII when using ASCII charset mode.
 
 
----
 
 ## mermaid output
 
@@ -194,8 +193,8 @@ TL;DR:
 See [LAYOUT-STRATEGIES.md](https://github.com/scottvr/phart/blob/main/LAYOUT-STRATEGIES.md) in the repo for some examples of output.
 I have also documented one of the scripts in the `examples/` directory and shown its output here in [TRIADIC-CENSUS.md](https://github.com/scottvr/phart/blob/main/examples/docs/TRIADIC-CENSUS.md)
 
--
 
+## Node ordering 
 ```
   --node-order {layout-default,preserve,alpha,natural,numeric}
                         Node ordering policy: layout-default (default), preserve, alpha, natural, or numeric
@@ -205,14 +204,14 @@ I have also documented one of the scripts in the `examples/` directory and shown
                         The result of the sorting method used by the layout strategy will be reversed
 ```
 
-Intended usage examples:
+### Intended usage examples:
 
 - `--node-order natural`
 - `--node-order-attr label --node-order alpha`
 - `--node-order-attr rank --node-order numeric`
 - `--node-order alpha --node-order-reverse`
 
-Also added were:
+## Also added were:
 
 ```
   --shared-ports {any,minimize,none}
@@ -241,11 +240,13 @@ $ phart --shared-ports any --bidirectional-mode coalesce ...
 
 Often, I'll combine those with variations on `--hpad/--vpad`, `--layer/node-sizing` and `--colors` ..., but hopefully unless you're adding a new layout strategy or other such enhancement, you aren't having to do a lot of puzzling about output. If you are, feel free to open an Issue.
 
-Additionally, a `public get_edge_route_length()` function was added to ASCIIRenderer class.
+### Additionally, a `public get_edge_route_length()` function was added to ASCIIRenderer class.
 
 - `get_edge_route_length()` is in canvas grid units: one unit per character cell step in the renderer’s virtual grid. Concretely, it returns abs(dx) + abs(dy) between the final chosen edge anchors, so it is “orthogonal steps,” not a geometric or graph-theoretic distance.
 
 You probably won't need it.
+
+----
 
 ## "Rainbow Coloring" demo
 
