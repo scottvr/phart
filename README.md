@@ -423,7 +423,7 @@ options:
   --write-pages DIR     Write all paginated pages to DIR as page_xNN_yNN.txt files
 ```
 
----/
+----
 
 ### [RAINBOW COLORING DEMOS](RAINBOW_COLORING.md)
 
