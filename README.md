@@ -2,7 +2,7 @@
 
 **PHART:** The Python Hierarchical ASCII Representation Tool - A Pure Python tool for graph visualization via charts and diagrams rendered in ASCII.
 
-# New!
+## New!
 
 This 1.5.0 release is bigger than any single update in the two years phart has been in development.
 
