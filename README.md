@@ -246,9 +246,188 @@ Often, I'll combine those with variations on `--hpad/--vpad`, `--layer/node-sizi
 
 You probably won't need it.
 
-[RAINBOW COLORING DEMOS](RAINBOW_COLORING.md)
+----
+## Why "PHART"?
 
-## NEW Features Feb 2026
+The acronym was a fortuitous accident from the non-abbreviated words that the letters represent: **Python Hierarchical ASCII Rendering Tool**.
+
+### Really, why?
+
+When I point out that phart is not a Perl or a PHP webapp, it may appear that I am
+_throwing shade_ at the existing solutions, but it is meant in a good-hearted way.
+Wrapping the OG perl Graph::Easy is a straightforward way to go about it, and a web interface to the same is a project I might create have created as well, but it is no
+longer a certainty that a system you are working on will have Perl installed these days,
+and spinning up a Docker container in order to add ascii line art graph visualizations to
+a python tool seemed a bit excessive, _even for me._
+
+Also, I'm not sure how I didn't find _pydot2ascii_ - which is native python - when I first
+looked for a solution, but even if I had, it may not have obvious to me that I could have
+exported my NX DAG to DOT, and then used pydot2ascii to go from DOT to an ascii diagram.
+
+So, for better or worse, we have PHART, and the ability to render a NX digraph in ASCII and Unicode, to read a DOT file, read GraphML, and a few other things in a well-tested Python module published to PyPi. I hope you find it useful.
+
+# Installation
+
+requires Python >= 3.10 and NetworkX >= 3.3
+
+From PyPi (the phart package there is out of date at the moment):
+
+```bash
+pip install phart
+```
+
+Or for the latest version:
+
+```
+git clone https://github.com/scottvr/phart
+cd phart
+python -mvenv .venv
+. .venv/bin/activate
+# or .venv\Scripts\activate on Windows
+pip install .
+```
+
+For your convenience, any 'extra' requirements can be installed bundled by category.
+For instance, if you require DOT file support to have phart use one of the dot files
+from the `examples/` directory, all requirements, including pydot, to use the examples
+can be installed with `piip install -e .'[examples]'`.
+
+To install all `extra` requirements (e.g., `fonttools` for svg rendering support, `scipy` for Kamada-Kawai layout support), you can install them all with `pip instaall -e .'[extra]'`. Additionally, there are `[developer]` and `[test]` module requirements that can be installed, or to get _everything-everywhere-all-at-once_, you can `pip install -e .'[all]'`. (Note: If installing from PyPi, you would use `pip install 'phart[all]'` rather than the `-e .` syntax for installing from source.)
+
+## The CLI
+
+```bash
+$ phart --help
+usage: phart [-h] [--output OUTPUT] [--version] [--output-format {ditaa,ditaa-puml,html,latex-markdown,mmd,svg,text}] [--style {minimal,square,round,diamond,custom,bbox}] [--node-spacing NODE_SPACING]
+             [--layer-spacing LAYER_SPACING] [--charset {ascii,ansi,unicode}] [--ascii] [--function FUNCTION] [--binary-tree]
+             [--layout {arf,auto,bfs,bipartite,circular,hierarchical,kamada-kawai,layered,multipartite,planar,random,shell,spiral,spring,vertical}] [--constrained]
+             [--node-order {layout-default,preserve,alpha,natural,numeric}] [--node-order-attr NODE_ORDER_ATTR] [--node-order-reverse] [--flow-direction {down,up,left,right}]
+             [--target-canvas-width [WIDTH|auto]] [--target-canvas-height [HEIGHT|auto]] [--partition-overlap PARTITION_OVERLAP] [--partition-affinity-strength PARTITION_AFFINITY_STRENGTH]
+             [--cross-partition-edge-style {stub,none}] [--connector-compaction {none,partition}] [--partition-order {natural,size}] [--panel-headers {none,basic,lineage}]
+             [--connector-ref {auto,id,label,both}] [--bboxes] [--hpad HPAD] [--vpad VPAD] [--uniform] [--edge-anchors {auto,center,ports}] [--shared-ports {any,minimize,none}]
+             [--bidirectional-mode {coalesce,separate}] [--labels] [--node-labels [ATTR]] [--edge-labels [ATTR]] [--node-label-lines SPEC] [--node-label-sep NODE_LABEL_SEP]
+             [--node-label-max-lines NODE_LABEL_MAX_LINES] [--bbox-multiline-labels] [--colors {attr,none,path,source,target}] [--no-color-nodes] [--edge-glyph-preset {default,thick,double}]
+             [--edge-arrow-style {ascii,unicode}] [--edge-color-rule RULE] [--style-rule RULE] [--style-rules-file FILE] [--svg-cell-size SVG_CELL_SIZE] [--svg-font-family SVG_FONT_FAMILY]
+             [--svg-text-mode {text,path}] [--svg-font-path SVG_FONT_PATH] [--svg-fg SVG_FG] [--svg-bg SVG_BG] [--whitespace {auto,ascii-space,nbsp}] [--paginate-output-width [WIDTH|auto]]
+             [--paginate-output-height [HEIGHT|auto]] [--paginate-overlap COLUMNS] [--select-output-page-x PAGE_X] [--select-output-page-y PAGE_Y] [--list-pages] [--write-pages DIR]
+             input
+
+PHART: Python Hierarchical ASCII Rendering Tool
+
+positional arguments:
+  input                 Input file (.dot, .graphml, or .py format)
+
+options:
+  -h, --help            show this help message and exit
+  --output, -o OUTPUT   Output file (if not specified, prints to stdout)
+  --version, -v         show program's version number and exit
+  --output-format {ditaa,ditaa-puml,html,latex-markdown,mmd,svg,text}
+                        Output format: text (default), ditaa, ditaa-puml, svg, html, mmmd, or latex-markdown
+  --style {minimal,square,round,diamond,custom,bbox}
+                        Node style (default: square, or minimal when --bboxes is enabled)
+  --node-spacing NODE_SPACING
+                        Horizontal space between nodes (default: 4)
+  --layer-spacing LAYER_SPACING
+                        Vertical space between layers (default: 3)
+  --charset {ascii,ansi,unicode}
+                        Character set to use for rendering (default: unicode)
+  --ascii               Force ASCII output (deprecated, use --charset ascii instead)
+  --function, -f FUNCTION
+                        Function to call in Python file (default: main)
+  --binary-tree         Enable binary tree layout (respects edge 'side' attributes)
+  --layout, --layout-strategy {arf,auto,bfs,bipartite,circular,hierarchical,kamada-kawai,layered,multipartite,planar,random,shell,spiral,spring,vertical}
+                        Node positioning strategy (default: auto)
+  --constrained         Enable constrained partitioning mode for compatible layout strategies
+  --node-order {layout-default,preserve,alpha,natural,numeric}
+                        Node ordering policy: layout-default (default), preserve, alpha, natural, or numeric
+  --node-order-attr NODE_ORDER_ATTR
+                        Optional node attribute name to use as the ordering key
+  --node-order-reverse  The result of the sorting method used by the layout strategy will be reversed
+  --flow-direction, --flow {down,up,left,right}
+                        Layout flow direction: down (default, root at top), up (root at bottom), left (root at right), right (root at left)
+  --target-canvas-width [WIDTH|auto]
+                        Target width for constrained mode. Accepts WIDTH columns or 'auto' (terminal width on terminal stdout).
+  --target-canvas-height [HEIGHT|auto]
+                        Optional target height for constrained partitioning. Accepts HEIGHT rows or 'auto' (terminal height on terminal stdout).
+  --partition-overlap PARTITION_OVERLAP
+                        Context overlap between neighboring constrained partitions (default: 0)
+  --partition-affinity-strength PARTITION_AFFINITY_STRENGTH
+                        Affinity weight used to keep closely related nodes together while splitting constrained partitions (0 disables)
+  --cross-partition-edge-style {stub,none}
+                        Cross-partition edge rendering style for constrained layout (default: stub)
+  --connector-compaction {none,partition}
+                        Connector listing compaction mode for constrained panels: none (default) or partition
+  --partition-order {natural,size}
+                        Constrained partition ordering: natural rank order or size (default: natural)
+  --panel-headers {none,basic,lineage}
+                        Constrained panel header mode: none, basic (default), or lineage
+  --connector-ref {auto,id,label,both}
+                        Connector endpoint reference mode: auto (default), id, label, or both
+  --bboxes, --bbox      Draw line-art boxes around nodes
+  --hpad HPAD           Horizontal padding inside node boxes (default: 1)
+  --vpad VPAD           Vertical padding inside node boxes (default: 0)
+  --uniform, --size-to-widest
+                        Use widest node text as the width baseline for all node boxes
+  --edge-anchors {auto,center,ports}
+                        Edge anchor strategy: auto (default), center, or ports (distributed on box edges)
+  --shared-ports {any,minimize,none}
+                        Terminal port sharing policy: any (default), minimize (prefer unused points on the same face), or none (avoid sharing until the node has no free terminal slots)
+  --bidirectional-mode {coalesce,separate}
+                        How to render reciprocal directed edges: coalesce (default) draws one shared route with arrows at both ends; separate draws each direction independently
+  --labels              Enable both node and edge labels using each element's 'label' attribute. Equivalent to --node-labels --edge-labels.
+  --node-labels [ATTR]  Enable node labels. Optionally provide the node attribute name to display (default: label). Use 'none' to disable node labels explicitly.
+  --edge-labels [ATTR]  Enable edge labels. Optionally provide the edge attribute name to display (default: label). Use 'none' to disable edge labels explicitly.
+  --node-label-lines SPEC
+                        Comma-separated ordered label line specs used when --labels is enabled and node 'label' is absent. Supports dotted paths (e.g. name,birt.date,deat.date).
+  --node-label-sep NODE_LABEL_SEP
+                        Separator for joining multi-value parts within one synthesized label line
+  --node-label-max-lines NODE_LABEL_MAX_LINES
+                        Optional maximum number of synthesized label lines
+  --bbox-multiline-labels
+                        Enable multiline node labels and bbox height expansion when labels contain line breaks
+  --colors {attr,none,path,source,target}
+                        ANSI edge coloring mode: none (default), source, target, path, or attr
+  --no-color-nodes      Color edges only, not nodes
+  --edge-glyph-preset {default,thick,double}
+                        Global edge line-art preset: default (thin), thick, or double (Unicode mode only for thick/double; ASCII falls back to standard glyphs)
+  --edge-arrow-style {ascii,unicode}
+                        Global arrowhead style for edges: ascii (default) or unicode. Unicode arrows are disabled automatically in ASCII charset mode.
+  --edge-color-rule RULE
+                        Attribute-driven edge color rule for --colors attr. Format: <attribute>:<value>=<color>[,<value>=<color>...] (repeatable)
+  --style-rule RULE     Advanced style rule expression. Format: '<target>: <predicate> -> color=<color>' where target is edge|node|connector|panel_header. Repeat to add multiple rules.
+  --style-rules-file FILE
+                        JSON or YAML file containing {'rules': [...]} canonical style rules. YAML requires PyYAML.
+  --svg-cell-size SVG_CELL_SIZE
+                        Cell size in pixels for SVG output (default: 12)
+  --svg-font-family SVG_FONT_FAMILY
+                        Font family for SVG/HTML output (default: monospace)
+  --svg-text-mode {text,path}
+                        Render SVG characters as <text> (default) or glyph paths
+  --svg-font-path SVG_FONT_PATH
+                        Font file path required when --svg-text-mode path is used
+  --svg-fg SVG_FG       Foreground color for SVG/HTML/LaTeX output
+  --svg-bg SVG_BG       Background color for SVG/HTML output
+  --whitespace {auto,ascii-space,nbsp}
+                        Text output whitespace mode: auto (default), ascii-space, or nbsp. In auto mode, output-format defaults are used.
+  --paginate-output-width [WIDTH|auto]
+                        Paginate text output horizontally by terminal width (auto) or WIDTH columns. With no value, defaults to auto.
+  --paginate-output-height [HEIGHT|auto]
+                        Paginate text output vertically by terminal height (auto) or HEIGHT rows. If omitted, row pagination is disabled and all rows remain in one page.
+  --paginate-overlap COLUMNS
+                        Overlap columns between neighboring output pages (default: 8)
+  --select-output-page-x, --page-x, -x PAGE_X
+                        Select horizontal page index (default: 0)
+  --select-output-page-y, --page-y, -y PAGE_Y
+                        Select vertical page index (currently must be 0)
+  --list-pages          Print page index metadata when pagination is enabled
+  --write-pages DIR     Write all paginated pages to DIR as page_xNN_yNN.txt files
+```
+
+---/
+
+### [RAINBOW COLORING DEMOS](RAINBOW_COLORING.md)
+
+### NEW Features Feb 2026
 
 - binary_tree sort mode
 - binary_tree sort can respect "side" properties ("left", 'right")
@@ -258,22 +437,26 @@ You probably won't need it.
 - (optionally) color edges with ANSI colors to help discern edge paths in dense complex diagrams
 - and several **new layout strategies** including `circular`, `bfs`, `shell`, `Kamada-Kawai`, and others.
 
-## NEWER! - Accidental Features
+### NEWER! - Accidental Features
 
 So, I inadvertently merged some code into main that was not intended to be released yet, because it's - while not _**not**_ working, per se - still a little half-baked, and not documented well.
 
+**LaTeX/GFM**
+
 Nevertheless, some might notice the command-line options, when runnning `phart --help` for example, and try to use some of the features, so I figured I may as well explain one of the goofier ones. I've written about it here in [GHM-LAtEX.md](https://github.com/scottvr/phart/blob/main/docs/GHM-LATEX.md).
+
+**SVG/HTML enhancements**
 
 I just finished updating the SVG documentation with a couple of surprising results achieved by what was intended to be a silly and useless feature that I didn't actually plan to release. Check out the two vector diagrams at the top of [svg-renderer.md](https://github.com/scottvr/phart/blob/main/docs/svg-renderer.md).
 
-### Labelling with label properties
+## Labelling with label properties
 
 The label support can make an interesting but uninformative diagram suddenly more meaningful, and beautiful IMHO.
 Take a look at this **Unix Family Tree** (also from a .dot file); I think it's gorgeous.
 
 <img width="700" height="600" alt="unix-family-tree" src="https://github.com/user-attachments/assets/1475614f-0f6b-425e-b088-7f121bef27d9" />
 
-### ANSI color edge paths
+## ANSI color edge paths
 
 ANSI color support turned out more interesting than I expected. Not completely satisfied with it, I ended up enabling four modes to the feature: color by source, color by target, color by path, and color by edge attributes. Here's an example of `edge_anchors=ports`, `colors=source`, using a graph of Golang package dependencies.
 
@@ -281,7 +464,6 @@ ANSI color support turned out more interesting than I expected. Not completely s
 
 I'm not sure it's all _that_ much easier to discern what goes to where, but it sure is fun to look at.
 
----
 
 ## Usage Examples
 
@@ -470,196 +652,13 @@ $ phart --colors attr --edge-color-rule side:left=green,right=red --bboxes -- \
  --charset unicode --no-color-nodes examples/collatz.py -- 5 | tail -15
 ```
 
-This gives us the following output, which I'll share via screenshot, because GitHub is picky\*\* about letting one color a markdown document:
+This gives us the following output, which I'll share via screenshot, because GitHub is picky about letting one color a markdown document:
 
 <img width="325" height="218" alt="collatz-5-tail-15" src="https://github.com/user-attachments/assets/bcd4cd1b-322a-464a-b1b6-e0e1359332a0" />
 
 There are more examples scripts in the repo, along with a README in the examples/ directory
 
-\*\* [There's' an app for that!(tm)](https://github.com/scottvr/phart/blob/main/docs/GHM-LATEX.md)
-
 ---
-
-## NEW! Feb 2026 - Layout Strategies
-
-Now, explicitly exposed and selectable by the user, phart's layout_strategy is now configurable.
-See [LAYOUT-STRATEGIES.md](https://github.com/scottvr/phart/blob/main/LAYOUT-STRATEGIES.md) in the repo for demos.
-
-## Why "PHART"?
-
-The acronym was a fortuitous accident from the non-abbreviated words that the letters represent: **Python Hierarchical ASCII Rendering Tool**.
-
-### Really, why?
-
-When I point out that phart is not a Perl or a PHP webapp, it may appear that I am
-_throwing shade_ at the existing solutions, but it is meant in a good-hearted way.
-Wrapping the OG perl Graph::Easy is a straightforward way to go about it, and a web interface to the same is a project I might create have created as well, but it is no
-longer a certainty that a system you are working on will have Perl installed these days,
-and spinning up a Docker container in order to add ascii line art graph visualizations to
-a python tool seemed a bit excessive, _even for me._
-
-Also, I'm not sure how I didn't find _pydot2ascii_ - which is native python - when I first
-looked for a solution, but even if I had, it may not have obvious to me that I could have
-exported my NX DAG to DOT, and then used pydot2ascii to go from DOT to an ascii diagram.
-
-So, for better or worse, we have PHART, and the ability to render a NX digraph in ASCII and Unicode, to read a DOT file, read GraphML, and a few other things in a well-tested Python module published to PyPi. I hope you find it useful.
-
-# Installation
-
-requires Python >= 3.10 and NetworkX >= 3.3
-
-From PyPi (the phart package there is out of date at the moment):
-
-```bash
-pip install phart
-```
-
-Or for the latest version:
-
-```
-git clone https://github.com/scottvr/phart
-cd phart
-python -mvenv .venv
-. .venv/bin/activate
-# or .venv\Scripts\activate on Windows
-pip install .
-```
-
-For your convenience, any 'extra' requirements can be installed bundled by category.
-For instance, if you require DOT file support to have phart use one of the dot files
-from the `examples/` directory, all requirements, including pydot, to use the examples
-can be installed with `piip install -e .'[examples]'`.
-
-To install all `extra` requirements (e.g., `fonttools` for svg rendering support, `scipy` for Kamada-Kawai layout support), you can install them all with `pip instaall -e .'[extra]'`. Additionally, there are `[developer]` and `[test]` module requirements that can be installed, or to get _everything-everywhere-all-at-once_, you can `pip install -e .'[all]'`. (Note: If installing from PyPi, you would use `pip install 'phart[all]'` rather than the `-e .` syntax for installing from source.)
-
-## The CLI
-
-```bash
-$ phart --help
-usage: phart [-h] [--output OUTPUT] [--version] [--output-format {ditaa,ditaa-puml,html,latex-markdown,mmd,svg,text}] [--style {minimal,square,round,diamond,custom,bbox}] [--node-spacing NODE_SPACING]
-             [--layer-spacing LAYER_SPACING] [--charset {ascii,ansi,unicode}] [--ascii] [--function FUNCTION] [--binary-tree]
-             [--layout {arf,auto,bfs,bipartite,circular,hierarchical,kamada-kawai,layered,multipartite,planar,random,shell,spiral,spring,vertical}] [--constrained]
-             [--node-order {layout-default,preserve,alpha,natural,numeric}] [--node-order-attr NODE_ORDER_ATTR] [--node-order-reverse] [--flow-direction {down,up,left,right}]
-             [--target-canvas-width [WIDTH|auto]] [--target-canvas-height [HEIGHT|auto]] [--partition-overlap PARTITION_OVERLAP] [--partition-affinity-strength PARTITION_AFFINITY_STRENGTH]
-             [--cross-partition-edge-style {stub,none}] [--connector-compaction {none,partition}] [--partition-order {natural,size}] [--panel-headers {none,basic,lineage}]
-             [--connector-ref {auto,id,label,both}] [--bboxes] [--hpad HPAD] [--vpad VPAD] [--uniform] [--edge-anchors {auto,center,ports}] [--shared-ports {any,minimize,none}]
-             [--bidirectional-mode {coalesce,separate}] [--labels] [--node-labels [ATTR]] [--edge-labels [ATTR]] [--node-label-lines SPEC] [--node-label-sep NODE_LABEL_SEP]
-             [--node-label-max-lines NODE_LABEL_MAX_LINES] [--bbox-multiline-labels] [--colors {attr,none,path,source,target}] [--no-color-nodes] [--edge-glyph-preset {default,thick,double}]
-             [--edge-arrow-style {ascii,unicode}] [--edge-color-rule RULE] [--style-rule RULE] [--style-rules-file FILE] [--svg-cell-size SVG_CELL_SIZE] [--svg-font-family SVG_FONT_FAMILY]
-             [--svg-text-mode {text,path}] [--svg-font-path SVG_FONT_PATH] [--svg-fg SVG_FG] [--svg-bg SVG_BG] [--whitespace {auto,ascii-space,nbsp}] [--paginate-output-width [WIDTH|auto]]
-             [--paginate-output-height [HEIGHT|auto]] [--paginate-overlap COLUMNS] [--select-output-page-x PAGE_X] [--select-output-page-y PAGE_Y] [--list-pages] [--write-pages DIR]
-             input
-
-PHART: Python Hierarchical ASCII Rendering Tool
-
-positional arguments:
-  input                 Input file (.dot, .graphml, or .py format)
-
-options:
-  -h, --help            show this help message and exit
-  --output, -o OUTPUT   Output file (if not specified, prints to stdout)
-  --version, -v         show program's version number and exit
-  --output-format {ditaa,ditaa-puml,html,latex-markdown,mmd,svg,text}
-                        Output format: text (default), ditaa, ditaa-puml, svg, html, mmmd, or latex-markdown
-  --style {minimal,square,round,diamond,custom,bbox}
-                        Node style (default: square, or minimal when --bboxes is enabled)
-  --node-spacing NODE_SPACING
-                        Horizontal space between nodes (default: 4)
-  --layer-spacing LAYER_SPACING
-                        Vertical space between layers (default: 3)
-  --charset {ascii,ansi,unicode}
-                        Character set to use for rendering (default: unicode)
-  --ascii               Force ASCII output (deprecated, use --charset ascii instead)
-  --function, -f FUNCTION
-                        Function to call in Python file (default: main)
-  --binary-tree         Enable binary tree layout (respects edge 'side' attributes)
-  --layout, --layout-strategy {arf,auto,bfs,bipartite,circular,hierarchical,kamada-kawai,layered,multipartite,planar,random,shell,spiral,spring,vertical}
-                        Node positioning strategy (default: auto)
-  --constrained         Enable constrained partitioning mode for compatible layout strategies
-  --node-order {layout-default,preserve,alpha,natural,numeric}
-                        Node ordering policy: layout-default (default), preserve, alpha, natural, or numeric
-  --node-order-attr NODE_ORDER_ATTR
-                        Optional node attribute name to use as the ordering key
-  --node-order-reverse  The result of the sorting method used by the layout strategy will be reversed
-  --flow-direction, --flow {down,up,left,right}
-                        Layout flow direction: down (default, root at top), up (root at bottom), left (root at right), right (root at left)
-  --target-canvas-width [WIDTH|auto]
-                        Target width for constrained mode. Accepts WIDTH columns or 'auto' (terminal width on terminal stdout).
-  --target-canvas-height [HEIGHT|auto]
-                        Optional target height for constrained partitioning. Accepts HEIGHT rows or 'auto' (terminal height on terminal stdout).
-  --partition-overlap PARTITION_OVERLAP
-                        Context overlap between neighboring constrained partitions (default: 0)
-  --partition-affinity-strength PARTITION_AFFINITY_STRENGTH
-                        Affinity weight used to keep closely related nodes together while splitting constrained partitions (0 disables)
-  --cross-partition-edge-style {stub,none}
-                        Cross-partition edge rendering style for constrained layout (default: stub)
-  --connector-compaction {none,partition}
-                        Connector listing compaction mode for constrained panels: none (default) or partition
-  --partition-order {natural,size}
-                        Constrained partition ordering: natural rank order or size (default: natural)
-  --panel-headers {none,basic,lineage}
-                        Constrained panel header mode: none, basic (default), or lineage
-  --connector-ref {auto,id,label,both}
-                        Connector endpoint reference mode: auto (default), id, label, or both
-  --bboxes, --bbox      Draw line-art boxes around nodes
-  --hpad HPAD           Horizontal padding inside node boxes (default: 1)
-  --vpad VPAD           Vertical padding inside node boxes (default: 0)
-  --uniform, --size-to-widest
-                        Use widest node text as the width baseline for all node boxes
-  --edge-anchors {auto,center,ports}
-                        Edge anchor strategy: auto (default), center, or ports (distributed on box edges)
-  --shared-ports {any,minimize,none}
-                        Terminal port sharing policy: any (default), minimize (prefer unused points on the same face), or none (avoid sharing until the node has no free terminal slots)
-  --bidirectional-mode {coalesce,separate}
-                        How to render reciprocal directed edges: coalesce (default) draws one shared route with arrows at both ends; separate draws each direction independently
-  --labels              Enable both node and edge labels using each element's 'label' attribute. Equivalent to --node-labels --edge-labels.
-  --node-labels [ATTR]  Enable node labels. Optionally provide the node attribute name to display (default: label). Use 'none' to disable node labels explicitly.
-  --edge-labels [ATTR]  Enable edge labels. Optionally provide the edge attribute name to display (default: label). Use 'none' to disable edge labels explicitly.
-  --node-label-lines SPEC
-                        Comma-separated ordered label line specs used when --labels is enabled and node 'label' is absent. Supports dotted paths (e.g. name,birt.date,deat.date).
-  --node-label-sep NODE_LABEL_SEP
-                        Separator for joining multi-value parts within one synthesized label line
-  --node-label-max-lines NODE_LABEL_MAX_LINES
-                        Optional maximum number of synthesized label lines
-  --bbox-multiline-labels
-                        Enable multiline node labels and bbox height expansion when labels contain line breaks
-  --colors {attr,none,path,source,target}
-                        ANSI edge coloring mode: none (default), source, target, path, or attr
-  --no-color-nodes      Color edges only, not nodes
-  --edge-glyph-preset {default,thick,double}
-                        Global edge line-art preset: default (thin), thick, or double (Unicode mode only for thick/double; ASCII falls back to standard glyphs)
-  --edge-arrow-style {ascii,unicode}
-                        Global arrowhead style for edges: ascii (default) or unicode. Unicode arrows are disabled automatically in ASCII charset mode.
-  --edge-color-rule RULE
-                        Attribute-driven edge color rule for --colors attr. Format: <attribute>:<value>=<color>[,<value>=<color>...] (repeatable)
-  --style-rule RULE     Advanced style rule expression. Format: '<target>: <predicate> -> color=<color>' where target is edge|node|connector|panel_header. Repeat to add multiple rules.
-  --style-rules-file FILE
-                        JSON or YAML file containing {'rules': [...]} canonical style rules. YAML requires PyYAML.
-  --svg-cell-size SVG_CELL_SIZE
-                        Cell size in pixels for SVG output (default: 12)
-  --svg-font-family SVG_FONT_FAMILY
-                        Font family for SVG/HTML output (default: monospace)
-  --svg-text-mode {text,path}
-                        Render SVG characters as <text> (default) or glyph paths
-  --svg-font-path SVG_FONT_PATH
-                        Font file path required when --svg-text-mode path is used
-  --svg-fg SVG_FG       Foreground color for SVG/HTML/LaTeX output
-  --svg-bg SVG_BG       Background color for SVG/HTML output
-  --whitespace {auto,ascii-space,nbsp}
-                        Text output whitespace mode: auto (default), ascii-space, or nbsp. In auto mode, output-format defaults are used.
-  --paginate-output-width [WIDTH|auto]
-                        Paginate text output horizontally by terminal width (auto) or WIDTH columns. With no value, defaults to auto.
-  --paginate-output-height [HEIGHT|auto]
-                        Paginate text output vertically by terminal height (auto) or HEIGHT rows. If omitted, row pagination is disabled and all rows remain in one page.
-  --paginate-overlap COLUMNS
-                        Overlap columns between neighboring output pages (default: 8)
-  --select-output-page-x, --page-x, -x PAGE_X
-                        Select horizontal page index (default: 0)
-  --select-output-page-y, --page-y, -y PAGE_Y
-                        Select vertical page index (currently must be 0)
-  --list-pages          Print page index metadata when pagination is enabled
-  --write-pages DIR     Write all paginated pages to DIR as page_xNN_yNN.txt files
-```
 
 ## Quick Start
 
