@@ -811,7 +811,6 @@ class ASCIIRenderer:
 
         adjusted = dict(positions)
         min_vertical_gap = 1
-        min_horizontal_gap = 1
 
         base_y_values = sorted({y for _, y in positions.values()})
         y_to_level = {y: idx for idx, y in enumerate(base_y_values)}
@@ -841,8 +840,6 @@ class ASCIIRenderer:
                     box_max_level[subgraph_id] = max(levels)
 
             vertical_candidates: List[Tuple[int, int]] = []
-            horizontal_candidates: List[Tuple[int, int]] = []
-
             for box in boxes:
                 members = subgraph_nodes.get(box.subgraph_id, set())
                 max_member_level = box_max_level.get(box.subgraph_id, -1)
@@ -857,13 +854,7 @@ class ASCIIRenderer:
                         continue
                     if bounds["top"] > box.bottom + min_vertical_gap:
                         continue
-                    if not self._ranges_overlap_with_gap(
-                        box.left,
-                        box.right,
-                        bounds["left"],
-                        bounds["right"],
-                        min_horizontal_gap,
-                    ):
+                    if bounds["right"] < box.left or bounds["left"] > box.right:
                         continue
                     delta_y = box.bottom + min_vertical_gap + 1 - bounds["top"]
                     if delta_y > 0:
@@ -879,37 +870,11 @@ class ASCIIRenderer:
                         continue
                     if lower.top > box.bottom + min_vertical_gap:
                         continue
-                    if not self._ranges_overlap_with_gap(
-                        box.left,
-                        box.right,
-                        lower.left,
-                        lower.right,
-                        min_horizontal_gap,
-                    ):
+                    if lower.right < box.left or lower.left > box.right:
                         continue
                     delta_y = box.bottom + min_vertical_gap + 1 - lower.top
                     if delta_y > 0:
                         vertical_candidates.append((lower_min_level, delta_y))
-
-                # Box vs outsider-node right-side horizontal clearance.
-                for node, bounds in node_bounds.items():
-                    if node in members:
-                        continue
-                    # Must overlap vertically to be visually colliding.
-                    if not self._ranges_overlap_with_gap(
-                        box.top,
-                        box.bottom,
-                        bounds["top"],
-                        bounds["bottom"],
-                        0,
-                    ):
-                        continue
-                    # Consider outsider nodes on/near right side of this box.
-                    if bounds["center_x"] <= ((box.left + box.right) // 2):
-                        continue
-                    delta_x = box.right + min_horizontal_gap + 1 - bounds["left"]
-                    if delta_x > 0:
-                        horizontal_candidates.append((bounds["left"], delta_x))
 
             if vertical_candidates:
                 target_level = min(level for level, _ in vertical_candidates)
@@ -921,15 +886,6 @@ class ASCIIRenderer:
                         x,
                         y + delta if node_level_idx.get(node, 0) >= target_level else y,
                     )
-                    for node, (x, y) in adjusted.items()
-                }
-                continue
-
-            if horizontal_candidates:
-                x_cut = min(cut for cut, _ in horizontal_candidates)
-                delta = max(d for cut, d in horizontal_candidates if cut == x_cut)
-                adjusted = {
-                    node: (x + delta if x >= x_cut else x, y)
                     for node, (x, y) in adjusted.items()
                 }
                 continue

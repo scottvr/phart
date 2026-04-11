@@ -1,37 +1,31 @@
 digraph InternetStructure {
-    rankdir=LR;
-    node [shape=box, style=filled, color=lightgrey];
+    rankdir=TB;
+    graph [label="What Happens When You Type a URL?", labelloc=t, fontsize=18];
+    node [shape=box, style=rounded, fontsize=11];
+    edge [fontsize=10];
 
-    // Client Side
+    // Home side: where the request starts.
     subgraph cluster_home {
         label = "User Home/Office";
-        Client [label="Devices (Laptop/Phone)"];
-        Router [label="Router/Modem"];
-        Client -> Router [label="Wi-Fi/Ethernet"];
+        Client [label="Browser on Your Device"];
+        Router [label="Home Router / Wi-Fi"];
     }
 
-    // Internet Service Provider
-    ISP [label="ISP (Internet Service Provider)", shape=diamond];
-    Router -> ISP [label="Cable/Fiber/DSL"];
-
-    // The Internet Core
+    // Provider + wider internet side.
     subgraph cluster_internet {
         label = "The Internet Backbone";
-        color=blue;
-        Backbone [label="Core Routers/Switches", shape=circle];
-        DNS [label="DNS Server"];
-        Backbone -> DNS [label="Lookup"];
+        ISP [label="ISP (Internet Service Provider)"];
+        DNS [label="DNS (finds the site's IP)"];
+        Backbone [label="Backbone Routers"];
+        Server [label="Web Server (e.g., www.example.com)"];
     }
+    Rendered [label="Page Rendered"];
 
-    ISP -> Backbone [label="Data Packets"];
-
-    // Data Centers/Servers
-    Server [label="Web Server (e.g., Google)", shape=cylinder];
-    Backbone -> Server;
-
-    // Data Flow Direction
-    Server -> Backbone [label="Response"];
-    Backbone -> ISP;
-    ISP -> Router;
-    Router -> Client;
+    // Step-by-step, DAG-style teaching flow.
+    Client -> Router [label="1) You type a URL"];
+    Router -> ISP [label="2) Request leaves home"];
+    ISP -> DNS [label="3) DNS lookup: domain -> IP"];
+    DNS -> Backbone [label="4) IP known, route toward destination"];
+    Backbone -> Server [label="5) HTTPS request reaches website"];
+    Server -> Rendered [label="6) Response returns (backbone -> ISP -> router)"];
 }

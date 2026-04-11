@@ -612,7 +612,7 @@ def main():
         ]
         exit_code = main()
         self.assertEqual(exit_code, 0)
-        self.assertEqual(self.stdout.getvalue(), "ABCDEFGHIJ")
+        self.assertEqual(self.stdout.getvalue(), "ABCDEFGHIJ\n")
 
     def test_paginate_output_width_supports_overlap_and_page_x(self):
         sys.argv = [
@@ -627,7 +627,7 @@ def main():
         ]
         exit_code = main()
         self.assertEqual(exit_code, 0)
-        self.assertEqual(self.stdout.getvalue(), "FGHIJKLMNO")
+        self.assertEqual(self.stdout.getvalue(), "FGHIJKLMNO\n")
 
     def test_paginate_output_width_list_pages_writes_index_to_stderr(self):
         sys.argv = [
@@ -679,7 +679,7 @@ def main():
         ]
         exit_code = main()
         self.assertEqual(exit_code, 0)
-        self.assertEqual(self.stdout.getvalue(), "ROW2\nROW3")
+        self.assertEqual(self.stdout.getvalue(), "ROW2\nROW3\n")
 
     def test_paginate_output_height_auto_requires_tty_stdout(self):
         sys.argv = [
@@ -723,7 +723,7 @@ def main():
         self.assertEqual(exit_code, 0)
         output = self.stdout.getvalue()
         stripped = re.sub(r"\x1b\[[0-9;]*m", "", output)
-        self.assertEqual(stripped, "ABCDE")
+        self.assertEqual(stripped, "ABCDE\n")
 
     def test_paginate_width_preserves_ansi_sequence_integrity(self):
         sys.argv = [
@@ -740,7 +740,7 @@ def main():
         self.assertEqual(exit_code, 0)
         output = self.stdout.getvalue()
         stripped = re.sub(r"\x1b\[[0-9;]*m", "", output)
-        self.assertEqual(stripped, "FGHIJ")
+        self.assertEqual(stripped, "FGHIJ\n")
         self.assertIn("\x1b[31m", output)
         self.assertIn("\x1b[0m", output)
 

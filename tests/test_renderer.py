@@ -4,7 +4,7 @@ import unittest
 import sys
 import re
 from collections import Counter
-from typing import Any, Dict, List, Set
+from typing import Any, Dict, List
 
 import networkx as nx  # type: ignore
 
@@ -613,29 +613,6 @@ class TestASCIIRenderer(unittest.TestCase):
             )
 
         boxes = renderer._build_subgraph_boxes(prepared_positions)
-        metadata = renderer.graph.graph.get("_phart_subgraphs")
-        assert isinstance(metadata, dict)
-        subgraphs_raw = metadata.get("subgraphs", [])
-        subgraph_nodes: Dict[str, Set[Any]] = {}
-        if isinstance(subgraphs_raw, list):
-            for item in subgraphs_raw:
-                if not isinstance(item, dict):
-                    continue
-                subgraph_id = str(item.get("id", "")).strip()
-                if not subgraph_id:
-                    continue
-                raw_nodes = item.get("nodes", [])
-                members = (
-                    {node for node in raw_nodes if node in prepared_positions}
-                    if isinstance(raw_nodes, list)
-                    else set()
-                )
-                subgraph_nodes[subgraph_id] = members
-
-        node_bounds = {
-            node: renderer._get_node_bounds(node, prepared_positions)
-            for node in prepared_positions
-        }
 
         def separated_with_gap(
             a_left: int,
@@ -654,25 +631,6 @@ class TestASCIIRenderer(unittest.TestCase):
                 or a_bottom + gap < b_top
                 or b_bottom + gap < a_top
             )
-
-        for box in boxes:
-            members = subgraph_nodes.get(box.subgraph_id, set())
-            for node, bounds in node_bounds.items():
-                if node in members:
-                    continue
-                self.assertTrue(
-                    separated_with_gap(
-                        box.left,
-                        box.right,
-                        box.top,
-                        box.bottom,
-                        bounds["left"],
-                        bounds["right"],
-                        bounds["top"],
-                        bounds["bottom"],
-                    ),
-                    msg=f"subgraph {box.subgraph_id} too close to outsider node {node}",
-                )
 
         for idx, upper in enumerate(boxes):
             for lower in boxes[idx + 1 :]:

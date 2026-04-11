@@ -1122,10 +1122,11 @@ def main() -> Optional[int]:
                 rendered_output = _apply_text_pagination(
                     args, rendered_output, paginate_width, paginate_height
                 )
+            rendered_output = _ensure_trailing_newline(rendered_output)
             if args.output:
                 args.output.write_text(rendered_output, encoding="utf-8")
             else:
-                sys.stdout.write(rendered_output)
+                _write_stdout_output(rendered_output)
             return 0
 
         else:
@@ -1167,15 +1168,30 @@ def main() -> Optional[int]:
                     paginate_height,
                     panel_blocks=panel_blocks,
                 )
+            rendered_output = _ensure_trailing_newline(rendered_output)
             if args.output:
                 args.output.write_text(rendered_output, encoding="utf-8")
             else:
-                sys.stdout.write(rendered_output)
+                _write_stdout_output(rendered_output)
             return 0
 
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         return 1
+
+
+def _write_stdout_output(text: str) -> None:
+    """Write CLI output to stdout.
+
+    Ensure newline-terminated textual output for shell/tool compatibility.
+    """
+    sys.stdout.write(_ensure_trailing_newline(text))
+
+
+def _ensure_trailing_newline(text: str) -> str:
+    if not text or text.endswith("\n"):
+        return text
+    return text + "\n"
 
 
 def _apply_text_pagination(
