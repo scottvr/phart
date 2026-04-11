@@ -410,6 +410,40 @@ class ASCIIRenderer:
             text = nodes_mod.normalize_label_value(value)
             return text.replace('"', '\\"')
 
+        def edge_label(start: Any, end: Any) -> Optional[str]:
+            edge_label_attr = self.options.edge_label_attr
+            if not edge_label_attr:
+                return None
+
+            edge_data = self.graph.get_edge_data(start, end) or {}
+            label: Any = None
+            if isinstance(edge_data, dict):
+                if edge_label_attr in edge_data:
+                    label = edge_data.get(edge_label_attr)
+                else:
+                    for candidate in edge_data.values():
+                        if isinstance(candidate, dict) and edge_label_attr in candidate:
+                            label = candidate.get(edge_label_attr)
+                            break
+            if label is None:
+                return None
+            text = nodes_mod.normalize_label_value(label)
+            return text if text else None
+
+        def escape_mermaid_edge_text(value: Any) -> str:
+            # Mermaid edge labels use pipe delimiters: --|label|-->
+            # Escape literal pipes to preserve label content.
+            text = nodes_mod.normalize_label_value(value)
+            return text.replace("|", "&#124;")
+
+        def mermaid_edge_statement(start: Any, end: Any) -> str:
+            src = node_aliases.get(start, sanitize_identifier(start))
+            dst = node_aliases.get(end, sanitize_identifier(end))
+            label = edge_label(start, end)
+            if not label:
+                return f"    {src} ---> {dst}"
+            return f"    {src} -->|{escape_mermaid_edge_text(label)}| {dst}"
+
         node_aliases: Dict[Any, str] = {}
         used_aliases: Set[str] = set()
         for node in sorted(self.graph.nodes(), key=lambda n: str(n).casefold()):
@@ -425,10 +459,18 @@ class ASCIIRenderer:
         metadata = self._subgraph_metadata()
         if metadata is None:
             for u, v in self.graph.edges():
-                lines.append(
-                    f'    {node_aliases.get(u, sanitize_identifier(u))}["{escape_mermaid_text(node_label(u))}"] '
-                    f'---> {node_aliases.get(v, sanitize_identifier(v))}["{escape_mermaid_text(node_label(v))}"]'
-                )
+                edge_text = edge_label(u, v)
+                if edge_text:
+                    lines.append(
+                        f'    {node_aliases.get(u, sanitize_identifier(u))}["{escape_mermaid_text(node_label(u))}"] '
+                        f"-->|{escape_mermaid_edge_text(edge_text)}| "
+                        f'{node_aliases.get(v, sanitize_identifier(v))}["{escape_mermaid_text(node_label(v))}"]'
+                    )
+                else:
+                    lines.append(
+                        f'    {node_aliases.get(u, sanitize_identifier(u))}["{escape_mermaid_text(node_label(u))}"] '
+                        f'---> {node_aliases.get(v, sanitize_identifier(v))}["{escape_mermaid_text(node_label(v))}"]'
+                    )
             return "\n".join(lines)
 
         subgraphs_raw = metadata.get("subgraphs", [])
@@ -438,10 +480,18 @@ class ASCIIRenderer:
             node_to_path_raw, dict
         ):
             for u, v in self.graph.edges():
-                lines.append(
-                    f'    {node_aliases.get(u, sanitize_identifier(u))}["{escape_mermaid_text(node_label(u))}"] '
-                    f'---> {node_aliases.get(v, sanitize_identifier(v))}["{escape_mermaid_text(node_label(v))}"]'
-                )
+                edge_text = edge_label(u, v)
+                if edge_text:
+                    lines.append(
+                        f'    {node_aliases.get(u, sanitize_identifier(u))}["{escape_mermaid_text(node_label(u))}"] '
+                        f"-->|{escape_mermaid_edge_text(edge_text)}| "
+                        f'{node_aliases.get(v, sanitize_identifier(v))}["{escape_mermaid_text(node_label(v))}"]'
+                    )
+                else:
+                    lines.append(
+                        f'    {node_aliases.get(u, sanitize_identifier(u))}["{escape_mermaid_text(node_label(u))}"] '
+                        f'---> {node_aliases.get(v, sanitize_identifier(v))}["{escape_mermaid_text(node_label(v))}"]'
+                    )
             return "\n".join(lines)
 
         subgraph_by_id: Dict[str, Dict[str, Any]] = {}
@@ -545,9 +595,7 @@ class ASCIIRenderer:
             )
 
         for u, v in self.graph.edges():
-            src = node_aliases.get(u, sanitize_identifier(u))
-            dst = node_aliases.get(v, sanitize_identifier(v))
-            lines.append(f"    {src} ---> {dst}")
+            lines.append(mermaid_edge_statement(u, v))
 
         return "\n".join(lines)
 

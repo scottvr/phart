@@ -4,6 +4,7 @@ digraph InternetStructure {
     node [shape=box, style=rounded, fontsize=11];
     edge [fontsize=10];
 
+//  subgraph test {
     // Home side: where the request starts.
     subgraph cluster_home {
         label = "User Home/Office";
@@ -20,12 +21,13 @@ digraph InternetStructure {
         Server [label="Web Server (e.g., www.example.com)"];
     }
     Rendered [label="Page Rendered"];
+  }
 
     // Step-by-step, DAG-style teaching flow.
-    Client -> Router [label="1) You type a URL"];
-    Router -> ISP [label="2) Request leaves home"];
-    ISP -> DNS [label="3) DNS lookup: domain -> IP"];
-    DNS -> Backbone [label="4) IP known, route toward destination"];
-    Backbone -> Server [label="5) HTTPS request reaches website"];
-    Server -> Rendered [label="6) Response returns (backbone -> ISP -> router)"];
-}
+    Client -> Router [label="1\) You type a URL"];
+    Router -> ISP [label="2\) Request leaves home"];
+    ISP -> DNS [label="3\) DNS lookup: domain -> IP"];
+    DNS -> Backbone [label="4\) IP known, route toward destination"];
+    Backbone -> Server [label="5\\) HTTPS request reaches website"];
+    Server -> Rendered [label="6\) Response returns rendered html"];
+//}

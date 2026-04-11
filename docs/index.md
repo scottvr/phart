@@ -23,6 +23,7 @@
 
 Design/spec references:
 
+- [CLI Runtime Architecture Walkthrough (First Pass)](./architecture/cli-runtime-architecture.md)
 - [Style Rules Specification (Implemented)](./architecture/style-rules-spec.md)
 - [Constrained Layout Partitioning Spec (Draft)](./architecture/layout-partitioning-spec.md)
 - [mermaid `flowchart TD` is now a supported output](./architecture/mermaid-flowchart-syntax.md")

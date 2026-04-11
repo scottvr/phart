@@ -36,10 +36,12 @@ New stuff is **bolded.**
 - **and the phart 0.1.4 original node styling and edge styling is now fully realized.**
 - **what's a panel header? Check out the new docs in the docs/ directory for deep dives architecturally**
 - **the rest I'll try to touch on in this README**
+- [docs/architecture/cli-runtime-architecture.md](https://github.com/scottvr/phart/blob/main/docs/architecture/cli-runtime-architecture.md)
 - [docs/architecture/style-rules-spec.md](https://github.com/scottvr/phart/blob/main/docs/architecture/style-rules-spec.md)
 - [docs/architecture/layout-partitioning-spec.md](https://github.com/scottvr/phart/blob/main/docs/architecture/layout-partitioning-spec.md)
 
-----
+---
+
 ## Some details on new v1.5.0 stuff:
 
 ## Label Synthesis and Multiline BBoxes
@@ -177,8 +179,6 @@ phart --edge-glyph-preset thick \
 - Edge glyph rule values must be single-cell glyphs (multi-character and wide glyphs are rejected).
 - `--edge-arrow-style unicode` is automatically coerced to ASCII when using ASCII charset mode.
 
-
-
 ## mermaid output
 
 [`flowchart TD` is now a supported output. Read about it here.](https://github.com/scottvr/phart/blob/main/docs/mermaid-phart.md)
@@ -193,8 +193,8 @@ TL;DR:
 See [LAYOUT-STRATEGIES.md](https://github.com/scottvr/phart/blob/main/LAYOUT-STRATEGIES.md) in the repo for some examples of output.
 I have also documented one of the scripts in the `examples/` directory and shown its output here in [TRIADIC-CENSUS.md](https://github.com/scottvr/phart/blob/main/examples/docs/TRIADIC-CENSUS.md)
 
+## Node ordering
 
-## Node ordering 
 ```
   --node-order {layout-default,preserve,alpha,natural,numeric}
                         Node ordering policy: layout-default (default), preserve, alpha, natural, or numeric
@@ -246,7 +246,8 @@ Often, I'll combine those with variations on `--hpad/--vpad`, `--layer/node-sizi
 
 You probably won't need it.
 
-----
+---
+
 ## Why "PHART"?
 
 The acronym was a fortuitous accident from the non-abbreviated words that the letters represent: **Python Hierarchical ASCII Rendering Tool**.
@@ -423,7 +424,7 @@ options:
   --write-pages DIR     Write all paginated pages to DIR as page_xNN_yNN.txt files
 ```
 
-----
+---
 
 ### [RAINBOW COLORING DEMOS](RAINBOW_COLORING.md)
 
@@ -463,7 +464,6 @@ ANSI color support turned out more interesting than I expected. Not completely s
 <img width="700" height="600" alt="go-package-dependencies" src="https://github.com/user-attachments/assets/932ce0db-cc4e-42ce-b77e-895ecf80fb56" />
 
 I'm not sure it's all _that_ much easier to discern what goes to where, but it sure is fun to look at.
-
 
 ## Usage Examples
 

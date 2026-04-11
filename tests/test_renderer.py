@@ -665,6 +665,22 @@ class TestASCIIRenderer(unittest.TestCase):
         self.assertIn('["The Internet Backbone"]', mmd)
         self.assertIn("DNS", mmd)
 
+    def test_mermaid_output_includes_edge_labels_when_enabled(self):
+        dot_string = Path("examples/internet.dot").read_text(encoding="utf-8")
+        renderer = ASCIIRenderer.from_dot(
+            dot_string,
+            options=LayoutOptions(
+                use_ascii=True,
+                use_labels=True,
+                node_label_attr="label",
+                edge_label_attr="label",
+            ),
+        )
+        mmd = renderer.mermaid_out()
+        self.assertIn("Browser on Your Device", mmd)
+        self.assertIn("|1) You type a URL|", mmd)
+        self.assertIn("|3) DNS lookup: domain -> IP|", mmd)
+
     def test_from_plantuml(self):
         """Test creation from PlantUML subset."""
         plantuml = """
