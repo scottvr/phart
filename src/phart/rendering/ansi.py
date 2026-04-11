@@ -38,6 +38,12 @@ ANSI_NAMED_COLORS = {
     # Palette aliases used by existing subway colors.
     "orange": "\x1b[38;5;214m",
     "aqua": "\x1b[38;5;81m",
+    # Common aliases/synonyms users type.
+    "gray": "\x1b[90m",
+    "grey": "\x1b[90m",
+    "light_gray": "\x1b[37m",
+    "light_grey": "\x1b[37m",
+    "dark_white": "\x1b[37m",
 }
 UNICODE_DITAA_MAP = {
     "─": "-",
@@ -82,7 +88,7 @@ def resolve_color_spec(spec: object) -> Optional[str]:
     if not token:
         return None
 
-    lowered = token.lower()
+    lowered = token.lower().replace("-", "_").replace(" ", "_")
     if lowered in ANSI_NAMED_COLORS:
         return ANSI_NAMED_COLORS[lowered]
 
@@ -96,6 +102,15 @@ def resolve_color_spec(spec: object) -> Optional[str]:
         color_index = int(lowered)
         if 0 <= color_index <= 255:
             return f"\x1b[38;5;{color_index}m"
+
+    if lowered.startswith("#") and len(lowered) == 4:
+        try:
+            r = int(lowered[1] * 2, 16)
+            g = int(lowered[2] * 2, 16)
+            b = int(lowered[3] * 2, 16)
+            return f"\x1b[38;2;{r};{g};{b}m"
+        except ValueError:
+            return None
 
     if lowered.startswith("#") and len(lowered) == 7:
         try:

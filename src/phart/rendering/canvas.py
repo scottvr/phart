@@ -99,9 +99,10 @@ def merge_edge_cell_color(
     if not renderer._use_ansi_colors():
         return
 
+    conflict_color = renderer._edge_conflict_color_override
     key = (x, y)
     if key in renderer._edge_conflict_cells:
-        renderer._color_canvas[y][x] = None
+        renderer._color_canvas[y][x] = conflict_color
         return
 
     existing = renderer._color_canvas[y][x]
@@ -112,7 +113,7 @@ def merge_edge_cell_color(
     if color is None or existing == color:
         return
 
-    renderer._color_canvas[y][x] = None
+    renderer._color_canvas[y][x] = conflict_color
     renderer._edge_conflict_cells.add(key)
 
 

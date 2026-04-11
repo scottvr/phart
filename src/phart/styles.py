@@ -166,6 +166,18 @@ class LayoutOptions:
     allow_ansi_in_ascii: bool = field(
         default=False
     )  # Allow ANSI color escapes even when glyphs are ASCII
+    node_color: Optional[str] = field(
+        default=None
+    )  # Optional explicit node color override
+    label_color: Optional[str] = field(
+        default=None
+    )  # Optional explicit label color override (node + edge labels)
+    subgraph_color: Optional[str] = field(
+        default=None
+    )  # Optional explicit subgraph border/title color override
+    edge_conflict_color: Optional[str] = field(
+        default=None
+    )  # Optional explicit color for edge crossover/collision callouts
     # TODO:
     # We should probably introduce the concept of node_color_mode.
     # We already allow for coloring only of edges by  passing --no-color-nodes,
@@ -417,6 +429,13 @@ class LayoutOptions:
                 self.edge_label_attr = "label"
         self.use_labels = bool(self.node_label_attr or self.edge_label_attr)
 
+        self.node_color = self._normalize_optional_color_name(self.node_color)
+        self.label_color = self._normalize_optional_color_name(self.label_color)
+        self.subgraph_color = self._normalize_optional_color_name(self.subgraph_color)
+        self.edge_conflict_color = self._normalize_optional_color_name(
+            self.edge_conflict_color
+        )
+
         if self.node_label_max_lines is not None and self.node_label_max_lines < 1:
             raise ValueError("node_label_max_lines must be >= 1 when provided")
 
@@ -472,6 +491,17 @@ class LayoutOptions:
 
     @staticmethod
     def _normalize_label_attr_name(value: Optional[Any]) -> Optional[str]:
+        if value is None:
+            return None
+        text = str(value).strip()
+        if not text:
+            return None
+        if text.lower() == "none":
+            return None
+        return text
+
+    @staticmethod
+    def _normalize_optional_color_name(value: Optional[Any]) -> Optional[str]:
         if value is None:
             return None
         text = str(value).strip()

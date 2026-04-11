@@ -305,10 +305,11 @@ def draw_node(renderer: ASCIIRenderer, node: Any, x: int, y: int) -> None:
     )
     node_width, node_height = renderer._get_node_dimensions(node)
     node_color = renderer._node_color_map.get(node)
+    label_color = renderer._label_color_override or node_color
 
     # if  renderer._use_ansi_colors and not renderer.options.bboxes:
     if not renderer.options.bboxes:
-        _paint_label(renderer, label_lines[0] if label_lines else "", x, y, node_color)
+        _paint_label(renderer, label_lines[0] if label_lines else "", x, y, label_color)
         return
 
     right_x = x + node_width - 1
@@ -351,7 +352,7 @@ def draw_node(renderer: ASCIIRenderer, node: Any, x: int, y: int) -> None:
         )
         inner_start_x = x + 1 + renderer.options.hpad + label_offset
         _paint_label(
-            renderer, line_text, inner_start_x, content_top + line_index, node_color
+            renderer, line_text, inner_start_x, content_top + line_index, label_color
         )
 
 

@@ -901,6 +901,46 @@ def main():
         self.assertEqual(exit_code, 0)
         self.assertNotIn("Error", self.stderr.getvalue())
 
+    def test_color_override_flags_populate_layout_options(self):
+        sys.argv = [
+            "phart",
+            "--colors",
+            "source",
+            "--node-color",
+            "#abc",
+            "--label-color",
+            "light gray",
+            "--subgraph-color",
+            "dark white",
+            "--collision-color",
+            "color240",
+            str(self.test_text_file),
+        ]
+        args, _, explicit_fields, _ = parse_args()
+        options = create_layout_options(args, explicit_fields)
+        self.assertEqual(options.node_color, "#abc")
+        self.assertEqual(options.label_color, "light gray")
+        self.assertEqual(options.subgraph_color, "dark white")
+        self.assertEqual(options.edge_conflict_color, "color240")
+
+    def test_color_override_flags_are_ignored_when_colors_disabled(self):
+        sys.argv = [
+            "phart",
+            "--node-color",
+            "red",
+            "--label-color",
+            "green",
+            "--subgraph-color",
+            "blue",
+            "--collision-color",
+            "yellow",
+            str(self.test_text_file),
+        ]
+        exit_code = main()
+        self.assertEqual(exit_code, 0)
+        output = self.stdout.getvalue()
+        self.assertNotIn("\x1b[", output)
+
     def test_edge_anchor_mode_auto_flag(self):
         sys.argv = [
             "phart",

@@ -99,6 +99,10 @@ def initialize_color_maps(
                 continue
             renderer._node_color_map[node] = resolved
 
+    node_override = renderer._node_color_override
+    if node_override is not None:
+        renderer._node_color_map = {node: node_override for node in positions}
+
     sorted_edges = sorted(
         (
             edge
@@ -149,9 +153,10 @@ def merge_edge_cell_color(
     if not renderer._use_ansi_colors():
         return
 
+    conflict_color = renderer._edge_conflict_color_override
     key = (x, y)
     if key in renderer._edge_conflict_cells:
-        renderer._color_canvas[y][x] = None
+        renderer._color_canvas[y][x] = conflict_color
         return
 
     existing = renderer._color_canvas[y][x]
@@ -162,7 +167,7 @@ def merge_edge_cell_color(
     if color is None or existing == color:
         return
 
-    renderer._color_canvas[y][x] = None
+    renderer._color_canvas[y][x] = conflict_color
     renderer._edge_conflict_cells.add(key)
 
 

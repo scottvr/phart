@@ -483,7 +483,7 @@ def draw_edge(
                 end_x=end_x,
                 end_y=end_y,
                 jog_y=jog_y,
-                color=edge_color,
+                color=renderer._label_color_override or edge_color,
             )
 
     except IndexError as exc:

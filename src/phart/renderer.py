@@ -19,7 +19,6 @@ from .rendering import svg as svg_mod
 from .rendering.ansi import (
     ANSI_RESET,
     ANSI_SUBWAY_PALETTE,
-    ANSI_NAMED_COLORS,
 )
 from .rendering.ansi import ansi_to_hex as _ansi_to_hex_impl
 from .rendering.ansi import normalize_edge_attr_value as _normalize_edge_attr_value_impl
@@ -165,6 +164,10 @@ class ASCIIRenderer:
         self._edge_conflict_cells: Set[Tuple[int, int]] = set()
         self._locked_arrow_cells: Set[Tuple[int, int]] = set()
         self._active_edge_style_set: Dict[str, str] = {}
+        self._node_color_override: Optional[str] = None
+        self._label_color_override: Optional[str] = None
+        self._subgraph_color_override: Optional[str] = None
+        self._edge_conflict_color_override: Optional[str] = None
         self._line_dirs_override_map = self._build_line_dirs_override_map()
         self._all_edge_arrow_glyphs = self._build_all_edge_arrow_glyphs()
 
@@ -269,35 +272,28 @@ class ASCIIRenderer:
     @staticmethod
     def _resolve_color_spec(spec: Any) -> Optional[str]:
         """Resolve a color spec into an ANSI escape sequence."""
-        token = str(spec).strip()
-        if not token:
+        return _resolve_color_spec_impl(spec)
+
+    def _resolve_render_color_overrides(self) -> None:
+        self._node_color_override = self._resolve_optional_override_color(
+            self.options.node_color
+        )
+        self._label_color_override = self._resolve_optional_override_color(
+            self.options.label_color
+        )
+        self._subgraph_color_override = self._resolve_optional_override_color(
+            self.options.subgraph_color
+        )
+        self._edge_conflict_color_override = self._resolve_optional_override_color(
+            self.options.edge_conflict_color
+        )
+
+    def _resolve_optional_override_color(self, spec: Optional[str]) -> Optional[str]:
+        if not self._use_ansi_colors():
             return None
-
-        lowered = token.lower()
-        if lowered in ANSI_NAMED_COLORS:
-            return ANSI_NAMED_COLORS[lowered]
-
-        if token.startswith("\x1b[") and token.endswith("m"):
-            return token
-
-        if lowered.startswith("color") and lowered[5:].isdigit():
-            lowered = lowered[5:]
-
-        if lowered.isdigit():
-            color_index = int(lowered)
-            if 0 <= color_index <= 255:
-                return f"\x1b[38;5;{color_index}m"
-
-        if lowered.startswith("#") and len(lowered) == 7:
-            try:
-                r = int(lowered[1:3], 16)
-                g = int(lowered[3:5], 16)
-                b = int(lowered[5:7], 16)
-                return f"\x1b[38;2;{r};{g};{b}m"
-            except ValueError:
-                return None
-
-        return None
+        if spec is None:
+            return None
+        return self._resolve_color_spec(spec)
 
     def _resolve_attr_edge_color(
         self: ASCIIRenderer,
@@ -959,25 +955,27 @@ class ASCIIRenderer:
         top_right = self.options.box_top_right
         bottom_left = self.options.box_bottom_left
         bottom_right = self.options.box_bottom_right
+        subgraph_color = self._subgraph_color_override
 
         for box in sorted(boxes, key=lambda item: (item.depth, -item.order)):
             if box.right <= box.left or box.bottom <= box.top:
                 continue
 
-            self._paint_cell(box.left, box.top, top_left, None)
-            self._paint_cell(box.right, box.top, top_right, None)
-            self._paint_cell(box.left, box.bottom, bottom_left, None)
-            self._paint_cell(box.right, box.bottom, bottom_right, None)
+            self._paint_cell(box.left, box.top, top_left, subgraph_color)
+            self._paint_cell(box.right, box.top, top_right, subgraph_color)
+            self._paint_cell(box.left, box.bottom, bottom_left, subgraph_color)
+            self._paint_cell(box.right, box.bottom, bottom_right, subgraph_color)
 
             for x in range(box.left + 1, box.right):
-                self._paint_cell(x, box.top, horizontal, None)
-                self._paint_cell(x, box.bottom, horizontal, None)
+                self._paint_cell(x, box.top, horizontal, subgraph_color)
+                self._paint_cell(x, box.bottom, horizontal, subgraph_color)
 
             for y in range(box.top + 1, box.bottom):
-                self._paint_cell(box.left, y, vertical, None)
-                self._paint_cell(box.right, y, vertical, None)
+                self._paint_cell(box.left, y, vertical, subgraph_color)
+                self._paint_cell(box.right, y, vertical, subgraph_color)
 
     def _draw_subgraph_box_titles(self, boxes: List[_SubgraphBox]) -> None:
+        title_color = self._subgraph_color_override
         for box in sorted(boxes, key=lambda item: (item.depth, -item.order)):
             if not box.title:
                 continue
@@ -1044,7 +1042,7 @@ class ASCIIRenderer:
                     break
 
             for offset, ch in enumerate(title_text):
-                self._paint_cell(best_start + offset, title_row, ch, None)
+                self._paint_cell(best_start + offset, title_row, ch, title_color)
 
     @staticmethod
     def _normalize_label_value(label: Any) -> str:
@@ -2002,6 +2000,7 @@ class ASCIIRenderer:
 
         # Initialize canvas with adjusted positions
         self._init_canvas(width, height, positions)
+        self._resolve_render_color_overrides()
         self._draw_subgraph_boxes(subgraph_boxes)
         self._initialize_color_maps(positions)
         self._edge_anchor_map = self._compute_edge_anchor_map(positions)
@@ -2431,6 +2430,10 @@ def merge_layout_options(
         "edge_glyph_preset",
         "edge_arrow_style",
         "color_nodes",
+        "node_color",
+        "label_color",
+        "subgraph_color",
+        "edge_conflict_color",
     }
 
     for field in fields(LayoutOptions):

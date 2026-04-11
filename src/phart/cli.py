@@ -79,6 +79,10 @@ CLI_LAYOUT_FIELD_MAP = {
     "--bbox-multiline-labels": {"bbox_multiline_labels"},
     "--colors": {"ansi_colors", "edge_color_mode"},
     "--no-color-nodes": {"color_nodes"},
+    "--node-color": {"node_color"},
+    "--label-color": {"label_color"},
+    "--subgraph-color": {"subgraph_color"},
+    "--collision-color": {"edge_conflict_color"},
     "--edge-glyph-preset": {"edge_glyph_preset"},
     "--edge-arrow-style": {"edge_arrow_style"},
     "--edge-color-rule": {"edge_color_rules"},
@@ -587,6 +591,46 @@ def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
         "--no-color-nodes", action="store_true", help="Color edges only, not nodes"
     )
     parser.add_argument(
+        "--node-color",
+        type=str,
+        default=None,
+        metavar="COLOR",
+        help=(
+            "Override node color when ANSI colors are enabled "
+            "(named/xterm index/#RRGGBB/#RGB/ANSI escape)"
+        ),
+    )
+    parser.add_argument(
+        "--label-color",
+        type=str,
+        default=None,
+        metavar="COLOR",
+        help=(
+            "Override node+edge label color when ANSI colors are enabled "
+            "(named/xterm index/#RRGGBB/#RGB/ANSI escape)"
+        ),
+    )
+    parser.add_argument(
+        "--subgraph-color",
+        type=str,
+        default=None,
+        metavar="COLOR",
+        help=(
+            "Override subgraph border/title color when ANSI colors are enabled "
+            "(named/xterm index/#RRGGBB/#RGB/ANSI escape)"
+        ),
+    )
+    parser.add_argument(
+        "--collision-color",
+        type=str,
+        default=None,
+        metavar="COLOR",
+        help=(
+            "Override edge crossover/collision callout color when ANSI colors are enabled "
+            "(named/xterm index/#RRGGBB/#RGB/ANSI escape)"
+        ),
+    )
+    parser.add_argument(
         "--edge-glyph-preset",
         choices=["default", "thick", "double"],
         default="default",
@@ -998,6 +1042,10 @@ def create_layout_options(
         edge_glyph_preset=args.edge_glyph_preset,
         edge_arrow_style=args.edge_arrow_style,
         color_nodes=color_nodes,
+        node_color=args.node_color,
+        label_color=args.label_color,
+        subgraph_color=args.subgraph_color,
+        edge_conflict_color=args.collision_color,
         whitespace_mode=args.whitespace,
     )
     setattr(options, "_explicit_cli_fields", set(explicit_layout_fields or set()))

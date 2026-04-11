@@ -1672,6 +1672,27 @@ class TestASCIIRenderer(unittest.TestCase):
         for x, y in renderer._edge_conflict_cells:  # noqa: SLF001
             self.assertIsNone(renderer._color_canvas[y][x])  # noqa: SLF001
 
+    def test_shared_edge_segments_use_override_color_on_conflict(self):
+        graph = nx.DiGraph([("A", "B"), ("A", "C"), ("A", "D")])
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=False,
+                ansi_colors=True,
+                edge_color_mode="path",
+                edge_conflict_color="bright_white",
+                bboxes=True,
+                hpad=1,
+                vpad=0,
+                layer_spacing=4,
+            ),
+        )
+        renderer.render()
+        self.assertGreater(len(renderer._edge_conflict_cells), 0)  # noqa: SLF001
+        for x, y in renderer._edge_conflict_cells:  # noqa: SLF001
+            self.assertEqual(renderer._color_canvas[y][x], "\x1b[97m")  # noqa: SLF001
+
     def test_edge_color_mode_source(self):
         graph = nx.DiGraph([("A", "B"), ("C", "D")])
         renderer = ASCIIRenderer(
@@ -1718,6 +1739,117 @@ class TestASCIIRenderer(unittest.TestCase):
         self.assertNotEqual(
             renderer._edge_color_map[("A", "B")],  # noqa: SLF001
             renderer._edge_color_map[("D", "E")],  # noqa: SLF001
+        )
+
+    def test_node_color_override_applies_even_when_no_color_nodes_is_set(self):
+        graph = nx.DiGraph([("A", "B"), ("C", "D")])
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=False,
+                ansi_colors=True,
+                edge_color_mode="source",
+                color_nodes=False,
+                node_color="color244",
+                bboxes=True,
+                layer_spacing=4,
+            ),
+        )
+        renderer.render()
+        self.assertTrue(renderer._node_color_map)  # noqa: SLF001
+        self.assertEqual(set(renderer._node_color_map.values()), {"\x1b[38;5;244m"})  # noqa: SLF001
+
+    def test_label_color_override_applies_to_node_and_edge_labels(self):
+        graph = nx.DiGraph()
+        graph.add_node("A", label="Q1")
+        graph.add_node("B", label="Q2")
+        graph.add_edge("A", "B", label="ZZ")
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=False,
+                ansi_colors=True,
+                edge_color_mode="source",
+                use_labels=True,
+                bboxes=True,
+                layer_spacing=5,
+                label_color="bright_white",
+            ),
+        )
+        renderer.render()
+        label_color = "\x1b[97m"
+
+        q_cells = [
+            (x, y)
+            for y, row in enumerate(renderer.canvas)  # noqa: SLF001
+            for x, ch in enumerate(row)
+            if ch == "Q"
+        ]
+        self.assertTrue(q_cells)
+        for x, y in q_cells:
+            self.assertEqual(renderer._color_canvas[y][x], label_color)  # noqa: SLF001
+
+        z_cells = [
+            (x, y)
+            for y, row in enumerate(renderer.canvas)  # noqa: SLF001
+            for x, ch in enumerate(row)
+            if ch == "Z"
+        ]
+        self.assertTrue(z_cells)
+        for x, y in z_cells:
+            self.assertEqual(renderer._color_canvas[y][x], label_color)  # noqa: SLF001
+
+    def test_subgraph_color_override_colors_subgraph_border_and_title(self):
+        renderer = ASCIIRenderer.from_dot(
+            """
+            digraph {
+                subgraph cluster_0 {
+                    label="ClusterTitleX";
+                    A;
+                    B;
+                }
+                A -> B;
+            }
+            """,
+            options=LayoutOptions(
+                node_style=NodeStyle.MINIMAL,
+                use_ascii=False,
+                ansi_colors=True,
+                edge_color_mode="source",
+                subgraph_color="color202",
+            ),
+        )
+        positions, width, height = renderer.layout_manager.calculate_layout()
+        _adjusted, _w2, _h2, boxes = renderer._prepare_layout_for_subgraphs(
+            positions, width, height
+        )
+        self.assertTrue(boxes)
+
+        renderer.render()
+        subgraph_color = "\x1b[38;5;202m"
+        first_box = boxes[0]
+        self.assertEqual(
+            renderer._color_canvas[first_box.top][first_box.left],  # noqa: SLF001
+            subgraph_color,
+        )
+
+        title_x_cells = [
+            (x, y)
+            for y, row in enumerate(renderer.canvas)  # noqa: SLF001
+            for x, ch in enumerate(row)
+            if ch == "X"
+        ]
+        self.assertTrue(title_x_cells)
+        for x, y in title_x_cells:
+            self.assertEqual(renderer._color_canvas[y][x], subgraph_color)  # noqa: SLF001
+
+    def test_color_spec_supports_common_aliases_and_short_hex(self):
+        self.assertEqual(ASCIIRenderer._resolve_color_spec("light gray"), "\x1b[37m")
+        self.assertEqual(ASCIIRenderer._resolve_color_spec("dark-white"), "\x1b[37m")
+        self.assertEqual(
+            ASCIIRenderer._resolve_color_spec("#abc"), "\x1b[38;2;170;187;204m"
         )
 
     def test_edge_color_mode_path(self):
