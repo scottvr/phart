@@ -77,6 +77,7 @@ CLI_LAYOUT_FIELD_MAP = {
     "--node-label-sep": {"node_label_sep"},
     "--node-label-max-lines": {"node_label_max_lines"},
     "--bbox-multiline-labels": {"bbox_multiline_labels"},
+    "--bbox-singleline-labels": {"bbox_multiline_labels"},
     "--colors": {"ansi_colors", "edge_color_mode"},
     "--no-color-nodes": {"color_nodes"},
     "--node-color": {"node_color"},
@@ -579,7 +580,20 @@ def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
     parser.add_argument(
         "--bbox-multiline-labels",
         action="store_true",
-        help="Enable multiline node labels and bbox height expansion when labels contain line breaks",
+        dest="bbox_multiline_labels",
+        default=True,
+        help=(
+            "Compatibility alias; multiline node labels in bboxes are enabled by default."
+        ),
+    )
+    parser.add_argument(
+        "--bbox-singleline-labels",
+        action="store_false",
+        dest="bbox_multiline_labels",
+        help=(
+            "Disable multiline node labels in bboxes (render labels as a single line, "
+            "with embedded newlines flattened to spaces)"
+        ),
     )
     parser.add_argument(
         "--colors",

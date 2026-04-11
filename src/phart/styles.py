@@ -160,7 +160,7 @@ class LayoutOptions:
         default=None
     )  # Optional cap for synthesized label lines
     bbox_multiline_labels: bool = field(
-        default=False
+        default=True
     )  # Expand bbox height and paint multiline labels when enabled
     ansi_colors: bool = field(default=False)  # ANSI colorized render output
     allow_ansi_in_ascii: bool = field(

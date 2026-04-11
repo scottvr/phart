@@ -1,33 +1,36 @@
-digraph InternetStructure {
-    rankdir=TB;
-    graph [label="What Happens When You Type a URL?", labelloc=t, fontsize=18];
-    node [shape=box, style=rounded, fontsize=11];
-    edge [fontsize=10];
+digraph G {
+    rankdir=LR;
+    node [shape=box, style=filled, fillcolor="#f9f9f9", fontname="Helvetica", fontsize=10];
+    edge [fontname="Helvetica", fontsize=9, color="#555555"];
 
-//  subgraph test {
-    // Home side: where the request starts.
-    subgraph cluster_home {
-        label = "User Home/Office";
-        Client [label="Browser on Your Device"];
-        Router [label="Home Router / Wi-Fi"];
-    }
+    // Nodes
+    User     [label="Browser User", fillcolor="#e1f5fe"];
+    Gateway  [label="Gateway / Router"];
+    ISP      [label="ISP / DNS Resolver"];
+    Backbone [label="Internet Backbone", shape=cloud, fillcolor="#eceff1"];
+    FW       [label="Firewall", fillcolor="#ffebee"];
+    LB       [label="Load Balancer", fillcolor="#fff3e0"];
+    WS1      [label="Web Server A", fillcolor="#e8f5e9"];
+    WS2      [label="Web Server B", fillcolor="#e8f5e9"];
 
-    // Provider + wider internet side.
-    subgraph cluster_internet {
-        label = "The Internet Backbone";
-        ISP [label="ISP (Internet Service Provider)"];
-        DNS [label="DNS (finds the site's IP)"];
-        Backbone [label="Backbone Routers"];
-        Server [label="Web Server (e.g., www.example.com)"];
-    }
-    Rendered [label="Page Rendered"];
-  }
+    // Connections with Edge Labels
+    User     -> Gateway  [label="LAN / WiFi"];
+    Gateway  -> ISP      [label="DNS Query (53)"];
+    ISP      -> Backbone [label="Recursive Lookup"];
+    Backbone -> FW       [label="HTTPS (443)"];
+    FW       -> LB       [label="TCP Traffic"];
+    LB       -> WS1      [label="Forwarding"];
+    LB       -> WS2      [label="Forwarding"];
 
-    // Step-by-step, DAG-style teaching flow.
-    Client -> Router [label="1\) You type a URL"];
-    Router -> ISP [label="2\) Request leaves home"];
-    ISP -> DNS [label="3\) DNS lookup: domain -> IP"];
-    DNS -> Backbone [label="4\) IP known, route toward destination"];
-    Backbone -> Server [label="5\\) HTTPS request reaches website"];
-    Server -> Rendered [label="6\) Response returns rendered html"];
-//}
+    // Keep servers aligned vertically
+    subgraph test { label="cluster"; rank=same; WS1; WS2; }
+}
+
+// graph LR
+//    User[Browser User] --> Gateway[Gateway / Router]
+//    Gateway --> ISP[ISP / DNS Resolver]
+//    ISP --> Backbone[Internet Backbone]
+//    Backbone --> FW[Firewall]
+//    FW --> LB[Load Balancer]
+//    LB --> WS1[Web Server A]
+//    LB --> WS2[Web Server B]

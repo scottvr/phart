@@ -1,0 +1,41 @@
+digraph SequenceLike {
+  rankdir=TB;
+  splines=ortho;
+  node [shape=box];
+
+  // Participants (top row)
+  subgraph cluster_participants {
+    rank=same;
+    label="Participants";
+    B [label="Browser"];
+    OS [label="OS/Cache"];
+    DNS [label="DNS Resolver"];
+    G [label="Gateway/Router"];
+    BN [label="Internet Backbone"];
+    WS [label="Web Server"];
+  }
+
+  // Phase markers
+  P1 [label="1. DNS Lookup Phase", shape=note];
+  P2 [label="2. Connection & Request Phase", shape=note];
+  P3 [label="3. HTTP Exchange Phase", shape=note];
+
+  // Message steps (modeled as graph edges)
+  B -> OS  [label="Look up Domain Name (example.com)"];
+  OS -> B  [label="IP Not Found"];
+  B -> DNS [label="Recursive Query for IP"];
+  DNS -> DNS [label="Query Root/TLD Servers"];
+  DNS -> B [label="Return IP Address (93.184.216.34)"];
+
+  B -> G   [label="TCP SYN (Request Connection)"];
+  G -> BN  [label="Route to Server"];
+  BN -> WS [label="Forward Packet"];
+  WS -> BN [label="TCP SYN-ACK"];
+  BN -> G  [label="Forwarded"];
+  G -> B   [label="TCP ACK (Connection Established)"];
+
+  B -> WS  [label="HTTP GET Request"];
+  WS -> WS [label="Process Request"];
+  WS -> B  [label="HTTP 200 OK & Content (HTML)"];
+  B -> B   [label="Render Page"];
+}

@@ -1,0 +1,46 @@
+digraph InternetStructure {
+    rankdir=TB;
+    graph [label="What Happens When You Type a URL?", labelloc=t, fontsize=18];
+    node [shape=box, style=rounded, fontsize=11];
+    edge [fontsize=10];
+
+  subgraph test {
+    rankdir=TB;
+    label="What Happens When You Type a URL?";
+    labelloc=ti;
+    fontsize=16;
+    node [shape=box, style=rounded, fontsize=11];
+    edge [fontsize=10];
+
+    // Home side: where the request starts.
+    subgraph cluster_home {
+        label = "User Home/Office";
+        Client [label="Browser on\n Your Device"];
+        Router [label="Home Router /\n Wi-Fi"];
+    }
+
+    // Provider + wider internet side.
+    subgraph cluster_internet {
+        label = "The Internet Backbone";
+        ISP [label="ISP (ATT, Comcast, etc)"];
+        DNS [label="DNS (resolves\n name to IP)"];
+        Backbone [label="Backbone\nRouters"];
+        Server [label="Web Server\n(www.example.com)"];
+    }
+    Rendered [label="Page Rendered"];
+
+    Client -> Router
+    Router -> ISP
+    ISP -> DNS
+    DNS -> Backbone
+    Backbone -> Server
+    Server -> Rendered
+  }
+    // Step-by-step, DAG-style teaching flow.
+    Client -> Router [label="1) You type a URL"];
+    Router -> ISP [label="2) Request leaves home"];
+    ISP -> DNS [label="3) DNS lookup: domain -> IP"];
+    DNS -> Backbone [label="4) IP known, route toward destination"];
+    Backbone -> Server [label="5) HTTPS request reaches website"];
+    Server -> Rendered [label="6) Response returns rendered html"];
+}

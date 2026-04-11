@@ -49,15 +49,16 @@ New stuff is **bolded.**
 When node labels are enabled with `--labels` (or `--node-labels`), and a node does not define `label`, PHART can synthesize label text from ordered attribute paths:
 
 ```bash
-phart --labels --bboxes --bbox-multiline-labels \
+phart --labels --bboxes \
   --node-label-lines name,birt.date,deat.date \
   examples/gedcom.py
 ```
 
 Notes:
 
-- `name,birt.date,deat.date` renders those three values in order (multiline in bboxes when enabled).
+- `name,birt.date,deat.date` renders those three values in order (multiline in bboxes by default).
 - You can also use dotted paths directly, such as `name,birt.date,deat.date`.
+- Use `--bbox-singleline-labels` if you want to flatten embedded newlines to one rendered line.
 
 ## Text Pagination
 
@@ -307,7 +308,7 @@ usage: phart [-h] [--output OUTPUT] [--version] [--output-format {ditaa,ditaa-pu
              [--cross-partition-edge-style {stub,none}] [--connector-compaction {none,partition}] [--partition-order {natural,size}] [--panel-headers {none,basic,lineage}]
              [--connector-ref {auto,id,label,both}] [--bboxes] [--hpad HPAD] [--vpad VPAD] [--uniform] [--edge-anchors {auto,center,ports}] [--shared-ports {any,minimize,none}]
              [--bidirectional-mode {coalesce,separate}] [--labels] [--node-labels [ATTR]] [--edge-labels [ATTR]] [--node-label-lines SPEC] [--node-label-sep NODE_LABEL_SEP]
-             [--node-label-max-lines NODE_LABEL_MAX_LINES] [--bbox-multiline-labels] [--colors {attr,none,path,source,target}] [--no-color-nodes] [--edge-glyph-preset {default,thick,double}]
+             [--node-label-max-lines NODE_LABEL_MAX_LINES] [--bbox-multiline-labels] [--bbox-singleline-labels] [--colors {attr,none,path,source,target}] [--no-color-nodes] [--edge-glyph-preset {default,thick,double}]
              [--edge-arrow-style {ascii,unicode}] [--edge-color-rule RULE] [--style-rule RULE] [--style-rules-file FILE] [--svg-cell-size SVG_CELL_SIZE] [--svg-font-family SVG_FONT_FAMILY]
              [--svg-text-mode {text,path}] [--svg-font-path SVG_FONT_PATH] [--svg-fg SVG_FG] [--svg-bg SVG_BG] [--whitespace {auto,ascii-space,nbsp}] [--paginate-output-width [WIDTH|auto]]
              [--paginate-output-height [HEIGHT|auto]] [--paginate-overlap COLUMNS] [--select-output-page-x PAGE_X] [--select-output-page-y PAGE_Y] [--list-pages] [--write-pages DIR]
@@ -385,7 +386,9 @@ options:
   --node-label-max-lines NODE_LABEL_MAX_LINES
                         Optional maximum number of synthesized label lines
   --bbox-multiline-labels
-                        Enable multiline node labels and bbox height expansion when labels contain line breaks
+                        Compatibility alias; multiline node labels in bboxes are enabled by default.
+  --bbox-singleline-labels
+                        Disable multiline node labels in bboxes (flatten embedded newlines to one line)
   --colors {attr,none,path,source,target}
                         ANSI edge coloring mode: none (default), source, target, path, or attr
   --no-color-nodes      Color edges only, not nodes

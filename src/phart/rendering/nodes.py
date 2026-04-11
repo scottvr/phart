@@ -16,12 +16,45 @@ def normalize_label_value(label: Any, *, keep_newlines: bool = False) -> str:
     text = str(label).strip()
     if len(text) >= 2 and text[0] == text[-1] and text[0] in {"'", '"'}:
         text = text[1:-1]
+    text = _decode_graphviz_linebreak_escapes(text)
     text = text.replace("\r\n", "\n")
     if keep_newlines:
         text = "\n".join(part.strip() for part in text.split("\n"))
     else:
         text = text.replace("\n", " ")
     return text.strip()
+
+
+def _decode_graphviz_linebreak_escapes(text: str) -> str:
+    """Decode Graphviz/DOT line-break escapes in label text.
+
+    Graphviz supports ``\\n``, ``\\l``, and ``\\r`` inside labels as line-break
+    controls. We normalize all three to ``\\n`` for PHART's line splitter.
+    """
+    out: list[str] = []
+    i = 0
+    while i < len(text):
+        ch = text[i]
+        if ch != "\\" or i + 1 >= len(text):
+            out.append(ch)
+            i += 1
+            continue
+
+        nxt = text[i + 1]
+        if nxt in {"n", "l", "r"}:
+            out.append("\n")
+            i += 2
+            continue
+        if nxt == "\\":
+            out.append("\\")
+            i += 2
+            continue
+
+        # Preserve unknown escape sequences literally.
+        out.append("\\")
+        out.append(nxt)
+        i += 2
+    return "".join(out)
 
 
 def get_display_node_text(renderer: ASCIIRenderer, node: Any) -> str:

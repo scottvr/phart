@@ -1,0 +1,45 @@
+digraph URLLoadFlow {
+    rankdir=TB;
+    graph [label="What Happens When You Type a URL? (Phase Flow)", labelloc=t, fontsize=18];
+    node [shape=box, style=rounded, fontsize=10];
+    edge [fontsize=9];
+
+    subgraph cluster_phase1 {
+        label = "1) DNS Lookup Phase";
+        p1_lookup [label="Browser -> OS/Cache:\nLookup example.com"];
+        p1_cache_check [label="OS/Cache:\nIP in cache?"];
+        p1_cache_hit [label="Cache hit:\nReturn IP to Browser"];
+        p1_cache_miss [label="Cache miss:\nBrowser -> DNS Resolver"];
+        p1_dns_walk [label="DNS Resolver:\nQuery root/TLD/auth servers"];
+        p1_dns_reply [label="DNS Resolver -> Browser:\nReturn IP"];
+    }
+
+    subgraph cluster_phase2 {
+        label = "2) Connection &\nRouting Phase";
+        p2_syn [label="Browser -> Gateway:\nTCP SYN"];
+        p2_route [label="Gateway -> Backbone:\nRoute packet"];
+        p2_forward [label="Backbone -> Web Server:\nForward packet"];
+        p2_synack [label="Web Server -> Browser:\nSYN-ACK (via backbone/gateway)"];
+        p2_established [label="Browser -> Web Server:\nACK, connection established"];
+    }
+
+    subgraph cluster_phase3 {
+        label = "3) HTTP Exchange Phase";
+        p3_get [label="Browser -> Web Server:\nHTTP GET"];
+        p3_process [label="Web Server:\nProcess request"];
+        p3_response [label="Web Server -> Browser:\nHTP 200 + HTML/CSS/JS"];
+        p3_render [label="Browser:\nRender page"];
+    }
+
+    p1_lookup -> p1_cache_check;
+    p1_cache_check -> p1_cache_hit [label="yes"];
+    p1_cache_check -> p1_cache_miss [label="no"];
+    p1_cache_miss -> p1_dns_walk;
+    p1_dns_walk -> p1_dns_reply;
+
+    p1_cache_hit -> p2_syn;
+    p1_dns_reply -> p2_syn;
+
+    p2_syn -> p2_route -> p2_forward -> p2_synack -> p2_established;
+    p2_established -> p3_get -> p3_process -> p3_response -> p3_render;
+}

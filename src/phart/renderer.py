@@ -392,7 +392,21 @@ class ASCIIRenderer:
         return colors_mod.initialize_color_maps(self, positions)
 
     def mermaid_out(self: ASCIIRenderer) -> str:
-        lines: List[str] = ["flowchart TD"]
+        direction_by_flow = {
+            "down": "TD",
+            "up": "BT",
+            "right": "LR",
+            "left": "RL",
+        }
+        flow_raw = getattr(
+            getattr(self.options, "flow_direction", "down"), "value", None
+        )
+        if flow_raw is None:
+            flow_raw = (
+                str(getattr(self.options, "flow_direction", "down")).strip().lower()
+            )
+        mermaid_direction = direction_by_flow.get(str(flow_raw).strip().lower(), "TD")
+        lines: List[str] = [f"flowchart {mermaid_direction}"]
 
         def node_label(node: Any) -> str:
             attrs = self.graph.nodes[node] if node in self.graph else {}
@@ -431,18 +445,24 @@ class ASCIIRenderer:
             return text if text else None
 
         def escape_mermaid_edge_text(value: Any) -> str:
-            # Mermaid edge labels use pipe delimiters: --|label|-->
-            # Escape literal pipes to preserve label content.
+            # Use quoted edge labels: A -- "label" --> B.
+            # Escape parser-sensitive characters for robust Mermaid parsing.
             text = nodes_mod.normalize_label_value(value)
-            return text.replace("|", "&#124;")
+            return (
+                text.replace("\\", "\\\\")
+                .replace('"', '\\"')
+                .replace("|", "&#124;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+            )
 
         def mermaid_edge_statement(start: Any, end: Any) -> str:
             src = node_aliases.get(start, sanitize_identifier(start))
             dst = node_aliases.get(end, sanitize_identifier(end))
             label = edge_label(start, end)
             if not label:
-                return f"    {src} ---> {dst}"
-            return f"    {src} -->|{escape_mermaid_edge_text(label)}| {dst}"
+                return f"    {src} --> {dst}"
+            return f'    {src} -- "{escape_mermaid_edge_text(label)}" --> {dst}'
 
         node_aliases: Dict[Any, str] = {}
         used_aliases: Set[str] = set()
@@ -463,7 +483,7 @@ class ASCIIRenderer:
                 if edge_text:
                     lines.append(
                         f'    {node_aliases.get(u, sanitize_identifier(u))}["{escape_mermaid_text(node_label(u))}"] '
-                        f"-->|{escape_mermaid_edge_text(edge_text)}| "
+                        f'-- "{escape_mermaid_edge_text(edge_text)}" --> '
                         f'{node_aliases.get(v, sanitize_identifier(v))}["{escape_mermaid_text(node_label(v))}"]'
                     )
                 else:
@@ -484,7 +504,7 @@ class ASCIIRenderer:
                 if edge_text:
                     lines.append(
                         f'    {node_aliases.get(u, sanitize_identifier(u))}["{escape_mermaid_text(node_label(u))}"] '
-                        f"-->|{escape_mermaid_edge_text(edge_text)}| "
+                        f'-- "{escape_mermaid_edge_text(edge_text)}" --> '
                         f'{node_aliases.get(v, sanitize_identifier(v))}["{escape_mermaid_text(node_label(v))}"]'
                     )
                 else:
@@ -553,6 +573,7 @@ class ASCIIRenderer:
             title_text = escape_mermaid_text(title)
             alias = subgraph_aliases.get(subgraph_id, sanitize_identifier(subgraph_id))
             lines.append(f'{indent}subgraph {alias}["{title_text}"]')
+            lines.append(f"{indent}    direction {mermaid_direction}")
 
             for node in sorted(
                 direct_nodes_for_subgraph(subgraph_id),

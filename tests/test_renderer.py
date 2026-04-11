@@ -21,6 +21,35 @@ import tempfile
 from unittest.mock import patch
 
 
+INTERNET_SUBGRAPH_DOT = """
+digraph InternetStructure {
+    rankdir=TB;
+
+    subgraph cluster_home {
+        label = "User Home/Office";
+        Client [label="Browser on Your Device"];
+        Router [label="Home Router / Wi-Fi"];
+    }
+
+    subgraph cluster_internet {
+        label = "The Internet Backbone";
+        ISP [label="ISP"];
+        DNS [label="DNS"];
+        Backbone [label="Backbone"];
+        Server [label="Server"];
+    }
+    Rendered [label="Rendered"];
+
+    Client -> Router [label="1) You type a URL"];
+    Router -> ISP [label="2) Request leaves home"];
+    ISP -> DNS [label="3) DNS lookup"];
+    DNS -> Backbone [label="4) Route"];
+    Backbone -> Server [label="5) Request reaches website"];
+    Server -> Rendered [label="6) Response returns rendered html"];
+}
+"""
+
+
 class TestASCIIRenderer(unittest.TestCase):
     """Test cases for basic rendering functionality and encoding."""
 
@@ -321,6 +350,23 @@ class TestASCIIRenderer(unittest.TestCase):
         self.assertIn("Alpha Beta", result)
         self.assertNotIn("Alpha\nBeta", result)
 
+    def test_dot_escaped_newline_label_renders_multiline_in_bbox_mode(self):
+        dot_string = r'digraph { n1 [label="Alpha\nBeta"]; }'
+        renderer = ASCIIRenderer.from_dot(
+            dot_string,
+            options=LayoutOptions(
+                bboxes=True,
+                use_labels=True,
+                bbox_multiline_labels=True,
+                use_ascii=True,
+            ),
+        )
+        result = renderer.render()
+        lines = result.splitlines()
+        self.assertNotIn("\\n", result)
+        self.assertTrue(any("Alpha" in line for line in lines))
+        self.assertTrue(any("Beta" in line for line in lines))
+
     def test_edge_label_renders_on_horizontal_edges(self):
         graph = nx.DiGraph()
         graph.add_edge("A", "B", label="E_H")
@@ -549,7 +595,7 @@ class TestASCIIRenderer(unittest.TestCase):
         )
 
     def test_render_shows_subgraph_titles_without_node_bboxes(self):
-        dot_string = Path("examples/internet.dot").read_text(encoding="utf-8")
+        dot_string = INTERNET_SUBGRAPH_DOT
         renderer = ASCIIRenderer.from_dot(
             dot_string,
             options=LayoutOptions(
@@ -565,7 +611,7 @@ class TestASCIIRenderer(unittest.TestCase):
         self.assertIn("DNS", output)
 
     def test_render_places_subgraph_title_inside_when_border_has_crossing(self):
-        dot_string = Path("examples/internet.dot").read_text(encoding="utf-8")
+        dot_string = INTERNET_SUBGRAPH_DOT
         renderer = ASCIIRenderer.from_dot(
             dot_string,
             options=LayoutOptions(
@@ -586,7 +632,7 @@ class TestASCIIRenderer(unittest.TestCase):
         self.assertRegex(output, r"\|\s+\+[-]+\+\s+\|")
 
     def test_subgraph_preparation_preserves_layer_alignment_and_clearance(self):
-        dot_string = Path("examples/internet.dot").read_text(encoding="utf-8")
+        dot_string = INTERNET_SUBGRAPH_DOT
         renderer = ASCIIRenderer.from_dot(
             dot_string,
             options=LayoutOptions(
@@ -648,8 +694,47 @@ class TestASCIIRenderer(unittest.TestCase):
                     msg=f"subgraph boxes overlap/touch: {upper.subgraph_id}, {lower.subgraph_id}",
                 )
 
+    def test_internet_style_options_render_stable_phase_flow_structure(self):
+        renderer = ASCIIRenderer.from_dot(
+            INTERNET_SUBGRAPH_DOT,
+            options=LayoutOptions(
+                use_ascii=True,
+                layer_spacing=3,
+                node_spacing=2,
+                edge_anchor_mode="ports",
+                shared_ports_mode="none",
+                node_order_mode="preserve",
+                bidirectional_mode="separate",
+                vpad=1,
+                bboxes=True,
+                use_labels=True,
+                node_label_attr="label",
+                edge_label_attr="label",
+            ),
+        )
+        output = renderer.render()
+        self.assertIn("User Home/Office", output)
+        self.assertIn("The Internet Backbone", output)
+        self.assertIn("Browser on Your Device", output)
+        self.assertIn("DNS lookup", output)
+        self.assertIn("Response returns rendered html", output)
+
     def test_mermaid_output_emits_nested_subgraphs_when_metadata_present(self):
-        dot_string = Path("examples/internet.dot").read_text(encoding="utf-8")
+        dot_string = """
+        digraph {
+            subgraph cluster_home {
+                label="User Home/Office";
+                Client [label="Browser on Your Device"];
+                Router [label="Home Router / Wi-Fi"];
+            }
+            subgraph cluster_internet {
+                label="The Internet Backbone";
+                DNS [label="DNS Resolver"];
+            }
+            Client -> Router [label="1) You type a URL"];
+            Router -> DNS [label="2) DNS lookup: domain -> IP"];
+        }
+        """
         renderer = ASCIIRenderer.from_dot(
             dot_string,
             options=LayoutOptions(
@@ -661,12 +746,27 @@ class TestASCIIRenderer(unittest.TestCase):
         mmd = renderer.mermaid_out()
         self.assertIn("flowchart TD", mmd)
         self.assertIn("subgraph", mmd)
+        self.assertIn("direction TD", mmd)
         self.assertIn('["User Home/Office"]', mmd)
         self.assertIn('["The Internet Backbone"]', mmd)
         self.assertIn("DNS", mmd)
 
     def test_mermaid_output_includes_edge_labels_when_enabled(self):
-        dot_string = Path("examples/internet.dot").read_text(encoding="utf-8")
+        dot_string = """
+        digraph {
+            subgraph cluster_home {
+                label="User Home/Office";
+                Client [label="Browser on Your Device"];
+                Router [label="Home Router / Wi-Fi"];
+            }
+            subgraph cluster_internet {
+                label="The Internet Backbone";
+                DNS [label="DNS Resolver"];
+            }
+            Client -> Router [label="1) You type a URL"];
+            Router -> DNS [label="3) DNS lookup: domain -> IP"];
+        }
+        """
         renderer = ASCIIRenderer.from_dot(
             dot_string,
             options=LayoutOptions(
@@ -678,8 +778,49 @@ class TestASCIIRenderer(unittest.TestCase):
         )
         mmd = renderer.mermaid_out()
         self.assertIn("Browser on Your Device", mmd)
-        self.assertIn("|1) You type a URL|", mmd)
-        self.assertIn("|3) DNS lookup: domain -> IP|", mmd)
+        self.assertIn('-- "1) You type a URL" -->', mmd)
+        self.assertIn('-- "3) DNS lookup: domain -&gt; IP" -->', mmd)
+
+    def test_mermaid_output_escapes_parser_sensitive_edge_label_chars(self):
+        graph = nx.DiGraph()
+        graph.add_node("A", label="Alpha")
+        graph.add_node("B", label="Beta")
+        graph.add_edge("A", "B", label='x|y "q" <ok> ->')
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                use_ascii=True,
+                use_labels=True,
+                node_label_attr="label",
+                edge_label_attr="label",
+            ),
+        )
+        mmd = renderer.mermaid_out()
+        self.assertIn('-- "x&#124;y \\"q\\" &lt;ok&gt; -&gt;" -->', mmd)
+
+    def test_mermaid_output_uses_flow_direction_for_root_and_subgraphs(self):
+        dot_string = """
+        digraph {
+            subgraph cluster_home {
+                label="User Home/Office";
+                Client [label="Browser"];
+                Router [label="Router"];
+            }
+            Client -> Router [label="Step"];
+        }
+        """
+        renderer = ASCIIRenderer.from_dot(
+            dot_string,
+            options=LayoutOptions(
+                use_ascii=True,
+                flow_direction="right",
+                node_label_attr="label",
+                edge_label_attr="label",
+            ),
+        )
+        mmd = renderer.mermaid_out()
+        self.assertIn("flowchart LR", mmd)
+        self.assertIn("direction LR", mmd)
 
     def test_from_plantuml(self):
         """Test creation from PlantUML subset."""

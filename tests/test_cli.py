@@ -1370,6 +1370,17 @@ def main():
         self.assertEqual(options.node_label_max_lines, 2)
         self.assertTrue(options.bbox_multiline_labels)
 
+    def test_bbox_singleline_labels_flag_disables_multiline_bbox_behavior(self):
+        sys.argv = [
+            "phart",
+            "--labels",
+            "--bbox-singleline-labels",
+            str(self.test_text_file),
+        ]
+        args, _unknown, explicit_layout_fields, _module_argv = parse_args()
+        options = create_layout_options(args, explicit_layout_fields)
+        self.assertFalse(options.bbox_multiline_labels)
+
     def test_node_and_edge_label_flags_populate_layout_options(self):
         sys.argv = [
             "phart",
