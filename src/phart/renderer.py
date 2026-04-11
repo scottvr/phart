@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import io
 import os
+import re
 import sys
 
-from dataclasses import fields
+from dataclasses import dataclass, fields
 from typing import Any, ClassVar, Dict, List, Optional, Set, TextIO, Tuple, cast
 
 import networkx as nx  # type: ignore
@@ -27,6 +28,18 @@ from .rendering.ansi import xterm_index_to_hex as _xterm_index_to_hex_impl
 
 from .styles import LayoutOptions, NodeStyle
 from .style_rules import evaluate_style_rule_color, evaluate_style_rule_set
+
+
+@dataclass(frozen=True)
+class _SubgraphBox:
+    subgraph_id: str
+    title: str
+    depth: int
+    order: int
+    left: int
+    top: int
+    right: int
+    bottom: int
 
 
 class ASCIIRenderer:
@@ -383,33 +396,164 @@ class ASCIIRenderer:
         return colors_mod.initialize_color_maps(self, positions)
 
     def mermaid_out(self: ASCIIRenderer) -> str:
-        str_ = "flowchart TD"
-        try:
-            # maybe do something where we find the shortest and longest edges
-            # and depending on the disparity, maybe we make them longer here. Or, we  couldl expose a flag
-            for u, v in self.graph.edges():
-                ulabel = vlabel = ""
-                node_label_attr = self.options.node_label_attr
-                if node_label_attr:
-                    if node_label_attr in self.graph.nodes[u]:
-                        ulabel = self.graph.nodes[u][node_label_attr]
-                    if node_label_attr in self.graph.nodes[v]:
-                        vlabel = self.graph.nodes[v][node_label_attr]
-                if ulabel == "":
-                    ulabel = u
-                if vlabel == "":
-                    vlabel = v
-                unostr = ulabel.replace(" ", "")
-                vnostr = vlabel.replace(" ", "")
-                unostr = ulabel.replace('"', "")
-                vnostr = vlabel.replace('"', "")
-                str_ += f"\n    {unostr}[{ulabel}] ---> {vnostr}[{vlabel}]"
-        except nx.NetworkXError as e:
-            print(f"An error occurred: {e}")
+        lines: List[str] = ["flowchart TD"]
 
-        finally:
-            pass
-        return str(str_)
+        def node_label(node: Any) -> str:
+            attrs = self.graph.nodes[node] if node in self.graph else {}
+            return nodes_mod.resolve_display_node_text(self.options, attrs, node)
+
+        def sanitize_identifier(value: Any) -> str:
+            base = re.sub(r"[^0-9A-Za-z_]", "_", str(value))
+            if not base:
+                base = "node"
+            if base[0].isdigit():
+                base = f"n_{base}"
+            return base
+
+        def escape_mermaid_text(value: Any) -> str:
+            text = nodes_mod.normalize_label_value(value)
+            return text.replace('"', '\\"')
+
+        node_aliases: Dict[Any, str] = {}
+        used_aliases: Set[str] = set()
+        for node in sorted(self.graph.nodes(), key=lambda n: str(n).casefold()):
+            alias_base = sanitize_identifier(node)
+            alias = alias_base
+            suffix = 1
+            while alias in used_aliases:
+                suffix += 1
+                alias = f"{alias_base}_{suffix}"
+            used_aliases.add(alias)
+            node_aliases[node] = alias
+
+        metadata = self._subgraph_metadata()
+        if metadata is None:
+            for u, v in self.graph.edges():
+                lines.append(
+                    f'    {node_aliases.get(u, sanitize_identifier(u))}["{escape_mermaid_text(node_label(u))}"] '
+                    f'---> {node_aliases.get(v, sanitize_identifier(v))}["{escape_mermaid_text(node_label(v))}"]'
+                )
+            return "\n".join(lines)
+
+        subgraphs_raw = metadata.get("subgraphs", [])
+        root_subgraphs = metadata.get("root_subgraphs", [])
+        node_to_path_raw = metadata.get("node_to_path", {})
+        if not isinstance(subgraphs_raw, list) or not isinstance(
+            node_to_path_raw, dict
+        ):
+            for u, v in self.graph.edges():
+                lines.append(
+                    f'    {node_aliases.get(u, sanitize_identifier(u))}["{escape_mermaid_text(node_label(u))}"] '
+                    f'---> {node_aliases.get(v, sanitize_identifier(v))}["{escape_mermaid_text(node_label(v))}"]'
+                )
+            return "\n".join(lines)
+
+        subgraph_by_id: Dict[str, Dict[str, Any]] = {}
+        children_by_id: Dict[str, List[str]] = {}
+        for item in subgraphs_raw:
+            if not isinstance(item, dict):
+                continue
+            subgraph_id = str(item.get("id", "")).strip()
+            if not subgraph_id:
+                continue
+            subgraph_by_id[subgraph_id] = item
+            raw_children = item.get("children", [])
+            children = (
+                [str(child).strip() for child in raw_children if str(child).strip()]
+                if isinstance(raw_children, list)
+                else []
+            )
+            children_by_id[subgraph_id] = children
+
+        def direct_nodes_for_subgraph(subgraph_id: str) -> List[Any]:
+            item = subgraph_by_id.get(subgraph_id, {})
+            direct = item.get("direct_nodes")
+            if isinstance(direct, list):
+                return [node for node in direct if node in self.graph]
+            result: List[Any] = []
+            for node, raw_path in node_to_path_raw.items():
+                if node not in self.graph:
+                    continue
+                path = tuple(str(part) for part in (raw_path or []))
+                if path and path[-1] == subgraph_id:
+                    result.append(node)
+            return result
+
+        subgraph_aliases: Dict[str, str] = {}
+        used_subgraph_aliases: Set[str] = set()
+        for subgraph_id, item in sorted(
+            subgraph_by_id.items(),
+            key=lambda kv: (int(kv[1].get("depth", 0)), int(kv[1].get("order", 0))),
+        ):
+            base = sanitize_identifier(item.get("name") or subgraph_id)
+            alias = base
+            suffix = 1
+            while alias in used_subgraph_aliases:
+                suffix += 1
+                alias = f"{base}_{suffix}"
+            used_subgraph_aliases.add(alias)
+            subgraph_aliases[subgraph_id] = alias
+
+        emitted_nodes: Set[Any] = set()
+
+        def emit_subgraph(subgraph_id: str, indent: str = "    ") -> None:
+            item = subgraph_by_id.get(subgraph_id)
+            if item is None:
+                return
+            title = self._normalize_subgraph_title(
+                item.get("label"),
+                str(item.get("name", "")),
+            )
+            title_text = escape_mermaid_text(title)
+            alias = subgraph_aliases.get(subgraph_id, sanitize_identifier(subgraph_id))
+            lines.append(f'{indent}subgraph {alias}["{title_text}"]')
+
+            for node in sorted(
+                direct_nodes_for_subgraph(subgraph_id),
+                key=lambda n: str(n).casefold(),
+            ):
+                emitted_nodes.add(node)
+                lines.append(
+                    f'{indent}    {node_aliases[node]}["{escape_mermaid_text(node_label(node))}"]'
+                )
+
+            for child_id in children_by_id.get(subgraph_id, []):
+                emit_subgraph(child_id, indent=f"{indent}    ")
+
+            lines.append(f"{indent}end")
+
+        if isinstance(root_subgraphs, list):
+            ordered_root_ids = [
+                root for root in root_subgraphs if root in subgraph_by_id
+            ]
+        else:
+            ordered_root_ids = []
+        if not ordered_root_ids:
+            ordered_root_ids = [
+                subgraph_id
+                for subgraph_id, item in sorted(
+                    subgraph_by_id.items(),
+                    key=lambda kv: int(kv[1].get("order", 0)),
+                )
+                if item.get("parent") is None
+            ]
+
+        for root_id in ordered_root_ids:
+            emit_subgraph(root_id)
+
+        for node in sorted(self.graph.nodes(), key=lambda n: str(n).casefold()):
+            if node in emitted_nodes:
+                continue
+            lines.append(
+                f'    {node_aliases[node]}["{escape_mermaid_text(node_label(node))}"]'
+            )
+
+        for u, v in self.graph.edges():
+            src = node_aliases.get(u, sanitize_identifier(u))
+            dst = node_aliases.get(v, sanitize_identifier(v))
+            lines.append(f"    {src} ---> {dst}")
+
+        return "\n".join(lines)
 
     def _paint_cell(
         self, x: int, y: int, char: str, color: Optional[str] = None
@@ -453,6 +597,498 @@ class ASCIIRenderer:
         if active_color is not None:
             rendered.append(ANSI_RESET)
         return "".join(rendered)
+
+    def _subgraph_metadata(self) -> Optional[Dict[str, Any]]:
+        raw = self.graph.graph.get("_phart_subgraphs")
+        if not isinstance(raw, dict):
+            return None
+        items = raw.get("subgraphs")
+        if not isinstance(items, list) or not items:
+            return None
+        return raw
+
+    @staticmethod
+    def _normalize_subgraph_title(label: Any, fallback: str) -> str:
+        if label is None:
+            return fallback
+        normalized = nodes_mod.normalize_label_value(label)
+        return normalized if normalized else fallback
+
+    def _build_subgraph_boxes(
+        self, positions: Dict[Any, Tuple[int, int]]
+    ) -> List[_SubgraphBox]:
+        metadata = self._subgraph_metadata()
+        if metadata is None:
+            return []
+
+        subgraphs_raw = metadata.get("subgraphs")
+        if not isinstance(subgraphs_raw, list):
+            return []
+
+        by_id: Dict[str, Dict[str, Any]] = {}
+        children_by_id: Dict[str, List[str]] = {}
+        for item in subgraphs_raw:
+            if not isinstance(item, dict):
+                continue
+            subgraph_id = str(item.get("id", "")).strip()
+            if not subgraph_id:
+                continue
+            by_id[subgraph_id] = item
+            child_ids_raw = item.get("children", [])
+            child_ids: List[str] = []
+            if isinstance(child_ids_raw, list):
+                child_ids = [
+                    str(child).strip() for child in child_ids_raw if str(child).strip()
+                ]
+            children_by_id[subgraph_id] = child_ids
+
+        if not by_id:
+            return []
+
+        # Reuse node bbox spacing semantics so subgraph containers track the
+        # same visual breathing room users already tune via hpad/vpad.
+        if self.options.bboxes:
+            pad_x = max(1, self.options.hpad + 1)
+            pad_y = max(1, self.options.vpad + 1)
+        else:
+            pad_x = 1
+            pad_y = 1
+        computed: Dict[str, _SubgraphBox] = {}
+
+        def compute_box(subgraph_id: str) -> Optional[_SubgraphBox]:
+            if subgraph_id in computed:
+                return computed[subgraph_id]
+            item = by_id.get(subgraph_id)
+            if item is None:
+                return None
+
+            node_ids_raw = item.get("nodes", [])
+            node_ids = (
+                [node for node in node_ids_raw if node in positions]
+                if isinstance(node_ids_raw, list)
+                else []
+            )
+
+            min_left: Optional[int] = None
+            max_right: Optional[int] = None
+            min_top: Optional[int] = None
+            max_bottom: Optional[int] = None
+
+            for node in node_ids:
+                bounds = self._get_node_bounds(node, positions)
+                min_left = (
+                    bounds["left"]
+                    if min_left is None
+                    else min(min_left, bounds["left"])
+                )
+                max_right = (
+                    bounds["right"]
+                    if max_right is None
+                    else max(max_right, bounds["right"])
+                )
+                min_top = (
+                    bounds["top"] if min_top is None else min(min_top, bounds["top"])
+                )
+                max_bottom = (
+                    bounds["bottom"]
+                    if max_bottom is None
+                    else max(max_bottom, bounds["bottom"])
+                )
+
+            for child_id in children_by_id.get(subgraph_id, []):
+                child_box = compute_box(child_id)
+                if child_box is None:
+                    continue
+                min_left = (
+                    child_box.left
+                    if min_left is None
+                    else min(min_left, child_box.left)
+                )
+                max_right = (
+                    child_box.right
+                    if max_right is None
+                    else max(max_right, child_box.right)
+                )
+                min_top = (
+                    child_box.top if min_top is None else min(min_top, child_box.top)
+                )
+                max_bottom = (
+                    child_box.bottom
+                    if max_bottom is None
+                    else max(max_bottom, child_box.bottom)
+                )
+
+            if (
+                min_left is None
+                or max_right is None
+                or min_top is None
+                or max_bottom is None
+            ):
+                return None
+
+            name = str(item.get("name", "")).strip()
+            label = item.get("label")
+            title = self._normalize_subgraph_title(label, name)
+            title_width = self.options.get_text_display_width(title) if title else 0
+            has_header_row = bool(title)
+
+            left = min_left - pad_x
+            right = max_right + pad_x
+            top_padding = pad_y + (1 if has_header_row else 0)
+            top = min_top - top_padding
+            bottom = max_bottom + pad_y
+
+            min_width = max(4, title_width + 4 if title else 4)
+            width = right - left + 1
+            if width < min_width:
+                growth = min_width - width
+                left -= growth // 2
+                right += growth - (growth // 2)
+
+            min_height = 4 if has_header_row else 3
+            if bottom - top + 1 < min_height:
+                bottom = top + (min_height - 1)
+
+            box = _SubgraphBox(
+                subgraph_id=subgraph_id,
+                title=title,
+                depth=int(item.get("depth", 0)),
+                order=int(item.get("order", 0)),
+                left=left,
+                top=top,
+                right=right,
+                bottom=bottom,
+            )
+            computed[subgraph_id] = box
+            return box
+
+        for subgraph_id in by_id:
+            compute_box(subgraph_id)
+
+        return sorted(computed.values(), key=lambda box: (box.depth, box.order))
+
+    @staticmethod
+    def _ranges_overlap_with_gap(
+        a_left: int, a_right: int, b_left: int, b_right: int, gap: int
+    ) -> bool:
+        return not (a_right + gap < b_left or b_right + gap < a_left)
+
+    def _resolve_subgraph_clearance_positions(
+        self,
+        positions: Dict[Any, Tuple[int, int]],
+    ) -> Dict[Any, Tuple[int, int]]:
+        """Inject minimal external clearance for subgraph containers.
+
+        This preserves relative ordering within layers by applying only:
+        - suffix Y-shifts by original layer index (vertical clearance), and
+        - suffix X-shifts for right-side conflicts (horizontal clearance).
+        """
+        metadata = self._subgraph_metadata()
+        if metadata is None:
+            return positions
+
+        subgraphs_raw = metadata.get("subgraphs")
+        if not isinstance(subgraphs_raw, list):
+            return positions
+
+        subgraph_nodes: Dict[str, Set[Any]] = {}
+        for item in subgraphs_raw:
+            if not isinstance(item, dict):
+                continue
+            subgraph_id = str(item.get("id", "")).strip()
+            if not subgraph_id:
+                continue
+            node_ids_raw = item.get("nodes", [])
+            node_ids = (
+                {node for node in node_ids_raw if node in positions}
+                if isinstance(node_ids_raw, list)
+                else set()
+            )
+            subgraph_nodes[subgraph_id] = node_ids
+
+        if not subgraph_nodes:
+            return positions
+
+        adjusted = dict(positions)
+        min_vertical_gap = 1
+        min_horizontal_gap = 1
+
+        base_y_values = sorted({y for _, y in positions.values()})
+        y_to_level = {y: idx for idx, y in enumerate(base_y_values)}
+        node_level_idx = {
+            node: y_to_level.get(y, 0) for node, (_x, y) in positions.items()
+        }
+
+        for _ in range(32):
+            boxes = self._build_subgraph_boxes(adjusted)
+            if not boxes:
+                break
+
+            node_bounds = {
+                node: self._get_node_bounds(node, adjusted) for node in adjusted
+            }
+
+            box_min_level: Dict[str, int] = {}
+            box_max_level: Dict[str, int] = {}
+            for subgraph_id, members in subgraph_nodes.items():
+                levels = [
+                    node_level_idx[node]
+                    for node in members
+                    if node in node_level_idx and node in adjusted
+                ]
+                if levels:
+                    box_min_level[subgraph_id] = min(levels)
+                    box_max_level[subgraph_id] = max(levels)
+
+            vertical_candidates: List[Tuple[int, int]] = []
+            horizontal_candidates: List[Tuple[int, int]] = []
+
+            for box in boxes:
+                members = subgraph_nodes.get(box.subgraph_id, set())
+                max_member_level = box_max_level.get(box.subgraph_id, -1)
+
+                # Box vs outsider-node vertical clearance.
+                for node, bounds in node_bounds.items():
+                    if node in members:
+                        continue
+                    node_level = node_level_idx.get(node, 0)
+                    if node_level <= max_member_level:
+                        # Shifting a suffix cannot separate same-or-higher layers.
+                        continue
+                    if bounds["top"] > box.bottom + min_vertical_gap:
+                        continue
+                    if not self._ranges_overlap_with_gap(
+                        box.left,
+                        box.right,
+                        bounds["left"],
+                        bounds["right"],
+                        min_horizontal_gap,
+                    ):
+                        continue
+                    delta_y = box.bottom + min_vertical_gap + 1 - bounds["top"]
+                    if delta_y > 0:
+                        vertical_candidates.append((node_level, delta_y))
+
+                # Box vs lower-box vertical clearance.
+                upper_level = box_max_level.get(box.subgraph_id, -1)
+                for lower in boxes:
+                    if lower.subgraph_id == box.subgraph_id:
+                        continue
+                    lower_min_level = box_min_level.get(lower.subgraph_id)
+                    if lower_min_level is None or lower_min_level <= upper_level:
+                        continue
+                    if lower.top > box.bottom + min_vertical_gap:
+                        continue
+                    if not self._ranges_overlap_with_gap(
+                        box.left,
+                        box.right,
+                        lower.left,
+                        lower.right,
+                        min_horizontal_gap,
+                    ):
+                        continue
+                    delta_y = box.bottom + min_vertical_gap + 1 - lower.top
+                    if delta_y > 0:
+                        vertical_candidates.append((lower_min_level, delta_y))
+
+                # Box vs outsider-node right-side horizontal clearance.
+                for node, bounds in node_bounds.items():
+                    if node in members:
+                        continue
+                    # Must overlap vertically to be visually colliding.
+                    if not self._ranges_overlap_with_gap(
+                        box.top,
+                        box.bottom,
+                        bounds["top"],
+                        bounds["bottom"],
+                        0,
+                    ):
+                        continue
+                    # Consider outsider nodes on/near right side of this box.
+                    if bounds["center_x"] <= ((box.left + box.right) // 2):
+                        continue
+                    delta_x = box.right + min_horizontal_gap + 1 - bounds["left"]
+                    if delta_x > 0:
+                        horizontal_candidates.append((bounds["left"], delta_x))
+
+            if vertical_candidates:
+                target_level = min(level for level, _ in vertical_candidates)
+                delta = max(
+                    d for level, d in vertical_candidates if level == target_level
+                )
+                adjusted = {
+                    node: (
+                        x,
+                        y + delta if node_level_idx.get(node, 0) >= target_level else y,
+                    )
+                    for node, (x, y) in adjusted.items()
+                }
+                continue
+
+            if horizontal_candidates:
+                x_cut = min(cut for cut, _ in horizontal_candidates)
+                delta = max(d for cut, d in horizontal_candidates if cut == x_cut)
+                adjusted = {
+                    node: (x + delta if x >= x_cut else x, y)
+                    for node, (x, y) in adjusted.items()
+                }
+                continue
+
+            break
+
+        return adjusted
+
+    def _prepare_layout_for_subgraphs(
+        self,
+        positions: Dict[Any, Tuple[int, int]],
+        width: int,
+        height: int,
+    ) -> Tuple[Dict[Any, Tuple[int, int]], int, int, List[_SubgraphBox]]:
+        positions = self._resolve_subgraph_clearance_positions(positions)
+        boxes = self._build_subgraph_boxes(positions)
+        if not boxes:
+            return positions, width, height, []
+
+        min_x = min([x for x, _ in positions.values()] + [box.left for box in boxes])
+        min_y = min([y for _, y in positions.values()] + [box.top for box in boxes])
+        shift_x = -min_x if min_x < 0 else 0
+        shift_y = -min_y if min_y < 0 else 0
+
+        shifted_positions = {
+            node: (x + shift_x, y + shift_y) for node, (x, y) in positions.items()
+        }
+        shifted_boxes = [
+            _SubgraphBox(
+                subgraph_id=box.subgraph_id,
+                title=box.title,
+                depth=box.depth,
+                order=box.order,
+                left=box.left + shift_x,
+                right=box.right + shift_x,
+                top=box.top + shift_y,
+                bottom=box.bottom + shift_y,
+            )
+            for box in boxes
+        ]
+
+        node_right = max(
+            (
+                x + self._get_node_dimensions(node)[0] - 1
+                for node, (x, _y) in shifted_positions.items()
+            ),
+            default=0,
+        )
+        node_bottom = max(
+            (
+                y + self._get_node_dimensions(node)[1] - 1
+                for node, (_x, y) in shifted_positions.items()
+            ),
+            default=0,
+        )
+        box_right = max((box.right for box in shifted_boxes), default=0)
+        box_bottom = max((box.bottom for box in shifted_boxes), default=0)
+
+        final_width = max(width, node_right + 1, box_right + 1)
+        final_height = max(height, node_bottom + 1, box_bottom + 1)
+
+        return shifted_positions, final_width, final_height, shifted_boxes
+
+    def _draw_subgraph_boxes(self, boxes: List[_SubgraphBox]) -> None:
+        if not boxes:
+            return
+
+        horizontal = self.options.edge_horizontal
+        vertical = self.options.edge_vertical
+        top_left = self.options.box_top_left
+        top_right = self.options.box_top_right
+        bottom_left = self.options.box_bottom_left
+        bottom_right = self.options.box_bottom_right
+
+        for box in sorted(boxes, key=lambda item: (item.depth, -item.order)):
+            if box.right <= box.left or box.bottom <= box.top:
+                continue
+
+            self._paint_cell(box.left, box.top, top_left, None)
+            self._paint_cell(box.right, box.top, top_right, None)
+            self._paint_cell(box.left, box.bottom, bottom_left, None)
+            self._paint_cell(box.right, box.bottom, bottom_right, None)
+
+            for x in range(box.left + 1, box.right):
+                self._paint_cell(x, box.top, horizontal, None)
+                self._paint_cell(x, box.bottom, horizontal, None)
+
+            for y in range(box.top + 1, box.bottom):
+                self._paint_cell(box.left, y, vertical, None)
+                self._paint_cell(box.right, y, vertical, None)
+
+    def _draw_subgraph_box_titles(self, boxes: List[_SubgraphBox]) -> None:
+        for box in sorted(boxes, key=lambda item: (item.depth, -item.order)):
+            if not box.title:
+                continue
+
+            title = self._normalize_subgraph_title(box.title, "")
+            if not title:
+                continue
+            title_text = f" {title} "
+            title_width = self.options.get_text_display_width(title_text)
+            available = max(0, box.right - box.left - 1)
+            if available <= 0:
+                continue
+            if title_width > available:
+                title_text = title_text[:available]
+                title_width = self.options.get_text_display_width(title_text)
+            if title_width <= 0:
+                continue
+
+            start_min = box.left + 1
+            start_max = box.right - len(title_text)
+            if start_max < start_min:
+                continue
+
+            centered_start = box.left + 1 + max(0, (available - len(title_text)) // 2)
+            centered_start = max(start_min, min(centered_start, start_max))
+
+            candidate_starts = sorted(
+                range(start_min, start_max + 1),
+                key=lambda start: (abs(start - centered_start), start),
+            )
+            horizontal_glyph = self.options.edge_horizontal
+            inside_row_available = box.top + 1 < box.bottom
+            title_row = box.top + 1 if inside_row_available else box.top
+
+            def conflict_score(
+                start_x: int,
+                *,
+                _title_text: str = title_text,
+                _row: int = title_row,
+                _box_top: int = box.top,
+                _horizontal_glyph: str = horizontal_glyph,
+            ) -> int:
+                score = 0
+                for offset, ch in enumerate(_title_text):
+                    x = start_x + offset
+                    current = self.canvas[_row][x]
+                    if current in {"", " "} or current == ch:
+                        continue
+                    # Border-row titles may overwrite only horizontal border glyphs.
+                    if _row == _box_top and current == _horizontal_glyph:
+                        continue
+                    score += 1
+                return score
+
+            best_start = centered_start
+            best_score: Optional[Tuple[int, int]] = None
+            for start_x in candidate_starts:
+                score = conflict_score(start_x)
+                key = (score, abs(start_x - centered_start))
+                if best_score is None or key < best_score:
+                    best_score = key
+                    best_start = start_x
+                if score == 0:
+                    break
+
+            for offset, ch in enumerate(title_text):
+                self._paint_cell(best_start + offset, title_row, ch, None)
 
     @staticmethod
     def _normalize_label_value(label: Any) -> str:
@@ -1399,11 +2035,18 @@ class ASCIIRenderer:
         if not positions:
             return ""
 
+        positions, width, height, subgraph_boxes = self._prepare_layout_for_subgraphs(
+            positions,
+            width,
+            height,
+        )
+
         if not print_config:
             pass
 
         # Initialize canvas with adjusted positions
         self._init_canvas(width, height, positions)
+        self._draw_subgraph_boxes(subgraph_boxes)
         self._initialize_color_maps(positions)
         self._edge_anchor_map = self._compute_edge_anchor_map(positions)
 
@@ -1439,6 +2082,8 @@ class ASCIIRenderer:
                 raise IndexError(
                     f"Node drawing failed: {pos_info}, {canvas_info}"
                 ) from e
+
+        self._draw_subgraph_box_titles(subgraph_boxes)
 
         text = "\n".join(
             self._render_row(row, colors)

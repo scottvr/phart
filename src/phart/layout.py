@@ -108,6 +108,22 @@ class LayoutManager:
         self.max_width = 0
         self.max_height = 0
         self.partition_plan: Optional[PartitionPlan] = None
+        self._node_subgraph_path: Dict[Any, Tuple[str, ...]] = {}
+        raw_subgraph_meta = self.graph.graph.get("_phart_subgraphs")
+        if isinstance(raw_subgraph_meta, dict):
+            raw_node_paths = raw_subgraph_meta.get("node_to_path")
+            if isinstance(raw_node_paths, dict):
+                for node, raw_path in raw_node_paths.items():
+                    path_tuple = tuple(str(part) for part in (raw_path or []))
+                    if node in self.graph:
+                        self._node_subgraph_path[node] = path_tuple
+                        continue
+                    # DOT node ids are strings; fall back to string matching.
+                    node_text = str(node)
+                    for candidate in self.graph.nodes():
+                        if str(candidate) == node_text:
+                            self._node_subgraph_path[candidate] = path_tuple
+                            break
         self._node_insertion_order = {
             node: idx for idx, node in enumerate(self.graph.nodes())
         }
@@ -241,6 +257,12 @@ class LayoutManager:
             return self.graph.nodes[node].get(attr_name)
         return node
 
+    def _subgraph_bias_key(self, node: Any) -> Tuple[Tuple[Any, ...], ...]:
+        path = self._node_subgraph_path.get(node, tuple())
+        if not path:
+            return tuple()
+        return tuple(self._natural_sort_tokens(part) for part in path)
+
     def _node_sort_key(
         self, node: Any, *, default_mode: str = "alpha"
     ) -> Tuple[Any, ...]:
@@ -248,11 +270,13 @@ class LayoutManager:
         mode = self._resolve_node_order_mode(default_mode)
         fallback_text = str(node)
         fallback_key = self._natural_sort_tokens(fallback_text)
+        subgraph_key = self._subgraph_bias_key(node)
 
         if mode == "preserve":
             return (
                 0,
                 self._node_insertion_order.get(node, len(self._node_insertion_order)),
+                subgraph_key,
                 fallback_text,
             )
 
@@ -264,19 +288,19 @@ class LayoutManager:
         value_natural_key = self._natural_sort_tokens(value)
 
         if mode == "alpha":
-            return (0, value_text.casefold(), fallback_key, fallback_text)
+            return (0, value_text.casefold(), subgraph_key, fallback_key, fallback_text)
 
         if mode == "natural":
-            return (0, value_natural_key, fallback_key, fallback_text)
+            return (0, value_natural_key, subgraph_key, fallback_key, fallback_text)
 
         if mode == "numeric":
             try:
                 numeric_value = float(value)
             except TypeError, ValueError:
                 return (1, fallback_key, fallback_text)
-            return (0, numeric_value, fallback_text)
+            return (0, numeric_value, subgraph_key, fallback_text)
 
-        return (0, fallback_text.casefold(), fallback_text)
+        return (0, fallback_text.casefold(), subgraph_key, fallback_text)
 
     def _ordered_nodes(self, nodes: Any, *, default_mode: str = "alpha") -> List[Any]:
         """Return nodes ordered according to the configured node-order policy."""

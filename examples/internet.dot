@@ -1,0 +1,37 @@
+digraph InternetStructure {
+    rankdir=LR;
+    node [shape=box, style=filled, color=lightgrey];
+
+    // Client Side
+    subgraph cluster_home {
+        label = "User Home/Office";
+        Client [label="Devices (Laptop/Phone)"];
+        Router [label="Router/Modem"];
+        Client -> Router [label="Wi-Fi/Ethernet"];
+    }
+
+    // Internet Service Provider
+    ISP [label="ISP (Internet Service Provider)", shape=diamond];
+    Router -> ISP [label="Cable/Fiber/DSL"];
+
+    // The Internet Core
+    subgraph cluster_internet {
+        label = "The Internet Backbone";
+        color=blue;
+        Backbone [label="Core Routers/Switches", shape=circle];
+        DNS [label="DNS Server"];
+        Backbone -> DNS [label="Lookup"];
+    }
+
+    ISP -> Backbone [label="Data Packets"];
+
+    // Data Centers/Servers
+    Server [label="Web Server (e.g., Google)", shape=cylinder];
+    Backbone -> Server;
+
+    // Data Flow Direction
+    Server -> Backbone [label="Response"];
+    Backbone -> ISP;
+    ISP -> Router;
+    Router -> Client;
+}

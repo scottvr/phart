@@ -4,6 +4,7 @@ import unittest
 import sys
 import re
 from collections import Counter
+from typing import Any, Dict, List, Set
 
 import networkx as nx  # type: ignore
 
@@ -501,6 +502,210 @@ class TestASCIIRenderer(unittest.TestCase):
         self.assertIn("A", result)
         self.assertIn("B", result)
         self.assertIn("C", result)
+
+    def test_from_dot_preserves_nested_subgraph_nodes_and_edges(self):
+        dot_string = """
+        digraph {
+            subgraph cluster_home {
+                label = "User Home/Office";
+                Client;
+                Router;
+                Client -> Router;
+            }
+            subgraph cluster_internet {
+                label = "The Internet Backbone";
+                Backbone;
+                DNS;
+                Backbone -> DNS;
+            }
+            Router -> Backbone;
+        }
+        """
+        renderer = ASCIIRenderer.from_dot(dot_string)
+        self.assertIn("DNS", renderer.graph.nodes())
+        self.assertIn(("Backbone", "DNS"), renderer.graph.edges())
+        metadata = renderer.graph.graph.get("_phart_subgraphs")
+        self.assertIsInstance(metadata, dict)
+        assert isinstance(metadata, dict)
+        self.assertTrue(metadata.get("subgraphs"))
+
+    def test_from_dot_expands_subgraph_endpoint_edges_without_cluster_nodes(self):
+        dot_string = """
+        digraph {
+            subgraph clusterA { a; b; }
+            subgraph clusterB { c; d; }
+            clusterA -> clusterB;
+        }
+        """
+        renderer = ASCIIRenderer.from_dot(dot_string)
+        nodes = set(renderer.graph.nodes())
+        self.assertNotIn("clusterA", nodes)
+        self.assertNotIn("clusterB", nodes)
+        self.assertIn("a", nodes)
+        self.assertIn("d", nodes)
+        self.assertEqual(
+            sorted(renderer.graph.edges()),
+            [("a", "c"), ("b", "d")],
+        )
+
+    def test_render_shows_subgraph_titles_without_node_bboxes(self):
+        dot_string = Path("examples/internet.dot").read_text(encoding="utf-8")
+        renderer = ASCIIRenderer.from_dot(
+            dot_string,
+            options=LayoutOptions(
+                use_ascii=True,
+                bboxes=False,
+                node_label_attr="label",
+                edge_label_attr="label",
+            ),
+        )
+        output = renderer.render()
+        self.assertIn("User Home/Office", output)
+        self.assertIn("The Internet Backbone", output)
+        self.assertIn("DNS", output)
+
+    def test_render_places_subgraph_title_inside_when_border_has_crossing(self):
+        dot_string = Path("examples/internet.dot").read_text(encoding="utf-8")
+        renderer = ASCIIRenderer.from_dot(
+            dot_string,
+            options=LayoutOptions(
+                use_ascii=True,
+                bboxes=True,
+                node_spacing=5,
+                layer_spacing=5,
+                edge_anchor_mode="ports",
+                shared_ports_mode="none",
+                node_order_mode="preserve",
+                bidirectional_mode="separate",
+                node_label_attr="label",
+                edge_label_attr="label",
+            ),
+        )
+        output = renderer.render()
+        self.assertRegex(output, r"\|.*User Home/Office.*\|")
+        self.assertRegex(output, r"\|\s+\+[-]+\+\s+\|")
+
+    def test_subgraph_preparation_preserves_layer_alignment_and_clearance(self):
+        dot_string = Path("examples/internet.dot").read_text(encoding="utf-8")
+        renderer = ASCIIRenderer.from_dot(
+            dot_string,
+            options=LayoutOptions(
+                use_ascii=True,
+                bboxes=False,
+            ),
+        )
+        positions, width, height = renderer.layout_manager.calculate_layout()
+        prepared_positions, _w2, _h2, _boxes = renderer._prepare_layout_for_subgraphs(
+            dict(positions),
+            width,
+            height,
+        )
+        original_layers: Dict[int, List[Any]] = {}
+        for node, (_x, y) in positions.items():
+            original_layers.setdefault(y, []).append(node)
+
+        for layer_nodes in original_layers.values():
+            prepared_y_values = {prepared_positions[node][1] for node in layer_nodes}
+            self.assertEqual(
+                len(prepared_y_values),
+                1,
+                msg=f"layer nodes must remain aligned: {layer_nodes}",
+            )
+
+        boxes = renderer._build_subgraph_boxes(prepared_positions)
+        metadata = renderer.graph.graph.get("_phart_subgraphs")
+        assert isinstance(metadata, dict)
+        subgraphs_raw = metadata.get("subgraphs", [])
+        subgraph_nodes: Dict[str, Set[Any]] = {}
+        if isinstance(subgraphs_raw, list):
+            for item in subgraphs_raw:
+                if not isinstance(item, dict):
+                    continue
+                subgraph_id = str(item.get("id", "")).strip()
+                if not subgraph_id:
+                    continue
+                raw_nodes = item.get("nodes", [])
+                members = (
+                    {node for node in raw_nodes if node in prepared_positions}
+                    if isinstance(raw_nodes, list)
+                    else set()
+                )
+                subgraph_nodes[subgraph_id] = members
+
+        node_bounds = {
+            node: renderer._get_node_bounds(node, prepared_positions)
+            for node in prepared_positions
+        }
+
+        def separated_with_gap(
+            a_left: int,
+            a_right: int,
+            a_top: int,
+            a_bottom: int,
+            b_left: int,
+            b_right: int,
+            b_top: int,
+            b_bottom: int,
+            gap: int = 1,
+        ) -> bool:
+            return (
+                a_right + gap < b_left
+                or b_right + gap < a_left
+                or a_bottom + gap < b_top
+                or b_bottom + gap < a_top
+            )
+
+        for box in boxes:
+            members = subgraph_nodes.get(box.subgraph_id, set())
+            for node, bounds in node_bounds.items():
+                if node in members:
+                    continue
+                self.assertTrue(
+                    separated_with_gap(
+                        box.left,
+                        box.right,
+                        box.top,
+                        box.bottom,
+                        bounds["left"],
+                        bounds["right"],
+                        bounds["top"],
+                        bounds["bottom"],
+                    ),
+                    msg=f"subgraph {box.subgraph_id} too close to outsider node {node}",
+                )
+
+        for idx, upper in enumerate(boxes):
+            for lower in boxes[idx + 1 :]:
+                self.assertTrue(
+                    separated_with_gap(
+                        upper.left,
+                        upper.right,
+                        upper.top,
+                        upper.bottom,
+                        lower.left,
+                        lower.right,
+                        lower.top,
+                        lower.bottom,
+                    ),
+                    msg=f"subgraph boxes overlap/touch: {upper.subgraph_id}, {lower.subgraph_id}",
+                )
+
+    def test_mermaid_output_emits_nested_subgraphs_when_metadata_present(self):
+        dot_string = Path("examples/internet.dot").read_text(encoding="utf-8")
+        renderer = ASCIIRenderer.from_dot(
+            dot_string,
+            options=LayoutOptions(
+                use_ascii=True,
+                node_label_attr="label",
+                edge_label_attr="label",
+            ),
+        )
+        mmd = renderer.mermaid_out()
+        self.assertIn("flowchart TD", mmd)
+        self.assertIn("subgraph", mmd)
+        self.assertIn('["User Home/Office"]', mmd)
+        self.assertIn('["The Internet Backbone"]', mmd)
+        self.assertIn("DNS", mmd)
 
     def test_from_plantuml(self):
         """Test creation from PlantUML subset."""
