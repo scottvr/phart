@@ -694,6 +694,65 @@ class TestASCIIRenderer(unittest.TestCase):
                     msg=f"subgraph boxes overlap/touch: {upper.subgraph_id}, {lower.subgraph_id}",
                 )
 
+    def test_subgraph_fit_edge_labels_expands_internal_box_width_for_fallback_labels(
+        self,
+    ):
+        dot_string = """
+        digraph {
+            subgraph cluster_internet {
+                label = "The Internet Backbone";
+                ISP [label="ISP"];
+                DNS [label="DNS"];
+                ISP -> DNS [label="3) DNS lookup: domain -> IP"];
+            }
+        }
+        """
+        base_kwargs = dict(
+            use_ascii=True,
+            bboxes=True,
+            edge_anchor_mode="ports",
+            shared_ports_mode="none",
+            node_label_attr="label",
+            edge_label_attr="label",
+        )
+
+        renderer_default = ASCIIRenderer.from_dot(
+            dot_string,
+            options=LayoutOptions(**base_kwargs),
+        )
+        positions_default, _w_default, _h_default = (
+            renderer_default.layout_manager.calculate_layout()
+        )
+        default_anchor_map = renderer_default._compute_edge_anchor_map(
+            positions_default
+        )
+        renderer_default._edge_anchor_map = default_anchor_map  # noqa: SLF001
+        default_label_bounds = renderer_default._estimate_edge_label_fallback_bounds(
+            "ISP",
+            "DNS",
+            positions_default,
+        )
+        self.assertIsNotNone(default_label_bounds)
+        default_boxes = renderer_default._build_subgraph_boxes(positions_default)
+        self.assertTrue(default_boxes)
+        default_box = default_boxes[0]
+
+        renderer_fit = ASCIIRenderer.from_dot(
+            dot_string,
+            options=LayoutOptions(
+                **base_kwargs,
+                subgraph_fit_edge_labels=True,
+            ),
+        )
+        positions_fit, _w_fit, _h_fit = renderer_fit.layout_manager.calculate_layout()
+        fit_boxes = renderer_fit._build_subgraph_boxes(positions_fit)
+        self.assertTrue(fit_boxes)
+        fit_box = fit_boxes[0]
+
+        assert default_label_bounds is not None
+        self.assertGreater(default_label_bounds["right"], default_box.right)
+        self.assertLessEqual(default_label_bounds["right"], fit_box.right)
+
     def test_internet_style_options_render_stable_phase_flow_structure(self):
         renderer = ASCIIRenderer.from_dot(
             INTERNET_SUBGRAPH_DOT,

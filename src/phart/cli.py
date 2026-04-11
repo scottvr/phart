@@ -78,6 +78,7 @@ CLI_LAYOUT_FIELD_MAP = {
     "--node-label-max-lines": {"node_label_max_lines"},
     "--bbox-multiline-labels": {"bbox_multiline_labels"},
     "--bbox-singleline-labels": {"bbox_multiline_labels"},
+    "--subgraph-fit-edge-labels": {"subgraph_fit_edge_labels"},
     "--colors": {"ansi_colors", "edge_color_mode"},
     "--no-color-nodes": {"color_nodes"},
     "--node-color": {"node_color"},
@@ -596,6 +597,15 @@ def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
         ),
     )
     parser.add_argument(
+        "--subgraph-fit-edge-labels",
+        action="store_true",
+        default=False,
+        help=(
+            "Expand subgraph container bounds to include long fallback edge labels "
+            "for edges fully inside each subgraph."
+        ),
+    )
+    parser.add_argument(
         "--colors",
         choices=sorted(COLOR_MODES),
         default="none",
@@ -1048,6 +1058,7 @@ def create_layout_options(
         node_label_sep=args.node_label_sep,
         node_label_max_lines=args.node_label_max_lines,
         bbox_multiline_labels=args.bbox_multiline_labels,
+        subgraph_fit_edge_labels=args.subgraph_fit_edge_labels,
         ansi_colors=(color_mode != "none"),
         allow_ansi_in_ascii=allow_ansi_in_ascii,
         edge_color_mode="source" if color_mode == "none" else color_mode,

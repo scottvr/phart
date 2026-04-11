@@ -1381,6 +1381,16 @@ def main():
         options = create_layout_options(args, explicit_layout_fields)
         self.assertFalse(options.bbox_multiline_labels)
 
+    def test_subgraph_fit_edge_labels_flag_populates_layout_options(self):
+        sys.argv = [
+            "phart",
+            "--subgraph-fit-edge-labels",
+            str(self.test_text_file),
+        ]
+        args, _unknown, explicit_layout_fields, _module_argv = parse_args()
+        options = create_layout_options(args, explicit_layout_fields)
+        self.assertTrue(options.subgraph_fit_edge_labels)
+
     def test_node_and_edge_label_flags_populate_layout_options(self):
         sys.argv = [
             "phart",

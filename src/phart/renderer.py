@@ -679,6 +679,87 @@ class ASCIIRenderer:
         normalized = nodes_mod.normalize_label_value(label)
         return normalized if normalized else fallback
 
+    def _resolve_edge_label_text(self, start: Any, end: Any) -> Optional[str]:
+        edge_label_attr = self.options.edge_label_attr
+        if not edge_label_attr:
+            return None
+
+        edge_data = self.graph.get_edge_data(start, end) or {}
+        label: Any = None
+        if isinstance(edge_data, dict):
+            if edge_label_attr in edge_data:
+                label = edge_data.get(edge_label_attr)
+            else:
+                for candidate in edge_data.values():
+                    if isinstance(candidate, dict) and edge_label_attr in candidate:
+                        label = candidate.get(edge_label_attr)
+                        break
+
+        if label is None:
+            return None
+
+        text = self._normalize_label_value(label)
+        return text if text else None
+
+    def _estimate_edge_label_fallback_bounds(
+        self,
+        start: Any,
+        end: Any,
+        positions: Dict[Any, Tuple[int, int]],
+    ) -> Optional[Dict[str, int]]:
+        """Return painted bounds for labels that fall back outside edge spans.
+
+        Subgraph fitting only considers fallback label placement (the form that
+        renders to the right of a route and can overflow subgraph borders).
+        """
+        if start not in positions or end not in positions:
+            return None
+
+        text = self._resolve_edge_label_text(start, end)
+        if not text:
+            return None
+
+        start_anchor, end_anchor = self._get_edge_anchor_points(start, end, positions)
+        start_x, start_y = start_anchor
+        end_x, end_y = end_anchor
+        text_width = len(text)
+        if text_width <= 0:
+            return None
+
+        def fallback_bounds() -> Dict[str, int]:
+            mid_y = (min(start_y, end_y) + max(start_y, end_y)) // 2
+            label_x = max(start_x, end_x) + 2
+            return {
+                "left": label_x,
+                "right": label_x + text_width - 1,
+                "top": mid_y,
+                "bottom": mid_y,
+            }
+
+        if start_y == end_y:
+            min_x = min(start_x, end_x) + 1
+            max_x = max(start_x, end_x) - 1
+            available = max_x - min_x + 1
+            if available >= text_width:
+                return None
+            return fallback_bounds()
+
+        top_anchor = start_anchor if start_y < end_y else end_anchor
+        bottom_anchor = end_anchor if start_y < end_y else start_anchor
+        top_y = top_anchor[1]
+        bottom_y = bottom_anchor[1]
+        if bottom_y <= top_y + 1:
+            return None
+
+        if start_x != end_x:
+            min_x = min(start_x, end_x) + 1
+            max_x = max(start_x, end_x) - 1
+            available = max_x - min_x + 1
+            if available >= text_width:
+                return None
+
+        return fallback_bounds()
+
     def _build_subgraph_boxes(
         self, positions: Dict[Any, Tuple[int, int]]
     ) -> List[_SubgraphBox]:
@@ -718,6 +799,21 @@ class ASCIIRenderer:
         else:
             pad_x = 1
             pad_y = 1
+        edge_label_bounds_by_edge: Dict[Tuple[Any, Any], Dict[str, int]] = {}
+        if self.options.subgraph_fit_edge_labels:
+            previous_anchor_map = self._edge_anchor_map
+            self._edge_anchor_map = self._compute_edge_anchor_map(positions)
+            try:
+                for start, end in self.graph.edges():
+                    bounds = self._estimate_edge_label_fallback_bounds(
+                        start, end, positions
+                    )
+                    if bounds is None:
+                        continue
+                    edge_label_bounds_by_edge[(start, end)] = bounds
+            finally:
+                self._edge_anchor_map = previous_anchor_map
+
         computed: Dict[str, _SubgraphBox] = {}
 
         def compute_box(subgraph_id: str) -> Optional[_SubgraphBox]:
@@ -782,6 +878,33 @@ class ASCIIRenderer:
                     if max_bottom is None
                     else max(max_bottom, child_box.bottom)
                 )
+
+            if edge_label_bounds_by_edge and node_ids:
+                node_id_set = set(node_ids)
+                label_padding = 1
+                for (start, end), bounds in edge_label_bounds_by_edge.items():
+                    if start not in node_id_set or end not in node_id_set:
+                        continue
+                    min_left = (
+                        bounds["left"] - label_padding
+                        if min_left is None
+                        else min(min_left, bounds["left"] - label_padding)
+                    )
+                    max_right = (
+                        bounds["right"] + label_padding
+                        if max_right is None
+                        else max(max_right, bounds["right"] + label_padding)
+                    )
+                    min_top = (
+                        bounds["top"]
+                        if min_top is None
+                        else min(min_top, bounds["top"])
+                    )
+                    max_bottom = (
+                        bounds["bottom"]
+                        if max_bottom is None
+                        else max(max_bottom, bounds["bottom"])
+                    )
 
             if (
                 min_left is None
@@ -2491,6 +2614,7 @@ def merge_layout_options(
         "node_label_sep",
         "node_label_max_lines",
         "bbox_multiline_labels",
+        "subgraph_fit_edge_labels",
         "ansi_colors",
         "allow_ansi_in_ascii",
         "edge_color_mode",

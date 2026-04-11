@@ -162,6 +162,9 @@ class LayoutOptions:
     bbox_multiline_labels: bool = field(
         default=True
     )  # Expand bbox height and paint multiline labels when enabled
+    subgraph_fit_edge_labels: bool = field(
+        default=False
+    )  # Expand subgraph boxes to include fallback edge-label text extents
     ansi_colors: bool = field(default=False)  # ANSI colorized render output
     allow_ansi_in_ascii: bool = field(
         default=False

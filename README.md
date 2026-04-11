@@ -308,7 +308,7 @@ usage: phart [-h] [--output OUTPUT] [--version] [--output-format {ditaa,ditaa-pu
              [--cross-partition-edge-style {stub,none}] [--connector-compaction {none,partition}] [--partition-order {natural,size}] [--panel-headers {none,basic,lineage}]
              [--connector-ref {auto,id,label,both}] [--bboxes] [--hpad HPAD] [--vpad VPAD] [--uniform] [--edge-anchors {auto,center,ports}] [--shared-ports {any,minimize,none}]
              [--bidirectional-mode {coalesce,separate}] [--labels] [--node-labels [ATTR]] [--edge-labels [ATTR]] [--node-label-lines SPEC] [--node-label-sep NODE_LABEL_SEP]
-             [--node-label-max-lines NODE_LABEL_MAX_LINES] [--bbox-multiline-labels] [--bbox-singleline-labels] [--colors {attr,none,path,source,target}] [--no-color-nodes] [--edge-glyph-preset {default,thick,double}]
+             [--node-label-max-lines NODE_LABEL_MAX_LINES] [--bbox-multiline-labels] [--bbox-singleline-labels] [--subgraph-fit-edge-labels] [--colors {attr,none,path,source,target}] [--no-color-nodes] [--edge-glyph-preset {default,thick,double}]
              [--edge-arrow-style {ascii,unicode}] [--edge-color-rule RULE] [--style-rule RULE] [--style-rules-file FILE] [--svg-cell-size SVG_CELL_SIZE] [--svg-font-family SVG_FONT_FAMILY]
              [--svg-text-mode {text,path}] [--svg-font-path SVG_FONT_PATH] [--svg-fg SVG_FG] [--svg-bg SVG_BG] [--whitespace {auto,ascii-space,nbsp}] [--paginate-output-width [WIDTH|auto]]
              [--paginate-output-height [HEIGHT|auto]] [--paginate-overlap COLUMNS] [--select-output-page-x PAGE_X] [--select-output-page-y PAGE_Y] [--list-pages] [--write-pages DIR]
@@ -389,6 +389,8 @@ options:
                         Compatibility alias; multiline node labels in bboxes are enabled by default.
   --bbox-singleline-labels
                         Disable multiline node labels in bboxes (flatten embedded newlines to one line)
+  --subgraph-fit-edge-labels
+                        Expand subgraph container bounds to include long fallback edge labels for edges fully inside each subgraph.
   --colors {attr,none,path,source,target}
                         ANSI edge coloring mode: none (default), source, target, path, or attr
   --no-color-nodes      Color edges only, not nodes
