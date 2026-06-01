@@ -1,0 +1,58 @@
+name: Workflow Policy
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/*.yml"
+      - ".github/workflows/*.yaml"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/*.yml"
+      - ".github/workflows/*.yaml"
+
+permissions:
+  contents: read
+
+jobs:
+  enforce-sha-pinning:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Ensure external actions are pinned to full commit SHA
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import pathlib
+          import re
+          import sys
+
+          wf_dir = pathlib.Path(".github/workflows")
+          uses_re = re.compile(r"^\s*-\s*uses:\s*([^\s#]+)")
+          full_sha = re.compile(r"^[0-9a-f]{40}$")
+          violations = []
+
+          for wf in sorted(wf_dir.glob("*.y*ml")):
+              for idx, raw in enumerate(wf.read_text(encoding="utf-8").splitlines(), start=1):
+                  m = uses_re.match(raw)
+                  if not m:
+                      continue
+                  ref = m.group(1)
+                  if ref.startswith("./") or ref.startswith("docker://"):
+                      continue
+                  if "@" not in ref:
+                      violations.append((wf, idx, ref, "missing @ref"))
+                      continue
+                  _action, pin = ref.rsplit("@", 1)
+                  if not full_sha.fullmatch(pin):
+                      violations.append((wf, idx, ref, "not full 40-char SHA"))
+
+          if violations:
+              print("Found unpinned/non-SHA action references:")
+              for wf, idx, ref, reason in violations:
+                  print(f"  {wf}:{idx}: {ref} ({reason})")
+              sys.exit(1)
+
+          print("All external actions are pinned to full commit SHAs.")
+          PY

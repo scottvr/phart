@@ -1,14 +1,43 @@
-# phart v1.5.0
+# phart
 
 **PHART:** The Python Hierarchical ASCII Representation Tool - A Pure Python tool for graph visualization via charts and diagrams rendered in ASCII.
 
+Release status (as of 2026-05-31):
+
+- Current PyPI release: `1.1.4`
+- Next planned release: `2.0.0`
+- This README reflects `main` / release-branch work-in-progress until tag + publish.
+- Concise publish notes draft: [PYPI-RELEASE-NOTES-2.0.0.md](PYPI-RELEASE-NOTES-2.0.0.md)
+
+## Quick Start
+
+Install from PyPI:
+
+```bash
+pip install phart
+```
+
+Render a graph file:
+
+```bash
+phart graph.dot
+```
+
+Render from a Python script that builds a graph:
+
+```bash
+phart your_graph_script.py
+```
+
+See `phart --help` for full CLI options.
+
 ## New!
 
-This 1.5.0 release is bigger than any single update in the two years phart has been in development.
+This 2.0.0 release is bigger than any single update in the two years phart has been in development.
 
 I'll try to document all of the new features, but alas, I tend to get too wordy so I've trashed and reverted back the old README several times already. For deep dives into new topics, I'm creating separate docs in the docs directory in the repo.
 
-## Features (some pre-date v1.5.0 but hadn't been documented yet.)
+## Features (some pre-date v2.0.0 but hadn't been documented yet.)
 
 New stuff is **bolded.**
 
@@ -27,10 +56,10 @@ New stuff is **bolded.**
 - **Optional width/height pagination for text output**
 - **Optional multiline node labels in bounding boxes**
 - **mermaid flowchart, svg, and html source output**
-- **pagination (horizontal and vertical) witth CLI page-selector support**
-- **partitioning (horizontal and vertical - set the screen canvas size as a contraint, and adjust the layers (rank aands ) to fit within canvas constraints**
-- **nodes and edges support arbitrary attribiutes now, not just label, color, etc)**
-- **those attributes can be displayed as lbels on nodes and edges**
+- **pagination (horizontal and vertical) with CLI page-selector support**
+- **partitioning (horizontal and vertical): set the screen canvas size as a constraint, and adjust ranks/routes to fit within canvas constraints**
+- **nodes and edges support arbitrary attributes now, not just label, color, etc)**
+- **those attributes can be displayed as labels on nodes and edges**
 - **styling, coloring, etc based on attributes is now done with a single unified, simple, and flexible syntax.**
 - **not that you asked for it, but connectors and panel headers can now be styled too**
 - **and the phart 0.1.4 original node styling and edge styling is now fully realized.**
@@ -42,7 +71,7 @@ New stuff is **bolded.**
 
 ---
 
-## Some details on new v1.5.0 stuff:
+## Some details on new v2.0.0 stuff:
 
 ## Label Synthesis and Multiline BBoxes
 
@@ -257,7 +286,7 @@ The acronym was a fortuitous accident from the non-abbreviated words that the le
 
 When I point out that phart is not a Perl or a PHP webapp, it may appear that I am
 _throwing shade_ at the existing solutions, but it is meant in a good-hearted way.
-Wrapping the OG perl Graph::Easy is a straightforward way to go about it, and a web interface to the same is a project I might create have created as well, but it is no
+Wrapping the OG perl Graph::Easy is a straightforward way to go about it, and a web interface to the same is a project I might create as well, but it is no
 longer a certainty that a system you are working on will have Perl installed these days,
 and spinning up a Docker container in order to add ascii line art graph visualizations to
 a python tool seemed a bit excessive, _even for me._
@@ -270,33 +299,37 @@ So, for better or worse, we have PHART, and the ability to render a NX digraph i
 
 # Installation
 
-requires Python >= 3.10 and NetworkX >= 3.3
+Requires Python >= 3.14 and NetworkX >= 3.3.
 
-From PyPi (the phart package there is out of date at the moment):
+From PyPI:
 
 ```bash
 pip install phart
 ```
 
-Or for the latest version:
+From source (latest `main`):
 
-```
+```bash
 git clone https://github.com/scottvr/phart
 cd phart
-python -mvenv .venv
+python3 -m venv .venv
 . .venv/bin/activate
 # or .venv\Scripts\activate on Windows
 pip install .
 ```
 
-For your convenience, any 'extra' requirements can be installed bundled by category.
-For instance, if you require DOT file support to have phart use one of the dot files
-from the `examples/` directory, all requirements, including pydot, to use the examples
-can be installed with `piip install -e .'[examples]'`.
+Optional dependency groups are available by category:
 
-To install all `extra` requirements (e.g., `fonttools` for svg rendering support, `scipy` for Kamada-Kawai layout support), you can install them all with `pip instaall -e .'[extra]'`. Additionally, there are `[developer]` and `[test]` module requirements that can be installed, or to get _everything-everywhere-all-at-once_, you can `pip install -e .'[all]'`. (Note: If installing from PyPi, you would use `pip install 'phart[all]'` rather than the `-e .` syntax for installing from source.)
+- Examples/DOT support: `pip install -e '.[examples]'`
+- SVG support: `pip install -e '.[svg]'`
+- Extra bundle: `pip install -e '.[extra]'`
+- Everything: `pip install -e '.[all]'`
+
+If installing from PyPI instead of source, use `pip install 'phart[all]'` (or any specific extra group).
 
 ## The CLI
+
+The following is a snapshot; use `phart --help` in your installed version for the latest options.
 
 ```bash
 $ phart --help
@@ -324,7 +357,7 @@ options:
   --output, -o OUTPUT   Output file (if not specified, prints to stdout)
   --version, -v         show program's version number and exit
   --output-format {ditaa,ditaa-puml,html,latex-markdown,mmd,svg,text}
-                        Output format: text (default), ditaa, ditaa-puml, svg, html, mmmd, or latex-markdown
+                        Output format: text (default), ditaa, ditaa-puml, svg, html, mmd, or latex-markdown
   --style {minimal,square,round,diamond,custom,bbox}
                         Node style (default: square, or minimal when --bboxes is enabled)
   --node-spacing NODE_SPACING
@@ -449,7 +482,7 @@ So, I inadvertently merged some code into main that was not intended to be relea
 
 **LaTeX/GFM**
 
-Nevertheless, some might notice the command-line options, when runnning `phart --help` for example, and try to use some of the features, so I figured I may as well explain one of the goofier ones. I've written about it here in [GHM-LAtEX.md](https://github.com/scottvr/phart/blob/main/docs/GHM-LATEX.md).
+Nevertheless, some might notice the command-line options, when running `phart --help` for example, and try to use some of the features, so I figured I may as well explain one of the goofier ones. I've written about it here in [GHM-LATEX.md](https://github.com/scottvr/phart/blob/main/docs/GHM-LATEX.md).
 
 **SVG/HTML enhancements**
 
@@ -566,7 +599,7 @@ $ phart balanced_tree.py --bboxes --hpad 2 --style minimal --layer-spacing 3  --
 +-----+    +-----+    +-----+    +-----+
 ```
 
-We can increasae the space between "layers" of nodes, we can move the edges to connect to/from "ports" on the most efficient side of the nodes, and we can render in unicode, using the same script, by passing the options via the command-line until we find what we like:
+We can increase the space between "layers" of nodes, we can move the edges to connect to/from "ports" on the most efficient side of the nodes, and we can render in unicode, using the same script, by passing the options via the command-line until we find what we like:
 
 ```
 $ phart balanced_tree.py --bboxes --hpad 2 --style minimal --layer-spacing 4 --edge-anchors ports
@@ -723,7 +756,7 @@ The renderer shows edge direction using arrows:
 - ^ : upward flow
 - &gt; or < : horizontal flow
 
-Speaking of "circular", there's a bunch of exampels of the Circular Layout strategy, among with many others in a documented dedicated to that purpose.
+Speaking of "circular", there are examples of the Circular Layout strategy, among many others in docs dedicated to that purpose.
 
 See [LAYOUT-STRATEGIES.md](https://github.com/scottvr/phart/blob/main/LAYOUT-STRATEGIES.md) in the repo for these demos.
 
@@ -763,7 +796,7 @@ phart --output-format svg \
   graph.dot > graph.svg
 ```
 
-See [svg-renderer.md](svg-renderer.md) for details and troubleshooting.
+See [docs/svg-renderer.md](docs/svg-renderer.md) for details and troubleshooting.
 
 ### DOT Files
 
@@ -771,13 +804,13 @@ See [svg-renderer.md](svg-renderer.md) for details and troubleshooting.
 - requires pydot
 
 ```bash
-pip install phart[extras]
+pip install phart[extra]
 ```
 
 or using requirements file
 
 ```bash
-pip install -r requirements\extra.txt
+pip install -r requirements/extra.txt
 ```
 
 ### DOT Example

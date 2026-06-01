@@ -1,0 +1,4 @@
+# Security-sensitive automation files should require owner review.
+/.github/workflows/* @scottvr
+/.github/dependabot.yml @scottvr
+/.github/CODEOWNERS @scottvr
