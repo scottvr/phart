@@ -2,12 +2,11 @@
 
 **PHART:** The Python Hierarchical ASCII Representation Tool - A Pure Python tool for graph visualization via charts and diagrams rendered in ASCII.
 
-Release status (as of 2026-05-31):
+Release status:
 
-- Current PyPI release: `1.1.4`
-- Next planned release: `2.0.0`
-- This README reflects `main` / release-branch work-in-progress until tag + publish.
-- Concise publish notes draft: [PYPI-RELEASE-NOTES-2.0.0.md](PYPI-RELEASE-NOTES-2.0.0.md)
+- Current PyPI release: `2.0.6`
+- Previous long-lived PyPI release: `1.1.4`
+- Concise publish notes: [PYPI-RELEASE-NOTES-2.0.6.md](PYPI-RELEASE-NOTES-2.0.6.md)
 
 ## Quick Start
 
@@ -33,11 +32,11 @@ See `phart --help` for full CLI options.
 
 ## New!
 
-This 2.0.0 release is bigger than any single update in the two years phart has been in development.
+This 2.0 release is bigger than any single update in the two years phart has been in development.
 
 I'll try to document all of the new features, but alas, I tend to get too wordy so I've trashed and reverted back the old README several times already. For deep dives into new topics, I'm creating separate docs in the docs directory in the repo.
 
-## Features (some pre-date v2.0.0 but hadn't been documented yet.)
+## Features (some pre-date v2.0 but hadn't been documented yet.)
 
 New stuff is **bolded.**
 
@@ -71,7 +70,7 @@ New stuff is **bolded.**
 
 ---
 
-## Some details on new v2.0.0 stuff:
+## Some details on new v2.0 stuff:
 
 ## Label Synthesis and Multiline BBoxes
 

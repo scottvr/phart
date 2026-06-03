@@ -1,4 +1,4 @@
-# Changelog: Changes Since `release-1.5.0` (Target: `2.0.0`)
+# Changelog: Changes Since `release-1.5.0` (Target: `2.0.6`)
 
 Comparison range: `origin/release-1.5.0..main`
 

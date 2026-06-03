@@ -1,8 +1,8 @@
-# PHART 2.0.0 (Draft) - PyPI Release Notes
+# PHART 2.0.6 - PyPI Release Notes
 
-This release is a major jump from the current PyPI package (`1.1.4`) and includes substantial feature growth, CLI expansion, rendering improvements, and stricter runtime expectations.
+This release is a major jump from the previous long-lived PyPI package (`1.1.4`) and includes substantial feature growth, CLI expansion, rendering improvements, and stricter runtime expectations.
 
-## Why `2.0.0`
+## Why `2.x`
 
 - The package on PyPI is far behind current `main`.
 - User-visible behavior and CLI capabilities have expanded significantly.
@@ -48,4 +48,4 @@ This release is a major jump from the current PyPI package (`1.1.4`) and include
 
 - Start by running your existing commands with `phart --help` open and compare flags.
 - If you parse output downstream, validate with your real graphs first.
-- Consider pinning to `2.0.0` initially before adopting newer releases.
+- Consider pinning to `2.0.6` initially before adopting newer releases.
