@@ -1249,7 +1249,7 @@ class LayoutManager:
         self, graph: nx.DiGraph, spacing: int
     ) -> Dict[str, Tuple[int, int]]:
         """Planar layout with hierarchical fallback for non-planar graphs."""
-        planar_graph = nx.Graph(graph)
+        planar_graph: nx.Graph[Any] = nx.Graph(graph)
         try:
             coord_map = nx.planar_layout(planar_graph)
             return self._layout_from_coordinate_map(coord_map, spacing)
@@ -1349,7 +1349,7 @@ class LayoutManager:
         self, graph: nx.DiGraph, spacing: int
     ) -> Dict[str, Tuple[int, int]]:
         """Multipartite layout driven by subset-like node attributes or BFS depth."""
-        multipartite_graph = nx.Graph(graph).copy()
+        multipartite_graph: nx.Graph[Any] = nx.Graph(graph).copy()
         subset_map = self._infer_multipartite_subset_map(graph)
         nx.set_node_attributes(multipartite_graph, subset_map, "_phart_subset")
         coord_map = nx.multipartite_layout(
