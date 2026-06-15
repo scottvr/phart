@@ -38,9 +38,17 @@ jobs:
             release-*) tag_version="${tag#release-}" ;;
             *) tag_version="$tag" ;;
           esac
-          pkg_version="$(python -c "import re, pathlib; s=pathlib.Path('src/phart/__init__.py').read_text(encoding='utf-8'); m=re.search(r'__version__\\s*=\\s*\\\"([^\\\"]+)\\\"', s); print(m.group(1) if m else '')")"
+          pkg_version="$(python - <<'PY'
+          import tomllib
+
+          with open("pyproject.toml", "rb") as pyproject_file:
+              pyproject = tomllib.load(pyproject_file)
+
+          print(pyproject.get("project", {}).get("version", ""))
+          PY
+          )"
           if [ -z "$pkg_version" ]; then
-            echo "Could not resolve package version from src/phart/__init__.py"
+            echo "Could not resolve package version from pyproject.toml"
             exit 1
           fi
           if [ "$tag_version" != "$pkg_version" ]; then
@@ -49,12 +57,92 @@ jobs:
           fi
           echo "Tag/version check passed: $tag_version"
 
+      - name: Validate source module entrypoint version
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          pkg_version="$(python - <<'PY'
+          import tomllib
+
+          with open("pyproject.toml", "rb") as pyproject_file:
+              pyproject = tomllib.load(pyproject_file)
+
+          print(pyproject.get("project", {}).get("version", ""))
+          PY
+          )"
+          module_version="$(PYTHONPATH=src python -m phart --version)"
+          if [ "$module_version" != "$pkg_version" ]; then
+            echo "Module entrypoint/version mismatch: module=$module_version package=$pkg_version"
+            exit 1
+          fi
+          echo "Source module entrypoint check passed: $module_version"
+
       - name: Build sdist and wheel
         run: |
           python -m pip install --upgrade pip
           python -m pip install build twine
           python -m build
           twine check dist/*
+
+      - name: Validate distribution metadata version
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import tarfile
+          import tomllib
+          from email.parser import Parser
+          from pathlib import Path
+          from zipfile import ZipFile
+
+          with open("pyproject.toml", "rb") as pyproject_file:
+              expected = tomllib.load(pyproject_file)["project"]["version"]
+
+          versions = {}
+
+          for wheel in Path("dist").glob("*.whl"):
+              with ZipFile(wheel) as archive:
+                  metadata_name = next(
+                      name
+                      for name in archive.namelist()
+                      if name.endswith(".dist-info/METADATA")
+                  )
+                  metadata = Parser().parsestr(
+                      archive.read(metadata_name).decode("utf-8")
+                  )
+              versions[wheel.name] = metadata["Version"]
+
+          for sdist in Path("dist").glob("*.tar.gz"):
+              with tarfile.open(sdist, "r:gz") as archive:
+                  pkg_info_name = next(
+                      name
+                      for name in archive.getnames()
+                      if name.endswith("/PKG-INFO")
+                  )
+                  pkg_info = archive.extractfile(pkg_info_name)
+                  if pkg_info is None:
+                      raise RuntimeError(f"Could not read {pkg_info_name}")
+                  metadata = Parser().parsestr(pkg_info.read().decode("utf-8"))
+              versions[sdist.name] = metadata["Version"]
+
+          if not versions:
+              raise RuntimeError("No distributions found in dist/")
+
+          mismatches = {
+              name: version
+              for name, version in versions.items()
+              if version != expected
+          }
+          if mismatches:
+              details = ", ".join(
+                  f"{name}={version}" for name, version in sorted(mismatches.items())
+              )
+              raise SystemExit(
+                  f"Distribution metadata/version mismatch: expected={expected}; {details}"
+              )
+
+          print(f"Distribution metadata check passed: {expected}")
+          PY
 
       - name: Upload dist artifacts
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
