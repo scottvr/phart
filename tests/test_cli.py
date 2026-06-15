@@ -7,12 +7,15 @@ import tempfile
 import shutil
 import re
 import json
+import os
+import subprocess
 from pathlib import Path
 import sys
 from io import StringIO
 from unittest.mock import patch
 
 
+from phart import __version__
 from phart.cli import create_layout_options, main, parse_args
 
 
@@ -208,6 +211,24 @@ def main():
         sys.stderr = self.old_stderr
         sys.argv = self.old_argv
         shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def test_module_entrypoint_reports_version(self):
+        """Test running the CLI without relying on an installed script shim."""
+        env = os.environ.copy()
+        src_path = str(Path(__file__).resolve().parents[1] / "src")
+        env["PYTHONPATH"] = (
+            src_path
+            if not env.get("PYTHONPATH")
+            else f"{src_path}{os.pathsep}{env['PYTHONPATH']}"
+        )
+        result = subprocess.run(
+            [sys.executable, "-m", "phart", "--version"],
+            check=True,
+            capture_output=True,
+            env=env,
+            text=True,
+        )
+        self.assertEqual(result.stdout.strip(), __version__)
 
     def test_basic_rendering(self):
         """Test basic DOT file rendering."""

@@ -30,6 +30,13 @@ phart your_graph_script.py
 
 See `phart --help` for full CLI options.
 
+When working directly from a source checkout, you can bypass any installed
+console-script shim and run the CLI module directly:
+
+```bash
+PYTHONPATH=src python -m phart --version
+```
+
 ## New!
 
 This 2.0 release is bigger than any single update in the two years phart has been in development.
