@@ -1,0 +1,28 @@
+sequenceDiagram
+    participant B as Browser
+    participant OS as OS/Cache
+    participant DNS as DNS Resolver
+    participant G as Gateway/Router
+    participant BN as Internet Backbone
+    participant WS as Web Server
+
+    Note over B, WS: 1. DNS Lookup Phase
+    B->>OS: Look up Domain Name (example.com)
+    OS-->>B: IP Not Found
+    B->>DNS: Recursive Query for IP
+    DNS->>DNS: Query Root/TLD Servers
+    DNS-->>B: Return IP Address (93.184.216.34)
+
+    Note over B, WS: 2. Connection & Request Phase
+    B->>G: TCP SYN (Request Connection)
+    G->>BN: Route to Server
+    BN->>WS: Forward Packet
+    WS-->>BN: TCP SYN-ACK
+    BN-->>G: Forwarded
+    G-->>B: TCP ACK (Connection Established)
+
+    Note over B, WS: 3. HTTP Exchange Phase
+    B->>WS: HTTP GET Request
+    WS->>WS: Process Request
+    WS-->>B: HTTP 200 OK & Content (HTML)
+    B->>B: Render Page

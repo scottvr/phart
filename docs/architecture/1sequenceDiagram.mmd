@@ -1,0 +1,30 @@
+sequenceDiagram
+    participant User as Browser (Client)
+    participant Gateway as Home Gateway/Router
+    participant Resolver as DNS Resolver (ISP)
+    participant DNS as DNS Root/TLD/Auth Servers
+    participant Backbone as Internet Backbone
+    participant WebServer as Web Server
+
+    Note over User, Resolver: Phase 1: DNS Resolution
+    User->>User: Check Browser/OS Cache
+    User->>Gateway: Recursive DNS Query
+    Gateway->>Resolver: Forward Query (Port 53)
+
+    loop Hierarchical Lookup
+        Resolver->>DNS: Query Root/TLD/Authoritative
+        DNS-->>Resolver: Referral or IP Address
+    end
+
+    Resolver-->>Gateway: Return IP Address
+    Gateway-->>User: Return IP Address to Browser
+
+    Note over User, WebServer: Phase 2: Web Page Request
+    User->>Gateway: HTTP/HTTPS Request
+    Gateway->>Backbone: Route Packets via ISP
+    Backbone->>Backbone: Core Router Hops
+    Backbone->>WebServer: Deliver Request to IP
+
+    WebServer->>Backbone: Send HTML/Data Response
+    Backbone->>Gateway: Route Back to Client IP
+    Gateway->>User: Render Webpage
