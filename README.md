@@ -30,6 +30,10 @@ phart your_graph_script.py
 
 See `phart --help` for full CLI options.
 
+## What does phart do?
+
+For a quick visual rundown of the types of things you might do with phart,  take a look at [LAYOUT-STRATEGIES.md](https://github.com/scottvr/phart/blob/main/LAYOUT-STRATEGIES.md)
+
 ## New!
 
 This 2.0 release is bigger than any single update in the two years phart has been in development.
