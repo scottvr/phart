@@ -39,7 +39,7 @@ repos:
     rev: a66e98df7b4aeeb3724184b332785976d062b92e
     hooks:
       - id: mypy
-        name: "mypy 1.19.1"
+        name: "mypy 2.3.0"
         entry: ./.venv/bin/mypy
         files: ^src/phart/
         exclude: ^examples/
