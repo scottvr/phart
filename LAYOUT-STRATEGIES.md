@@ -183,15 +183,15 @@ We have a `--flow up` option for cases like that:
 <img width="400" height="160" alt="sempath2" src="https://github.com/user-attachments/assets/85e2f87a-b3d1-410b-a5d8-30ab710b7eda" />
 
 That makes more sense to me inverted like that,
-but what a mess at those bottom rows. We can increase `layer_spacing`:
+but what a mess at those bottom rows. Let's increase `layer_spacing`:
 
 <img width="400" height="80" alt="sempath-4" src="https://github.com/user-attachments/assets/895721ee-2bc9-4ff5-a21a-b3645ac4498a" />
 
-And still confusing. We'll increases the `layer_spacing` further:
+And still a bit confusing. We'll increases the `layer_spacing` further:
 
 <img width="400" height="80" alt="sempath-5" src="https://github.com/user-attachments/assets/9e4d9c89-4d01-4d1c-9a9c-d180c05ff58a" />
 
-OK, so maybe one of the other layouts demonstrates why it is useful to have these additional options available for placing the nodes in a 2D plane for visualization. This one is just too hard to follow in the hierarchical layout with orthogonal edges.
+If this is still too hard to follow in the hierarchical layout, you can experiment more with spacing or just try a new layout. FWIW, even in B&W, it turns out that what, to me, is the intuitive way to see those crossing edge lines is actually correct, so though it looked *potentially* confusing to me even with more layer_spacing, it was actually fine. 
 
 I hope you enjoyed taking a look at how different layouts effect legibility of the information conveyed by your ascii visualization of a graph using **phart**.
 
