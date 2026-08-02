@@ -1,15 +1,6 @@
-# Style Rules Specification (v1.5, Implemented)
+# Style Rules Specification 
 
 Status: Implemented in PHART v1.5.x (current branch behavior documented below).
-Audience: CLI users, library users, and maintainers
-
-## 1. Problem Statement
-
-PHART currently supports attribute-driven edge coloring via `--edge-color-rule`, but it is limited to direct edge-attribute equality matches. Users need richer conditions, including rules that combine edge attributes with endpoint node attributes (e.g. spouse edge color based on destination sex), while keeping simple cases ergonomic.
-
-The design goal is a unified rule model that can style both nodes and edges without introducing multiple disconnected rule systems.
-
-## 2. Goals
 
 - One rule model for both node and edge styling.
 - Support predicates over:
@@ -21,12 +12,7 @@ The design goal is a unified rule model that can style both nodes and edges with
 - Deterministic rule application order and precedence.
 - Safe parser/evaluator (no `eval`, no Python code execution).
 
-## 3. Non-Goals
 
-- General-purpose scripting language.
-- Arbitrary graph traversal in predicates (no multi-hop lookups in v1.5).
-
-## 4. Terminology
 
 - Target element: the element currently being styled (`node`, `edge`, `connector`, or `panel_header`).
 - Context object:
@@ -39,9 +25,9 @@ The design goal is a unified rule model that can style both nodes and edges with
   - `v`: destination-node attributes for an edge
 - Rule: a predicate + style assignment for a target type.
 
-## 5. Canonical Rule Model
+## Canonical Rule Model
 
-Rules normalize into this internal structure:
+Rules normalize into an internal structure such as:
 
 ```yaml
 id: spouse-male
@@ -72,16 +58,16 @@ Supported `set` keys:
 - `connector`: `color`, `prefix`, `suffix`
 - `panel_header`: `color`, `prefix`, `suffix`
 
-## 6. Expression Language (v1.5)
+## Expression Language (v1.5)
 
-### 6.1 Operators
+### Operators
 
 - Comparison: `==`, `!=`
 - Membership: `in`, `not in`
 - Boolean: `and`, `or`, `not`
 - Parentheses: `(`, `)`
 
-### 6.2 Literals
+### Literals
 
 - Strings: `'text'` or `"text"`
 - Numbers: integers/floats
@@ -89,7 +75,7 @@ Supported `set` keys:
 - Null: `null`
 - Lists: `["A", "B", "C"]`
 
-### 6.3 Attribute references
+### Attribute references
 
 - `self.role`, `edge.role`, `node.name`, `u.sex`, `v.sex`
 - Unqualified names (for example `role`) are shorthand for `self.role`.
@@ -100,13 +86,13 @@ Resolution rules:
 - Dot-path lookup supports nested dict traversal (`a.b.c`).
 - Non-scalar values can only be used with `in`/`not in` in v1.5.
 
-### 6.4 String comparison semantics
+### String comparison semantics
 
 Default string comparisons are case-insensitive in v1.5 for compatibility with existing edge color rule normalization.
 
-## 7. Rule Sources
+## Rule Sources
 
-### 7.1 CLI (simple)
+### CLI (simple)
 
 Keep existing:
 
@@ -116,7 +102,7 @@ Keep existing:
 
 This is compiled into equivalent advanced rules at parse time.
 
-### 7.2 CLI (advanced)
+### CLI (advanced)
 
 CLI supports repeated option:
 
@@ -133,7 +119,7 @@ Optional file input for complex sets:
 
 File format: YAML or JSON containing a `rules` array using canonical model.
 
-### 7.3 Programmatic
+### Programmatic
 
 `LayoutOptions` accepts raw canonical rule dicts via `style_rules`:
 
@@ -153,7 +139,7 @@ Implementation note:
 - Rules are compiled during `LayoutOptions` initialization into `_compiled_style_rules` for runtime evaluation.
 - `_compiled_style_rules` is internal and not part of the public stability contract.
 
-## 8. Evaluation Semantics
+## Evaluation Semantics
 
 1. Build evaluation context for each element.
 2. Sort rules by:
@@ -172,7 +158,7 @@ Fallbacks:
 
 - If no style rule matches, use existing color mode behavior (`source|target|path` etc.).
 
-## 9. Backward Compatibility
+## Backward Compatibility
 
 - `--edge-color-rule` remains supported.
 - Existing `edge_color_rules` field remains accepted.
@@ -192,27 +178,27 @@ normalizes to:
   set: { color: blue }
 ```
 
-## 10. Error Handling
+## Error Handling
 
 - Parse errors include rule text and token position.
 - Unknown target (`foo`) is rejected.
 - Unsupported operator/type combinations are rejected with explicit diagnostics.
 - Invalid color values preserve current color validation behavior.
 
-## 11. Security and Safety
+## Security and Safety
 
 - No dynamic code execution.
 - Dedicated tokenizer/parser for expression language.
 - Explicit recursion and token limits to avoid pathological input.
 
-## 12. Performance Expectations
+## Performance Expectations
 
 - Compile all rules once during option normalization.
 - Evaluate compiled AST per element.
 - Target complexity: O(R _ E) for edges and O(R _ N) for nodes, with small constants.
 - Optional future optimization: pre-index rules by referenced attributes.
 
-## 13. Implementation Status (Phased)
+## Implementation Status (Phased)
 
 Phase 1 completed:
 
@@ -232,7 +218,7 @@ Phase 3 completed for current scope:
 - Global edge presets and arrow style options implemented.
 - Legacy globals remain operational; style-rules override overlapping keys.
 
-### 13.1 Phase 3 Expansion: Legacy Feature Convergence
+### Phase 3 Expansion: Legacy Feature Convergence
 
 #### Background
 
@@ -281,137 +267,8 @@ Style rules are last-write authority for the fields they set.
 - Rule-driven style changes must not violate routing assumptions (cell widths, arrow locking).
 - If a rule sets an unsupported field for a target, fail fast with precise diagnostics.
 
-### 13.2 Phase 3 Implementation Checklist
 
-Execution board (feature branch: `feature/style-rule-node-style`):
-
-| ID  | Workstream                 | Status               | Notes                                                                                              |
-| --- | -------------------------- | -------------------- | -------------------------------------------------------------------------------------------------- |
-| A   | Contracts and option model | Completed (Phase 3a) | Key/target validation active for `node:{color,prefix,suffix,node_style}` and `edge:{color,glyphs}` |
-| B   | Node rendering integration | Completed (Phase 3a) | Rule-driven `prefix`/`suffix`/`node_style` wired in shared node line resolution (layout + draw)    |
-| C   | Edge rendering integration | Completed (Phase 3b) | Rule-driven `arrow_*`, `line_*`, `corner_*`, `tee_*`, and `cross` integrated into routing/merge    |
-| D   | Legacy convergence path    | Completed (Decision) | No implicit legacy-to-rule mapper in Phase 3; legacy globals remain, style-rules are authoritative |
-| E   | CLI / UX surface           | Completed            | CLI/docs cover style-rules plus global edge presets/arrow modes                                    |
-| F   | Test plan                  | In Progress          | Node-style + edge-glyph rule and validation tests added; parity tests pending                      |
-| G   | Rollout sequencing         | Completed (Phase 3)  | Steps 1-5 complete for style-rule/node-style/edge-glyph scope                                      |
-
-#### A. Contracts and option model
-
-- [x] Extend canonical style-rule schema docs with allowed `set` keys per `target`.
-- [x] Add `StyleSetKey` validation in rule compilation (reject unknown keys early).
-- [x] Add target/key compatibility checks (for example, disallow `arrow_up` on `node`).
-- [x] Keep `LayoutOptions` legacy fields unchanged for compatibility (`node_style`, `custom_decorators`, arrow glyph fields).
-- [x] Decision: no explicit compatibility mapper in Phase 3.
-
-Acceptance criteria:
-
-- Invalid key/target combinations fail at startup with precise error messages.
-- Existing code paths without style rules behave exactly as before.
-
-#### B. Node rendering integration
-
-- [x] Introduce node style-rule evaluator (`target=node`) that can resolve:
-  - `color`
-  - `prefix`
-  - `suffix`
-  - `node_style`
-  - optional safe padding overrides (`hpad`, `vpad`) only when `bboxes` is true.
-- [x] Apply resolved node style fields in one place before node glyph composition.
-- [x] Ensure bbox sizing uses post-rule effective text/decorators.
-- [x] Ensure multiline label flow remains correct with rule-modified node text wrappers.
-
-Acceptance criteria:
-
-- Per-node rule-driven decorators render deterministically.
-- No regressions in existing bbox/multiline tests.
-
-#### C. Edge rendering integration
-
-- [x] Extend edge style-rule evaluator (`target=edge`) beyond `color` to support glyph keys:
-  - arrows: `arrow_up/down/left/right`
-  - segments: `line_horizontal/line_vertical`
-  - junctions: `corner_*`, `tee_*`
-- [x] Apply resolved glyphs through routing/canvas paint path without bypassing conflict logic.
-- [x] Preserve arrow lock semantics for overlapping edges.
-- [x] Keep single-cell glyph invariant enforced at validation time.
-
-Acceptance criteria:
-
-- Rule-selected edge glyphs appear consistently on all routed segments.
-- Overlap and bidirectional behavior remain stable.
-
-#### D. Legacy convergence path
-
-- [x] Decision: no implicit legacy-to-rule mapper in Phase 3.
-- [x] Keep legacy global options operational (`NodeStyle`, `custom_decorators`, edge glyph fields).
-- [x] Define precedence for implemented scope:
-  1. defaults
-  2. explicit `LayoutOptions` globals
-  3. style rules
-- [ ] Add debug/trace hook (optional) to inspect effective style source for a node/edge.
-
-Acceptance criteria:
-
-- Legacy scripts continue to render with existing globals.
-- Style-rules remain the authoritative per-element override for keys they set.
-
-#### E. CLI / UX surface
-
-- [x] Keep `--style-rule` and `--style-rules-file` unchanged.
-- [x] Document new allowed `set` keys and target restrictions in `README.md` and `docs/index.md`.
-- [x] Add end-to-end CLI examples for:
-  - node decorators via rules
-  - edge arrow/glyph override via rules
-- [x] Improve CLI error text for unsupported fields and multi-character glyph attempts.
-
-Acceptance criteria:
-
-- Users can discover field support from `--help` and docs without reading code.
-
-#### F. Test plan (required before merge)
-
-- [x] Parser/validator tests:
-  - unknown keys
-  - wrong target/key combinations
-  - multi-char glyph rejection
-- [x] Renderer tests:
-  - per-node decorator/prefix/suffix application
-  - per-edge glyph key application
-  - arrow lock/overlap correctness under rule changes
-- [ ] Compatibility tests:
-  - `NodeStyle` + `custom_decorators` parity vs pre-Phase-3 output
-  - legacy edge glyph options parity
-- [x] CLI tests:
-  - valid/invalid `--style-rule` with new keys
-  - style-rules-file examples for node + edge keys
-
-Acceptance criteria:
-
-- New coverage includes behavior assertions and key validation coverage.
-- No regressions in existing edge routing and bbox suites.
-
-#### G. Rollout sequencing
-
-1. Validation + schema enforcement (implemented).
-2. Node rule fields (`prefix/suffix/node_style`) integration (implemented).
-3. Edge glyph fields integration (implemented).
-4. Legacy convergence decision + precedence finalization (implemented).
-5. Docs/examples finalization (implemented).
-
-## 14. Test Matrix (Minimum)
-
-- Parser:
-  - valid/invalid operators, parentheses, quoting, list literals.
-- Context access:
-  - edge/self/u/v path lookups and missing keys.
-- Compatibility:
-  - `--edge-color-rule` output equals canonical rule output.
-- Precedence:
-  - priority and declaration-order tie breaks.
-- CLI quoting:
-  - examples with shell-safe quoting for `and`/`or` expressions.
-
-## 15. Examples
+## Examples
 
 Simple edge attr:
 
