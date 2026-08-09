@@ -350,6 +350,58 @@ class TestASCIIRenderer(unittest.TestCase):
         self.assertIn("Alpha Beta", result)
         self.assertNotIn("Alpha\nBeta", result)
 
+    def test_node_label_max_width_wraps_long_label_within_bbox(self):
+        graph = nx.DiGraph()
+        graph.add_node("n1", label="alpha beta gamma delta epsilon")
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                bboxes=True,
+                use_labels=True,
+                node_label_max_width=20,
+                use_ascii=True,
+            ),
+        )
+        lines = renderer.render().splitlines()
+        self.assertTrue(any("alpha" in line for line in lines))
+        self.assertTrue(any("epsilon" in line for line in lines))
+        for line in lines:
+            self.assertLessEqual(len(line.rstrip()), 20)
+
+    def test_node_label_max_width_preserves_explicit_newlines(self):
+        graph = nx.DiGraph()
+        graph.add_node("n1", label="Alpha\nBeta")
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                bboxes=True,
+                use_labels=True,
+                node_label_max_width=40,
+                use_ascii=True,
+            ),
+        )
+        lines = renderer.render().splitlines()
+        # Budget is wide enough to hold both words, but the author's break wins.
+        self.assertFalse(any("Alpha Beta" in line for line in lines))
+        self.assertTrue(any("Alpha" in line for line in lines))
+        self.assertTrue(any("Beta" in line for line in lines))
+
+    def test_node_label_max_width_is_inert_without_bboxes(self):
+        graph = nx.DiGraph()
+        graph.add_node("n1", label="alpha beta gamma delta epsilon")
+
+        renderer = ASCIIRenderer(
+            graph,
+            options=LayoutOptions(
+                use_labels=True,
+                node_label_max_width=12,
+                use_ascii=True,
+            ),
+        )
+        self.assertIn("alpha beta gamma delta epsilon", renderer.render())
+
     def test_dot_escaped_newline_label_renders_multiline_in_bbox_mode(self):
         dot_string = r'digraph { n1 [label="Alpha\nBeta"]; }'
         renderer = ASCIIRenderer.from_dot(

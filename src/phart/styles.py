@@ -2,7 +2,7 @@
 from dataclasses import dataclass, field, fields
 from enum import Enum
 import unicodedata
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from .style_rules import CompiledStyleRule, compile_style_rules
 
@@ -89,6 +89,11 @@ class LayoutOptions:
         show_arrows: Whether to show direction arrows on edges
         use_ascii: Force ASCII output instead of Unicode
 
+    Label Control:
+        node_label_max_width: Total rendered node width to wrap labels into,
+            counting box borders, hpad, and node decorators. Requires bboxes
+            and bbox_multiline_labels; None (default) disables wrapping.
+
     Advanced Layout Control:
         left_padding: Extra space on left side of diagram (default 4)
         right_padding: Extra space on right side of diagram (default 4)
@@ -159,6 +164,9 @@ class LayoutOptions:
     node_label_max_lines: Optional[int] = field(
         default=None
     )  # Optional cap for synthesized label lines
+    node_label_max_width: Optional[int] = field(
+        default=None
+    )  # Total rendered node width to wrap labels into (borders + hpad + decorators)
     bbox_multiline_labels: bool = field(
         default=True
     )  # Expand bbox height and paint multiline labels when enabled
@@ -681,12 +689,98 @@ class LayoutOptions:
         # top border + bottom border + content rows + optional vertical padding rows
         return (2 * self.vpad) + 2 + max(1, content_lines)
 
+    def resolve_label_text_budget(self) -> Optional[int]:
+        """Get inner text columns available for wrapped node labels.
+
+        ``node_label_max_width`` is a *total* rendered width, so the border
+        columns and ``hpad`` on both sides come off the top. Returns None when
+        label wrapping is not in effect, since wrapped lines can only be
+        painted inside a multiline bbox.
+        """
+        if self.node_label_max_width is None:
+            return None
+        if not (self.bboxes and self.bbox_multiline_labels):
+            return None
+        return max(1, int(self.node_label_max_width) - (2 * self.hpad) - 2)
+
+    def _split_word_to_display_width(self, word: str, limit: int) -> List[str]:
+        """Hard-break a single over-long word into display-width chunks."""
+        if self.get_text_display_width(word) <= limit:
+            return [word]
+
+        pieces: List[str] = []
+        current = ""
+        current_width = 0
+        for char in word:
+            char_width = self.get_char_display_width(char)
+            if current and current_width + char_width > limit:
+                pieces.append(current)
+                current = ""
+                current_width = 0
+            current += char
+            current_width += char_width
+        if current:
+            pieces.append(current)
+        return pieces
+
+    def wrap_text_to_display_width(self, text: str, width: int) -> List[str]:
+        """Greedily wrap text to a monospace column budget.
+
+        Width is measured with :meth:`get_text_display_width` so wide (CJK)
+        glyphs cost the two columns they actually occupy. A word longer than
+        the budget is hard-broken rather than allowed to overflow the box.
+        """
+        limit = max(1, int(width))
+        lines: List[str] = []
+        current = ""
+        for word in text.split():
+            for piece in self._split_word_to_display_width(word, limit):
+                if not current:
+                    current = piece
+                    continue
+                joined_width = (
+                    self.get_text_display_width(current)
+                    + 1
+                    + self.get_text_display_width(piece)
+                )
+                if joined_width <= limit:
+                    current = f"{current} {piece}"
+                else:
+                    lines.append(current)
+                    current = piece
+        if current:
+            lines.append(current)
+        return lines or [""]
+
+    def wrap_label_lines(
+        self, lines: List[str], decorate: Callable[[str], str]
+    ) -> List[str]:
+        """Wrap label lines to ``node_label_max_width``, decorators included.
+
+        ``decorate`` renders one logical line with its node decorators; the
+        columns those add are charged against the same total-width budget as
+        the borders and padding. Explicit newlines still break lines first, so
+        hand-authored breaks survive wrapping.
+        """
+        budget = self.resolve_label_text_budget()
+        if budget is None:
+            return list(lines)
+
+        wrapped: List[str] = []
+        for line in lines:
+            overhead = self.get_text_display_width(
+                decorate(line)
+            ) - self.get_text_display_width(line)
+            wrapped.extend(self.wrap_text_to_display_width(line, budget - overhead))
+        return wrapped
+
     def get_node_dimensions(
         self, node_str: str, widest_text_width: Optional[int] = None
     ) -> Tuple[int, int]:
         """Get rendered node width/height for a given node text."""
         multiline = self.bboxes and self.bbox_multiline_labels
         raw_lines = node_str.split("\n") if multiline else [node_str]
+        raw_lines = self.wrap_label_lines(raw_lines, self.get_node_text)
         rendered_lines = [self.get_node_text(line) for line in raw_lines]
         text_width = max(
             (self.get_text_display_width(line) for line in rendered_lines),

@@ -98,6 +98,34 @@ Notes:
 - `name,birt.date,deat.date` renders those three values in order (multiline in bboxes by default).
 - You can also use dotted paths directly, such as `name,birt.date,deat.date`.
 - Use `--bbox-singleline-labels` if you want to flatten embedded newlines to one rendered line.
+- `--node-label-max-lines` caps how many synthesized lines are emitted. It is a line _count_, not a width; to constrain width, use `--node-label-width` below.
+
+## Constraining Label Width
+
+Long labels otherwise render as one very wide box. `--node-label-width COLS` wraps them instead, so no node is wider than `COLS`:
+
+```bash
+phart --labels --bboxes --node-label-width 24 examples/gedcom.py
+```
+
+```text
+┌───────────────────┐
+│ a very long label │
+│ that should wrap  │
+│ somewhere         │
+└───────────────────┘
+```
+
+Notes:
+
+- `COLS` is the **total** rendered width. Box borders, `--hpad` padding, and any `--style` decorators are charged against it, so the box never exceeds `COLS` — raising `--hpad` narrows the text rather than widening the box.
+- Requires `--bboxes`, since wrapped lines need a box to be painted into. Combining it with `--bbox-singleline-labels` is an error.
+- Explicit newlines in a label break lines first; wrapping then applies within each of those lines, so hand-authored breaks are preserved.
+- Wide (CJK) glyphs are counted as the two columns they occupy.
+- A single word longer than the budget is hard-broken rather than allowed to overflow the box.
+- `--uniform` still works: every box is sized to the widest wrapped line.
+
+The Python API equivalent is `LayoutOptions(bboxes=True, node_label_max_width=24)`.
 
 ## Text Pagination
 
@@ -351,7 +379,7 @@ usage: phart [-h] [--output OUTPUT] [--version] [--output-format {ditaa,ditaa-pu
              [--cross-partition-edge-style {stub,none}] [--connector-compaction {none,partition}] [--partition-order {natural,size}] [--panel-headers {none,basic,lineage}]
              [--connector-ref {auto,id,label,both}] [--bboxes] [--hpad HPAD] [--vpad VPAD] [--uniform] [--edge-anchors {auto,center,ports}] [--shared-ports {any,minimize,none}]
              [--bidirectional-mode {coalesce,separate}] [--labels] [--node-labels [ATTR]] [--edge-labels [ATTR]] [--node-label-lines SPEC] [--node-label-sep NODE_LABEL_SEP]
-             [--node-label-max-lines NODE_LABEL_MAX_LINES] [--bbox-multiline-labels] [--bbox-singleline-labels] [--subgraph-fit-edge-labels] [--colors {attr,none,path,source,target}] [--no-color-nodes] [--edge-glyph-preset {default,thick,double}]
+             [--node-label-max-lines NODE_LABEL_MAX_LINES] [--node-label-width COLS] [--bbox-multiline-labels] [--bbox-singleline-labels] [--subgraph-fit-edge-labels] [--colors {attr,none,path,source,target}] [--no-color-nodes] [--edge-glyph-preset {default,thick,double}]
              [--edge-arrow-style {ascii,unicode}] [--edge-color-rule RULE] [--style-rule RULE] [--style-rules-file FILE] [--svg-cell-size SVG_CELL_SIZE] [--svg-font-family SVG_FONT_FAMILY]
              [--svg-text-mode {text,path}] [--svg-font-path SVG_FONT_PATH] [--svg-fg SVG_FG] [--svg-bg SVG_BG] [--whitespace {auto,ascii-space,nbsp}] [--paginate-output-width [WIDTH|auto]]
              [--paginate-output-height [HEIGHT|auto]] [--paginate-overlap COLUMNS] [--select-output-page-x PAGE_X] [--select-output-page-y PAGE_Y] [--list-pages] [--write-pages DIR]
@@ -428,6 +456,8 @@ options:
                         Separator for joining multi-value parts within one synthesized label line
   --node-label-max-lines NODE_LABEL_MAX_LINES
                         Optional maximum number of synthesized label lines
+  --node-label-width COLS
+                        Wrap node labels so each box is at most COLS columns wide. The width is the total rendered width, including box borders, --hpad padding, and any node style decorators. Requires --bboxes; explicit newlines in a label still break lines first.
   --bbox-multiline-labels
                         Compatibility alias; multiline node labels in bboxes are enabled by default.
   --bbox-singleline-labels

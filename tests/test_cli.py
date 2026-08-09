@@ -1391,6 +1391,58 @@ def main():
         self.assertEqual(options.node_label_max_lines, 2)
         self.assertTrue(options.bbox_multiline_labels)
 
+    def test_node_label_width_flag_populates_layout_options(self):
+        sys.argv = [
+            "phart",
+            "--labels",
+            "--bboxes",
+            "--node-label-width",
+            "24",
+            str(self.test_text_file),
+        ]
+        args, _unknown, explicit_layout_fields, _module_argv = parse_args()
+        options = create_layout_options(args, explicit_layout_fields)
+        self.assertEqual(options.node_label_max_width, 24)
+
+    def test_node_label_width_requires_bboxes(self):
+        sys.argv = [
+            "phart",
+            "--labels",
+            "--node-label-width",
+            "24",
+            str(self.test_text_file),
+        ]
+        args, _unknown, explicit_layout_fields, _module_argv = parse_args()
+        with self.assertRaises(ValueError):
+            create_layout_options(args, explicit_layout_fields)
+
+    def test_node_label_width_rejects_non_positive_values(self):
+        sys.argv = [
+            "phart",
+            "--labels",
+            "--bboxes",
+            "--node-label-width",
+            "0",
+            str(self.test_text_file),
+        ]
+        args, _unknown, explicit_layout_fields, _module_argv = parse_args()
+        with self.assertRaises(ValueError):
+            create_layout_options(args, explicit_layout_fields)
+
+    def test_node_label_width_conflicts_with_singleline_labels(self):
+        sys.argv = [
+            "phart",
+            "--labels",
+            "--bboxes",
+            "--bbox-singleline-labels",
+            "--node-label-width",
+            "24",
+            str(self.test_text_file),
+        ]
+        args, _unknown, explicit_layout_fields, _module_argv = parse_args()
+        with self.assertRaises(ValueError):
+            create_layout_options(args, explicit_layout_fields)
+
     def test_bbox_singleline_labels_flag_disables_multiline_bbox_behavior(self):
         sys.argv = [
             "phart",

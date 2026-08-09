@@ -76,6 +76,7 @@ CLI_LAYOUT_FIELD_MAP = {
     "--node-label-lines": {"node_label_lines"},
     "--node-label-sep": {"node_label_sep"},
     "--node-label-max-lines": {"node_label_max_lines"},
+    "--node-label-width": {"node_label_max_width"},
     "--bbox-multiline-labels": {"bbox_multiline_labels"},
     "--bbox-singleline-labels": {"bbox_multiline_labels"},
     "--subgraph-fit-edge-labels": {"subgraph_fit_edge_labels"},
@@ -579,6 +580,18 @@ def parse_args() -> tuple[argparse.Namespace, list[str], set[str], list[str]]:
         help="Optional maximum number of synthesized label lines",
     )
     parser.add_argument(
+        "--node-label-width",
+        type=int,
+        default=None,
+        metavar="COLS",
+        help=(
+            "Wrap node labels so each box is at most COLS columns wide. The width "
+            "is the total rendered width, including box borders, --hpad padding, "
+            "and any node style decorators. Requires --bboxes; explicit newlines "
+            "in a label still break lines first."
+        ),
+    )
+    parser.add_argument(
         "--bbox-multiline-labels",
         action="store_true",
         dest="bbox_multiline_labels",
@@ -1017,6 +1030,15 @@ def create_layout_options(
         raise ValueError("--partition-affinity-strength must be non-negative")
     if args.constrained and target_canvas_width is None:
         raise ValueError("--constrained requires --target-canvas-width")
+    if args.node_label_width is not None:
+        if args.node_label_width <= 0:
+            raise ValueError("--node-label-width must be greater than zero")
+        if not args.bboxes:
+            raise ValueError("--node-label-width requires --bboxes")
+        if not args.bbox_multiline_labels:
+            raise ValueError(
+                "--node-label-width cannot be combined with --bbox-singleline-labels"
+            )
     if args.labels:
         if node_label_attr is None:
             node_label_attr = "label"
@@ -1057,6 +1079,7 @@ def create_layout_options(
         node_label_lines=node_label_lines,
         node_label_sep=args.node_label_sep,
         node_label_max_lines=args.node_label_max_lines,
+        node_label_max_width=args.node_label_width,
         bbox_multiline_labels=args.bbox_multiline_labels,
         subgraph_fit_edge_labels=args.subgraph_fit_edge_labels,
         ansi_colors=(color_mode != "none"),
