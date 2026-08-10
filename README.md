@@ -4,9 +4,9 @@
 
 Release status:
 
-- Current PyPI release: `2.0.6`
+- Current PyPI release: `2.2.1`
 - Previous long-lived PyPI release: `1.1.4`
-- Concise publish notes: [PYPI-RELEASE-NOTES-2.0.6.md](PYPI-RELEASE-NOTES-2.0.6.md)
+- Concise publish notes: [PYPI-RELEASE-NOTES.md](PYPI-RELEASE-NOTES.md)
 
 ## Quick Start
 
