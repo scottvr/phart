@@ -2613,6 +2613,7 @@ def merge_layout_options(
         "node_label_lines",
         "node_label_sep",
         "node_label_max_lines",
+        "node_label_max_width",
         "bbox_multiline_labels",
         "subgraph_fit_edge_labels",
         "ansi_colors",

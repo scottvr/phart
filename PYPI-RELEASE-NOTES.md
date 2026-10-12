@@ -1,3 +1,13 @@
+# PHART 2.2.1 - PyPI Release Notes
+
+this release coalesces some changes to the ci/cd backend code and adds a new feature: 
+
+`--node-label-width COLS`
+
+for constraining label width by hard-breaking lines at COLS width. works in conjunction with existing args for controllling how many lines of label can be inside a bounding box.
+
+
+
 # PHART 2.0.6 - PyPI Release Notes
 
 This release is a major jump from the previous long-lived PyPI package (`1.1.4`) and includes substantial feature growth, CLI expansion, rendering improvements, and stricter runtime expectations.

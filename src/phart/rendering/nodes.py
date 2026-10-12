@@ -405,22 +405,18 @@ def resolved_node_label_lines(
     else:
         raw_lines = [display_text]
     style_set = resolve_effective_node_style_set(options, attrs)
-    decorated = [
-        _decorate_node_line(
+
+    def decorate(line: str) -> str:
+        return _decorate_node_line(
             options=options,
             line=line,
             fallback_node=fallback_node,
             style_set=style_set,
         )
-        for line in raw_lines
-    ]
-    empty = _decorate_node_line(
-        options=options,
-        line="",
-        fallback_node=fallback_node,
-        style_set=style_set,
-    )
-    return decorated if decorated else [empty]
+
+    raw_lines = options.wrap_label_lines(raw_lines, decorate)
+    decorated = [decorate(line) for line in raw_lines]
+    return decorated if decorated else [decorate("")]
 
 
 def resolve_effective_node_style_set(
