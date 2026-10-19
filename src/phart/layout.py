@@ -1260,7 +1260,7 @@ class LayoutManager:
         self, graph: nx.DiGraph, spacing: int, seed: int = 42
     ) -> Dict[str, Tuple[int, int]]:
         """Fruchterman-Reingold spring layout."""
-        coord_map = nx.spring_layout(nx.Graph(graph), seed=seed)
+        coord_map: Dict[Any, Any] = nx.spring_layout(nx.Graph(graph), seed=seed)
         return self._layout_from_coordinate_map(coord_map, spacing)
 
     def _layout_arf(
@@ -1307,7 +1307,9 @@ class LayoutManager:
     ) -> Dict[str, Tuple[int, int]]:
         """Kamada-Kawai force-directed layout."""
         try:
-            coord_map = nx.kamada_kawai_layout(nx.Graph(graph), weight=None)
+            coord_map: Dict[Any, Any] = nx.kamada_kawai_layout(
+                nx.Graph(graph), weight=None
+            )
         except ModuleNotFoundError, ImportError:
             # NetworkX's Kamada-Kawai solver depends on SciPy; fallback keeps
             # the strategy usable in minimal environments.
