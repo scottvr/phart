@@ -1,92 +1,124 @@
 name: Publish to PyPI
 
+# Release model: bump `project.version` in pyproject.toml, merge/push to main.
+# This workflow runs on every push to main; it only releases when the version
+# in pyproject.toml has no matching `v<version>` git tag yet. The release then:
+#   1. runs the test suite,
+#   2. builds and validates sdist + wheel,
+#   3. publishes to PyPI via Trusted Publishing (pauses for the `pypi`
+#      environment approval),
+#   4. creates the `v<version>` tag and a GitHub Release from
+#      PYPI-RELEASE-NOTES.md, with the dist files attached.
+# `workflow_dispatch` is a manual re-run of the same logic (main only).
+
 on:
   push:
-    tags:
-      - "v[0-9]+.[0-9]+.[0-9]+*"
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
-jobs:
-  test:
-    name: Run test suite
-    uses: ./.github/workflows/test.yaml
+concurrency:
+  group: publish-pypi
+  cancel-in-progress: false
 
-  build:
-    name: Validate release and build distributions
+jobs:
+  check:
+    name: Decide whether this commit is a release
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
+    if: github.ref == 'refs/heads/main'
+    outputs:
+      release: ${{ steps.decide.outputs.release }}
+      version: ${{ steps.decide.outputs.version }}
 
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
-          fetch-depth: 0
           persist-credentials: false
-
-      - name: Ensure tagged commit is on main
-        run: |
-          set -euo pipefail
-          commit="$(git rev-parse 'HEAD^{commit}')"
-          if ! git merge-base --is-ancestor "$commit" origin/main; then
-            echo "Tag ${GITHUB_REF_NAME} points to ${commit}, which is not on main."
-            echo "Merge to main first, then tag the commit on main."
-            exit 1
-          fi
-          echo "Release gate passed: ${commit} is on main."
 
       - name: Set up Python
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: "3.14"
 
-      - name: Validate tag matches package version
+      - name: Compare pyproject version against git tags and PyPI
+        id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          pkg_version="$(python - <<'PY'
+          version="$(python - <<'PY'
           import tomllib
 
           with open("pyproject.toml", "rb") as pyproject_file:
               pyproject = tomllib.load(pyproject_file)
 
-          print(pyproject.get("project", {}).get("version", ""))
+          print(pyproject["project"]["version"])
           PY
           )"
-          if [ -z "$pkg_version" ]; then
-            echo "Could not resolve package version from pyproject.toml"
+          if [ -z "$version" ]; then
+            echo "::error::Could not resolve project.version from pyproject.toml"
             exit 1
           fi
-          if [ "${GITHUB_REF_NAME}" != "v${pkg_version}" ]; then
-            echo "Tag/version mismatch: tag=${GITHUB_REF_NAME} expected=v${pkg_version}"
+          tag="v${version}"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+          if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${tag}" >/dev/null 2>&1; then
+            echo "Tag ${tag} already exists; pyproject version ${version} was already released. Nothing to do."
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if curl -fsSL "https://pypi.org/pypi/phart/${version}/json" >/dev/null 2>&1; then
+            echo "::error::phart ${version} is already on PyPI but tag ${tag} does not exist."
+            echo "Tag the commit that was published, then this workflow will go idle:"
+            echo "  git tag ${tag} <published-sha> && git push origin ${tag}"
             exit 1
           fi
-          echo "Tag/version check passed: ${GITHUB_REF_NAME}"
+
+          echo "Version ${version}: no ${tag} tag and not on PyPI. Releasing."
+          echo "release=true" >> "$GITHUB_OUTPUT"
+
+  test:
+    name: Run test suite
+    needs: check
+    if: needs.check.outputs.release == 'true'
+    uses: ./.github/workflows/test.yaml
+
+  build:
+    name: Build and validate distributions
+    needs: check
+    if: needs.check.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_VERSION: ${{ needs.check.outputs.version }}
+
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.14"
 
       - name: Validate source module entrypoint version
         run: |
           set -euo pipefail
           python -m pip install --upgrade pip
           python -m pip install -e .
-          pkg_version="$(python - <<'PY'
-          import tomllib
-
-          with open("pyproject.toml", "rb") as pyproject_file:
-              pyproject = tomllib.load(pyproject_file)
-
-          print(pyproject.get("project", {}).get("version", ""))
-          PY
-          )"
           module_version="$(PYTHONPATH=src python -m phart --version)"
-          if [ "$module_version" != "$pkg_version" ]; then
-            echo "Module entrypoint/version mismatch: module=$module_version package=$pkg_version"
+          if [ "$module_version" != "$RELEASE_VERSION" ]; then
+            echo "::error::Module entrypoint/version mismatch: module=$module_version package=$RELEASE_VERSION"
             exit 1
           fi
           echo "Source module entrypoint check passed: $module_version"
 
       - name: Build sdist and wheel
         run: |
-          python -m pip install --upgrade pip
+          set -euo pipefail
           python -m pip install build twine
           python -m build
           twine check dist/*
@@ -95,15 +127,13 @@ jobs:
         run: |
           set -euo pipefail
           python - <<'PY'
+          import os
           import tarfile
-          import tomllib
           from email.parser import Parser
           from pathlib import Path
           from zipfile import ZipFile
 
-          with open("pyproject.toml", "rb") as pyproject_file:
-              expected = tomllib.load(pyproject_file)["project"]["version"]
-
+          expected = os.environ["RELEASE_VERSION"]
           versions = {}
 
           for wheel in Path("dist").glob("*.whl"):
@@ -158,11 +188,12 @@ jobs:
 
   publish:
     name: Publish to PyPI (Trusted Publishing)
-    needs: [test, build]
+    needs: [check, test, build]
+    if: needs.check.outputs.release == 'true'
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/p/phart
+      url: https://pypi.org/project/phart/${{ needs.check.outputs.version }}/
     permissions:
       id-token: write
 
@@ -177,3 +208,76 @@ jobs:
         uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
         with:
           attestations: true
+
+  release:
+    name: Tag and create GitHub Release
+    needs: [check, publish]
+    if: needs.check.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      RELEASE_VERSION: ${{ needs.check.outputs.version }}
+
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+
+      - name: Download dist artifacts
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: dist
+          path: dist/
+
+      - name: Extract release notes for this version
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          version = os.environ["RELEASE_VERSION"]
+          notes_path = Path("PYPI-RELEASE-NOTES.md")
+          heading = re.compile(r"^# PHART (\S+)", re.MULTILINE)
+          body = None
+
+          if notes_path.exists():
+              text = notes_path.read_text(encoding="utf-8")
+              matches = list(heading.finditer(text))
+              for index, match in enumerate(matches):
+                  if match.group(1) != version:
+                      continue
+                  start = text.index("\n", match.start()) + 1
+                  end = (
+                      matches[index + 1].start()
+                      if index + 1 < len(matches)
+                      else len(text)
+                  )
+                  body = text[start:end].strip()
+                  break
+
+          if not body:
+              body = (
+                  f"PHART {version}. No section for this version was found in "
+                  "PYPI-RELEASE-NOTES.md."
+              )
+              print(f"::warning::{body}")
+
+          Path("release-notes.md").write_text(body + "\n", encoding="utf-8")
+          print(body)
+          PY
+
+      - name: Create tag and GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "v${RELEASE_VERSION}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --target "${GITHUB_SHA}" \
+            --title "PHART ${RELEASE_VERSION}" \
+            --notes-file release-notes.md \
+            dist/*
+          echo "Created tag v${RELEASE_VERSION} and GitHub Release at ${GITHUB_SHA}"
