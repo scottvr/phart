@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
   workflow_call:
+  schedule:
+    # Weekly drift check. Catches dependency/stub updates that break CI
+    # between pushes, so they surface before release day instead of on it.
+    - cron: "0 9 * * 1"
 
 jobs:
   test:
