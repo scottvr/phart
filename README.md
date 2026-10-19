@@ -2,6 +2,8 @@
 
 **PHART:** The Python Hierarchical ASCII Representation Tool - A Pure Python tool for graph visualization via charts and diagrams rendered in ASCII.
 
+**Issues/Q&S)**
+Where open Issues have lead to a fix or which turned out to not be an actual failure mode of PHART, I converted the Issues to Q&A/FAQ answers that are hopefully useful to to you: 
 Release status:
 
 - Current PyPI release: `2.2.1`
